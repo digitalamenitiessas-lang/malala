@@ -69,17 +69,20 @@ export default async function EgresosPage({
 
   // Dropdowns de filtro acotados a la sucursal vista (los nombres de cada
   // egreso los resuelve listEgresos, así que no se pierde info histórica).
-  const rubros = await listRubrosGasto({ sucursalId: sucursal.id });
-  const proveedores = await listProveedores({ sucursalId: sucursal.id });
-
-  const egresos = await listEgresos({
-    sucursalId: sucursal.id,
-    rubroId: sp.rubro,
-    proveedorId: sp.proveedor,
-    soloPendientes: sp.pendientes === "1",
-    desde,
-    hasta,
-  });
+  // Los dos dropdowns y la lista son independientes: van juntos en vez de uno
+  // atrás del otro.
+  const [rubros, proveedores, egresos] = await Promise.all([
+    listRubrosGasto({ sucursalId: sucursal.id }),
+    listProveedores({ sucursalId: sucursal.id }),
+    listEgresos({
+      sucursalId: sucursal.id,
+      rubroId: sp.rubro,
+      proveedorId: sp.proveedor,
+      soloPendientes: sp.pendientes === "1",
+      desde,
+      hasta,
+    }),
+  ]);
 
   const totales = aggregateEgresos(egresos);
   const puedeCargar = user.rol === "admin" || user.rol === "encargada";

@@ -20,7 +20,7 @@ import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
 import { listSucursales } from "@/lib/data/sucursales";
 import {
-  listClientes,
+  contarClientes,
   listEmpleados,
   listInsumos,
   listMediosPago,
@@ -128,19 +128,39 @@ export default async function CatalogosPage() {
 
   const sucursal = await getActiveSucursal();
   const sid = sucursal?.id;
-  const servicios = await listServicios({ sucursalId: sid });
-  const promociones = await listPromociones({ incluirInactivas: true, sucursalId: sid });
-  const insumos = await listInsumos({ sucursalId: sid });
-  const recetas = await listRecetasResumen({ sucursalId: sid });
-  const clientes = await listClientes({ sucursalId: sid });
-  const empleados = await listEmpleados({ sucursalId: sid });
-  const proveedores = await listProveedores({ sucursalId: sid });
-  const mediosPago = await listMediosPago({ sucursalId: sid });
-  const rubrosGasto = await listRubrosGasto({ sucursalId: sid });
-  const motivosDescuento = await listMotivosDescuento({ sucursalId: sid });
-  const cuentas = await listCuentas({ sucursalId: sid });
-  const giftCards = await listGiftCards({ sucursalId: sid });
-  const sucursales = await listSucursales();
+
+  // Esta pantalla sólo muestra cuántos hay de cada cosa: los trece listados no
+  // se necesitan entre sí. En fila eran trece idas y vueltas a la base, una
+  // atrás de la otra, y por eso Catálogos tardaba tanto en abrir.
+  const [
+    servicios,
+    promociones,
+    insumos,
+    recetas,
+    cantClientes,
+    empleados,
+    proveedores,
+    mediosPago,
+    rubrosGasto,
+    motivosDescuento,
+    cuentas,
+    giftCards,
+    sucursales,
+  ] = await Promise.all([
+    listServicios({ sucursalId: sid }),
+    listPromociones({ incluirInactivas: true, sucursalId: sid }),
+    listInsumos({ sucursalId: sid }),
+    listRecetasResumen({ sucursalId: sid }),
+    contarClientes({ sucursalId: sid }),
+    listEmpleados({ sucursalId: sid }),
+    listProveedores({ sucursalId: sid }),
+    listMediosPago({ sucursalId: sid }),
+    listRubrosGasto({ sucursalId: sid }),
+    listMotivosDescuento({ sucursalId: sid }),
+    listCuentas({ sucursalId: sid }),
+    listGiftCards({ sucursalId: sid }),
+    listSucursales(),
+  ]);
 
   const recetasCargadas = recetas.filter((r) => r.cantidadInsumos > 0).length;
 
@@ -150,7 +170,7 @@ export default async function CatalogosPage() {
     "/catalogos/gift-cards": giftCards.length,
     "/catalogos/insumos": insumos.length,
     "/catalogos/recetas": recetasCargadas,
-    "/catalogos/clientes": clientes.length,
+    "/catalogos/clientes": cantClientes,
     "/catalogos/empleados": empleados.length,
     "/catalogos/proveedores": proveedores.length,
     "/catalogos/medios-pago": mediosPago.length,

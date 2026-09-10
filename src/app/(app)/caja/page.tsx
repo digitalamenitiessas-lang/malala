@@ -75,24 +75,35 @@ export default async function CajaPage({
   // Aperturas y cierres son 100% manuales: no se autocierra ningún día. Los días
   // abiertos sin cerrar quedan como pendientes hasta que se cierren a mano.
 
-  const resumen = await getResumenDelDia(sucursal.id, hoy);
-  const estado = await getEstadoCajaDelDia(sucursal.id, hoy);
+  // Todas estas consultas son independientes entre sí: sólo dependen de la
+  // sucursal y la fecha, que ya están resueltas. En fila, cada una pagaba su
+  // propia ida y vuelta a la base y la pantalla sumaba las ocho esperas. En
+  // paralelo se paga una sola.
+  const [
+    resumen,
+    estado,
+    cierres,
+    cierreHoy,
+    aperturaHoy,
+    pendientesDeCierre,
+    deudores,
+    aFavor,
+  ] = await Promise.all([
+    getResumenDelDia(sucursal.id, hoy),
+    getEstadoCajaDelDia(sucursal.id, hoy),
+    listCierres({ sucursalId: sucursal.id, limit: 30 }),
+    getCierreDeFecha(sucursal.id, hoy),
+    getAperturaDeFecha(sucursal.id, hoy),
+    puedeCerrar ? getCajasPendientesDeCierre(sucursal.id) : Promise.resolve([]),
+    getDeudoresCc(),
+    getSaldosAFavorCc(),
+  ]);
+
   const totalInicial = estado.reduce((s, r) => s + r.saldoInicial, 0);
   const totalIngresos = estado.reduce((s, r) => s + r.ingresos, 0);
   const totalEgresos = estado.reduce((s, r) => s + r.egresos, 0);
   const totalEsperado = estado.reduce((s, r) => s + r.saldoEsperado, 0);
-  const cierres = await listCierres({ sucursalId: sucursal.id, limit: 30 });
-  const cierreHoy = await getCierreDeFecha(sucursal.id, hoy);
-  const aperturaHoy = await getAperturaDeFecha(sucursal.id, hoy);
-
-  const pendientesDeCierre = puedeCerrar
-    ? await getCajasPendientesDeCierre(sucursal.id)
-    : [];
-
-  const deudores = await getDeudoresCc();
   const totalDeuda = deudores.reduce((sum, d) => sum + d.saldo, 0);
-
-  const aFavor = await getSaldosAFavorCc();
   const totalAFavor = aFavor.reduce((sum, c) => sum + c.a_favor, 0);
 
   return (

@@ -318,24 +318,18 @@ export async function getResumenDelDia(
   // El medio "CC" no representa plata cobrada: las ventas fiadas generan deuda,
   // no entran a caja. Se excluye de los totales, pero guardamos sus ids para
   // calcular aparte el "fiado del día".
-  const todosMedios = await listMediosPago({
-    sucursalId,
-    incluirCuentaCorriente: true,
-  });
+  // Los tres son independientes: no se necesitan entre sí para armarse. En
+  // fila costaban tres idas y vueltas a la base; juntos, una.
+  const [todosMedios, ingresosDelDia, egresosDelDia] = await Promise.all([
+    listMediosPago({ sucursalId, incluirCuentaCorriente: true }),
+    listIngresos({ sucursalId, desde, hasta }),
+    listEgresos({ sucursalId, desde, hasta }),
+  ]);
+
   const ccMpIds = new Set(
     todosMedios.filter((m) => m.codigo === "CC").map((m) => m.id),
   );
   const mediosPago = todosMedios.filter((m) => m.codigo !== "CC");
-  const ingresosDelDia = await listIngresos({
-    sucursalId,
-    desde,
-    hasta,
-  });
-  const egresosDelDia = await listEgresos({
-    sucursalId,
-    desde,
-    hasta,
-  });
 
   const egresosPagados = egresosDelDia.filter((item) => item.egreso.pagado);
   const acc = new Map<string, { ingresos: number; egresos: number }>();

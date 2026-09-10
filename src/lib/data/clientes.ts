@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, eq, exists, ilike, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
@@ -99,6 +99,52 @@ export async function listClientes(opts?: {
   }
 
   return rows.map(mapCliente);
+}
+
+/**
+ * Cuántos clientes hay, sin traerlos.
+ *
+ * La portada de Catálogos sólo muestra el número, y para eso estaba usando
+ * listClientes: casi 2000 filas y 645 KB por el cable para imprimir "1990
+ * registros". Acá cuenta la base y viaja un entero.
+ *
+ * El predicado tiene que ser EL MISMO que el de listClientes de arriba —activo,
+ * y membresía en la sucursal cuando se pasa—, por eso vive pegado a esa
+ * función: si una cambia, la otra se ve en la misma pantalla.
+ */
+export async function contarClientes(opts?: {
+  incluirInactivos?: boolean;
+  sucursalId?: string;
+}): Promise<number> {
+  await requireUser();
+  requireSupabaseRuntime(
+    "Los clientes del sistema solo se cargan desde Supabase.",
+  );
+
+  const db = getDb();
+  const filtros = [];
+  if (!opts?.incluirInactivos) filtros.push(eq(clientesTable.activo, true));
+  if (opts?.sucursalId) {
+    filtros.push(
+      exists(
+        db
+          .select({ uno: sql`1` })
+          .from(clienteSucursalTable)
+          .where(
+            and(
+              eq(clienteSucursalTable.clienteId, clientesTable.id),
+              eq(clienteSucursalTable.sucursalId, opts.sucursalId),
+            ),
+          ),
+      ),
+    );
+  }
+
+  const [row] = await db
+    .select({ n: count() })
+    .from(clientesTable)
+    .where(filtros.length > 0 ? and(...filtros) : undefined);
+  return row?.n ?? 0;
 }
 
 /**

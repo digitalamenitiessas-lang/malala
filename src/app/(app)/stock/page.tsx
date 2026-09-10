@@ -35,8 +35,10 @@ export default async function StockPage({
       ? sp.sucursal
       : scope.sucursalIdsPermitidas[0]) ?? "";
 
-  const rows = await listStockBySucursal(sucursalId);
-  const sucursales = await listSucursales({ soloActivas: true });
+  const [rows, sucursales] = await Promise.all([
+    listStockBySucursal(sucursalId),
+    listSucursales({ soloActivas: true }),
+  ]);
   const negativos = rows.filter((r) => r.estado === "negativo").length;
   const bajos = rows.filter((r) => r.estado === "bajo").length;
   const totalValuado = rows.reduce((acc, row) => {

@@ -3,7 +3,9 @@
 export { listServicios } from "@/lib/data/servicios";
 export { listPromociones } from "@/lib/data/promociones";
 export { listInsumos } from "@/lib/data/insumos";
-export { listClientes } from "@/lib/data/clientes";
+// Clientes van por conteo y no por listado: son casi 2000 filas (~645 KB) y
+// esta pantalla sólo imprime el número.
+export { contarClientes } from "@/lib/data/clientes";
 export { listEmpleados } from "@/lib/data/empleados";
 export { listProveedores } from "@/lib/data/proveedores";
 export { listMediosPago } from "@/lib/data/medios-pago";

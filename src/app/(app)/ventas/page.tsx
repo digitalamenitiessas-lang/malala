@@ -64,8 +64,12 @@ export default async function VentasPage({
   const esEmpleado = user.rol === "empleado";
   const empleadoIdForzado = esEmpleado ? user.empleado_id : sp.empleado;
 
-  const empleados = await listEmpleados({ sucursalId: sucursal.id });
-  const clientes = await listClientes({ sucursalId: sucursal.id });
+  // Empleados y clientes no dependen uno del otro: van juntos. Las ventas sí
+  // esperan, porque el filtro por empleada se valida contra la lista.
+  const [empleados, clientes] = await Promise.all([
+    listEmpleados({ sucursalId: sucursal.id }),
+    listClientes({ sucursalId: sucursal.id }),
+  ]);
   const empleadoIdFiltrado =
     esEmpleado || !empleadoIdForzado
       ? empleadoIdForzado
