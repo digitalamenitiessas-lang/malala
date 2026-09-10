@@ -12,6 +12,7 @@ import {
   estadoEfectivo,
 } from "@/lib/turno-estado";
 import { hoyAr } from "@/lib/fecha-ar";
+import { useTurnoHover } from "@/components/turnos/turno-hover";
 
 interface Props {
   fecha: string;
@@ -33,6 +34,7 @@ function minutesToLabel(m: number) {
 
 export function DailyTimelineView({ fecha, turnos, profesionales, horarios }: Props) {
   const searchParams = useSearchParams();
+  const { hoverProps, resumen } = useTurnoHover();
   const today = hoyAr();
   const isToday = fecha === today;
 
@@ -174,6 +176,7 @@ export function DailyTimelineView({ fecha, turnos, profesionales, horarios }: Pr
                     <Link
                       key={turno.id}
                       href={buildTurnoHref(turno.id)}
+                      {...hoverProps(turno)}
                       className={`absolute left-1 right-1 rounded-xl border px-2 py-1 transition hover:shadow-md hover:scale-[1.02] cursor-pointer overflow-hidden ${ESTADO_BADGE_BORDE[estadoEfectivo(turno)]}`}
                       style={{ top, height }}
                     >
@@ -216,6 +219,7 @@ export function DailyTimelineView({ fecha, turnos, profesionales, horarios }: Pr
           })}
         </div>
       </div>
+      {resumen}
     </section>
   );
 }

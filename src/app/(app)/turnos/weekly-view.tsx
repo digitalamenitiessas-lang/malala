@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import type { TurnoAgenda } from "@/lib/types";
 import { ESTADO_DOT, estadoEfectivo } from "@/lib/turno-estado";
 import { hoyAr } from "@/lib/fecha-ar";
+import { useTurnoHover } from "@/components/turnos/turno-hover";
 
 interface Props {
   fecha: string; // Monday of the week
@@ -28,6 +29,7 @@ function getWeekDays(mondayIso: string) {
 
 export function WeeklyView({ fecha, turnosPorFecha }: Props) {
   const searchParams = useSearchParams();
+  const { hoverProps, resumen } = useTurnoHover();
   const today = hoyAr();
   const weekDays = getWeekDays(fecha);
 
@@ -94,6 +96,7 @@ export function WeeklyView({ fecha, turnosPorFecha }: Props) {
                   <Link
                     key={turno.id}
                     href={buildTurnoHref(turno.id)}
+                    {...hoverProps(turno)}
                     className="block rounded-lg bg-stone-50 px-2 py-1.5 transition hover:bg-sage-50 group"
                   >
                     <div className="flex items-center gap-1.5">
@@ -197,6 +200,7 @@ export function WeeklyView({ fecha, turnosPorFecha }: Props) {
           );
         })}
       </div>
+      {resumen}
     </section>
   );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { TurnoAgenda } from "@/lib/types";
 import { hoyAr } from "@/lib/fecha-ar";
+import { useTurnoHover } from "@/components/turnos/turno-hover";
 
 interface Props {
   fecha: string; // any date within the month (used to derive the month)
@@ -58,6 +59,7 @@ function getMonthGrid(isoDate: string) {
 
 export function MonthlyView({ fecha, turnosPorFecha }: Props) {
   const searchParams = useSearchParams();
+  const { hoverProps, resumen } = useTurnoHover();
   const today = hoyAr();
   const cells = getMonthGrid(fecha);
   const HEADERS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -134,6 +136,7 @@ export function MonthlyView({ fecha, turnosPorFecha }: Props) {
                       <Link
                         key={t.id}
                         href={buildTurnoHref(t.id)}
+                        {...hoverProps(t)}
                         className="flex items-center gap-1.5 rounded-md bg-stone-50 px-1.5 py-1 transition hover:bg-sage-50"
                       >
                         <span
@@ -206,6 +209,7 @@ export function MonthlyView({ fecha, turnosPorFecha }: Props) {
           })}
         </div>
       </div>
+      {resumen}
     </section>
   );
 }
