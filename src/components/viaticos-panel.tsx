@@ -87,8 +87,18 @@ export function ViaticosPanel({
     );
   }
 
-  function handleBorrar(id: string) {
+  function handleBorrar(v: Viatico) {
     setError(null);
+    // Borrar uno ya entregado saca plata de la caja del día: se avisa antes.
+    if (
+      v.pagado &&
+      !window.confirm(
+        `Este viático ya se había entregado. Al borrarlo se elimina también el gasto de ${formatARS(v.monto)} y su movimiento de caja. ¿Seguimos?`,
+      )
+    ) {
+      return;
+    }
+    const id = v.id;
     run(
       async () => {
         const res = await borrarViatico(id);
@@ -162,16 +172,19 @@ export function ViaticosPanel({
               >
                 Día
               </label>
+              {/* Sin tope superior a propósito: las encargadas arman la
+                  liquidación desde el principio de la semana y necesitan dejar
+                  cargados los días que todavía no pasaron. */}
               <input
                 id="viatico-fecha"
                 type="date"
                 value={fecha}
-                max={hoyAr()}
                 onChange={(e) => setFecha(e.target.value)}
                 className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <p className="text-xs text-muted-foreground">
-                El día que le tocó, que no siempre es hoy.
+                El día que le toca. Podés dejar cargada toda la semana por
+                adelantado.
               </p>
             </div>
             <div className="space-y-1.5">
@@ -303,12 +316,13 @@ export function ViaticosPanel({
                   </span>
                 )}
                 <span className="tabular-nums">{formatARS(v.monto)}</span>
-                {/* Sólo se puede borrar lo que no se liquidó ni movió plata; el
-                    resto lo rechaza el servidor con su motivo. */}
-                {!v.liquidacion_id && !v.pagado && (
+                {/* Se puede borrar todo lo que no esté liquidado. Si ya se
+                    había pagado, el servidor deshace también el gasto y el
+                    movimiento de caja. */}
+                {!v.liquidacion_id && (
                   <button
                     type="button"
-                    onClick={() => handleBorrar(v.id)}
+                    onClick={() => handleBorrar(v)}
                     disabled={pending}
                     aria-label={`Borrar viático del ${fmtFecha(v.fecha)}`}
                     className="text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
