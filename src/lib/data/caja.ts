@@ -39,6 +39,19 @@ export interface ResumenMpRow {
   neto: number;
 }
 
+export interface EgresoDelDia {
+  id: string;
+  fecha: string;
+  /** Lo que escribió la encargada; si no escribió nada, el rubro. */
+  concepto: string;
+  rubro: string;
+  proveedor?: string;
+  insumo?: string;
+  mp?: string;
+  valor: number;
+  pagado: boolean;
+}
+
 export interface ResumenDelDia {
   fecha: string;
   sucursal_id: string;
@@ -53,6 +66,10 @@ export interface ResumenDelDia {
   cantIngresos: number;
   cantEgresos: number;
   tickets: TicketResumen[];
+  // Los egresos uno por uno. Los totales solos no alcanzan: sin el concepto,
+  // un "Egreso $4.000" en la caja no se puede rastrear hasta su origen para
+  // corregirlo.
+  egresos: EgresoDelDia[];
   comisionesPorEmpleado: ComisionEmpleadoRow[];
   totalComisiones: number;
   costoInsumos: number;
@@ -368,6 +385,26 @@ export async function getResumenDelDia(
     if (mp) mp.egresos += row.egreso.valor;
   }
 
+  // Detalle uno por uno. Se listan TODOS los del día, no sólo los pagados: uno
+  // sin pagar no mueve la caja pero igual se cargó hoy, y si está mal cargado
+  // hay que poder encontrarlo.
+  const egresosDetalle: EgresoDelDia[] = egresosDelDia.map((row) => {
+    const rubro = [row.rubro?.rubro, row.rubro?.subrubro]
+      .filter(Boolean)
+      .join(" · ");
+    return {
+      id: row.egreso.id,
+      fecha: row.egreso.fecha,
+      concepto: row.egreso.observacion?.trim() || rubro || "Sin concepto",
+      rubro: rubro || "Sin rubro",
+      proveedor: row.proveedor?.nombre,
+      insumo: row.insumo?.nombre,
+      mp: row.mp?.nombre,
+      valor: row.egreso.valor,
+      pagado: row.egreso.pagado,
+    };
+  });
+
   const giftCards = await getGiftCardsDelDia(
     sucursalId,
     new Date(desde),
@@ -456,6 +493,7 @@ export async function getResumenDelDia(
     cantIngresos: ingresosDelDia.length,
     cantEgresos: egresosPagados.length,
     tickets,
+    egresos: egresosDetalle,
     comisionesPorEmpleado,
     totalComisiones: totalComisionesAll,
     costoInsumos: costoInsumosAll,

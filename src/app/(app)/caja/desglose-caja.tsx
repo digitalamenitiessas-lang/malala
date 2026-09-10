@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TableActionLink } from "@/components/table-action-link";
 import { formatARS } from "@/lib/utils";
 import type { ResumenDelDia } from "@/lib/data/caja";
@@ -26,7 +27,92 @@ export function DesgloseCaja({
         <ComisionesPorEmpleada resumen={resumen} />
       )}
       {resumen.tickets.length > 0 && <Tickets resumen={resumen} />}
+      {resumen.egresos.length > 0 && <Egresos resumen={resumen} />}
     </div>
+  );
+}
+
+/**
+ * Egresos uno por uno. Antes la caja sólo mostraba el total, así que un
+ * "Egreso $4.000" no se podía rastrear hasta su origen para corregirlo.
+ */
+function Egresos({ resumen }: { resumen: ResumenDelDia }) {
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
+          Egresos del día
+        </h2>
+        <Link
+          href="/egresos?rango=hoy"
+          className="text-xs uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Ver en Gastos
+        </Link>
+      </div>
+      <div className="overflow-hidden rounded-md border border-border bg-card">
+        <table className="w-full text-sm">
+          <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium">Hora</th>
+              <th className="px-4 py-3 text-left font-medium">Concepto</th>
+              <th className="px-4 py-3 text-left font-medium">Rubro</th>
+              <th className="px-4 py-3 text-left font-medium">Pagado con</th>
+              <th className="px-4 py-3 text-right font-medium">Monto</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {resumen.egresos.map((e) => (
+              <tr key={e.id}>
+                <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                  {new Date(e.fecha).toLocaleTimeString("es-AR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </td>
+                <td className="px-4 py-3">
+                  {e.concepto}
+                  {(e.proveedor || e.insumo) && (
+                    <span className="block text-xs text-muted-foreground">
+                      {[e.insumo, e.proveedor].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">
+                  {e.rubro}
+                </td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">
+                  {e.pagado ? (
+                    (e.mp ?? "—")
+                  ) : (
+                    <span className="rounded bg-warning/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-brown-700">
+                      Sin pagar
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right font-medium tabular-nums">
+                  {formatARS(e.valor)}
+                </td>
+              </tr>
+            ))}
+            <tr className="bg-cream/40 font-medium">
+              <td className="px-4 py-3" colSpan={4}>
+                Total pagado hoy
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums">
+                {formatARS(resumen.totalEgresos)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {resumen.egresos.some((e) => !e.pagado) && (
+        <p className="text-xs text-muted-foreground">
+          Los que están sin pagar no salieron de la caja todavía, así que no
+          entran en el total.
+        </p>
+      )}
+    </section>
   );
 }
 

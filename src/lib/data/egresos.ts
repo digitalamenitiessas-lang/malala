@@ -451,6 +451,23 @@ export async function createEgreso(
             monto: valor2,
           });
         }
+        // Sin observación el movimiento decía literalmente "Egreso", y en la
+        // caja aparecía un "Egreso $4.000" imposible de rastrear. El rubro
+        // siempre está cargado (es obligatorio), así que sirve de concepto.
+        const [rubroDelEgreso] = await tx
+          .select({
+            rubro: rubrosGastoTable.rubro,
+            subrubro: rubrosGastoTable.subrubro,
+          })
+          .from(rubrosGastoTable)
+          .where(eq(rubrosGastoTable.id, data.rubro_id))
+          .limit(1);
+        const conceptoRubro = rubroDelEgreso
+          ? [rubroDelEgreso.rubro, rubroDelEgreso.subrubro]
+              .filter(Boolean)
+              .join(" · ")
+          : "Egreso";
+
         for (const pago of pagos) {
           if (pago.monto <= 0) continue;
           const cuentaId =
@@ -464,7 +481,7 @@ export async function createEgreso(
               sucursalId: data.sucursal_id,
               refTipo: "egreso",
               refId: egresoId,
-              descripcion: data.observacion ?? "Egreso",
+              descripcion: data.observacion ?? conceptoRubro,
               usuarioId: user.id,
             });
           }
