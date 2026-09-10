@@ -88,15 +88,19 @@ export function EmpleadoForm({
               sistema sabía quién almorzó cada día, y en realidad lo adivinaba
               contando ventas. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Este campo dejó de ser la fuente de las horas: manda el horario
+                semanal de "Disponibilidad pública", que se carga una vez y
+                queda. Se conserva como respaldo porque hoy casi nadie tiene el
+                semanal cargado, y sin él la liquidación daría cero horas. */}
             <Field
-              label="Horas por día"
+              label="Horas por día (respaldo)"
               name="horas_por_dia"
               type="number"
               step="0.5"
               min="0"
               defaultValue={empleado?.horas_por_dia ?? 0}
               error={errors.horas_por_dia}
-              hint="Para proponer las horas al liquidar"
+              hint="Sólo se usa mientras no tenga cargado el horario semanal en Disponibilidad pública, que es lo que manda."
             />
           </div>
           <DiasTrabajoField dias={empleado?.dias_trabajo ?? []} />

@@ -34,6 +34,7 @@ import {
   toggleProfesionalAgendaActivo,
 } from "@/lib/data/profesionales-agenda";
 import { listSucursales } from "@/lib/data/sucursales";
+import { aMinutos, horasSemanales } from "@/lib/horas-franjas";
 import { SubmitButton } from "@/components/forms/field";
 
 const ROL_LABEL: Record<string, string> = {
@@ -51,6 +52,12 @@ const DIAS = [
   { value: 6, label: "Sábado" },
   { value: 0, label: "Domingo" },
 ];
+
+/** "8 hs", "7,5 hs" — sin decimales cuando no hacen falta. */
+function fmtHoras(h: number): string {
+  const txt = Number.isInteger(h) ? String(h) : h.toFixed(2).replace(/0$/, "");
+  return `${txt.replace(".", ",")} hs`;
+}
 
 const DIA_LABEL: Record<number, string> = Object.fromEntries(
   DIAS.map((dia) => [dia.value, dia.label]),
@@ -214,6 +221,8 @@ function DisponibilidadPublicaPanel({
       sucursal_nombre: string;
       especialidad: string;
       activo_publico: boolean;
+      avatar_url: string;
+      color: string;
     };
     horarios: Array<{
       id: string;
@@ -240,6 +249,11 @@ function DisponibilidadPublicaPanel({
           al liquidarle el sueldo. Cargalo con la jornada real.
         </p>
         <p className="text-xs text-muted-foreground">
+          <strong>Se carga una sola vez y queda.</strong> Semana a semana no hay
+          que volver a cargar nada: el total de acá abajo es el que se propone
+          al liquidar, y sólo se toca cuando le cambia la jornada.
+        </p>
+        <p className="text-xs text-muted-foreground">
           Si no hay franjas, la reserva ofrece todo el horario de la sucursal y
           las horas de la liquidación se calculan con la jornada de la ficha.
         </p>
@@ -263,12 +277,55 @@ function DisponibilidadPublicaPanel({
                 return (
                   <>
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{agenda.sucursal_nombre}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {agenda.especialidad} ·{" "}
-                    {agenda.activo_publico ? "Visible en reserva" : "Oculta en reserva"}
-                  </p>
+                <div className="flex items-start gap-3">
+                  {/* La foto que ve la clienta al reservar. Se sube en la vista
+                      completa; se muestra acá porque si no, nadie encuentra
+                      dónde se carga. */}
+                  <Link
+                    href={`/turnos/profesionales/${agenda.id}`}
+                    className="shrink-0"
+                    title={
+                      agenda.avatar_url
+                        ? "Cambiar la foto de perfil"
+                        : "Subir la foto de perfil"
+                    }
+                  >
+                    {agenda.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={agenda.avatar_url}
+                        alt=""
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span
+                        className="flex h-12 w-12 items-center justify-center rounded-full text-[10px] font-medium uppercase tracking-wider text-white"
+                        style={{ backgroundColor: agenda.color }}
+                      >
+                        Foto
+                      </span>
+                    )}
+                  </Link>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{agenda.sucursal_nombre}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {agenda.especialidad} ·{" "}
+                      {agenda.activo_publico ? "Visible en reserva" : "Oculta en reserva"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {agenda.avatar_url ? (
+                        <>La clienta ve esta foto al reservar.</>
+                      ) : (
+                        <>Sin foto: al reservar se muestra sólo su color.</>
+                      )}{" "}
+                      <Link
+                        href={`/turnos/profesionales/${agenda.id}`}
+                        className="underline underline-offset-2 hover:text-foreground"
+                      >
+                        {agenda.avatar_url ? "Cambiarla" : "Subir una foto"}
+                      </Link>
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <form action={toggleAgenda}>
@@ -313,6 +370,14 @@ function DisponibilidadPublicaPanel({
                         <span className="ml-2 tabular-nums text-muted-foreground">
                           {horario.apertura} - {horario.cierre}
                         </span>
+                        <span className="ml-2 tabular-nums text-xs text-muted-foreground">
+                          ({fmtHoras(
+                            Math.max(
+                              0,
+                              aMinutos(horario.cierre) - aMinutos(horario.apertura),
+                            ) / 60,
+                          )})
+                        </span>
                       </span>
                       <form
                         action={async (formData) => {
@@ -334,6 +399,23 @@ function DisponibilidadPublicaPanel({
                       </form>
                     </li>
                   ))}
+                  {/* El total sale de la misma función con la que se liquida:
+                      sirve como verificación de lo que se va a pagar, no como
+                      un número decorativo aparte. */}
+                  <li className="flex items-center justify-between gap-3 bg-cream/40 px-4 py-2.5 text-sm font-medium">
+                    <span>Total semanal</span>
+                    <span className="tabular-nums">
+                      {fmtHoras(
+                        horasSemanales(
+                          horarios.map((h) => ({
+                            diaSemana: h.dia_semana,
+                            apertura: h.apertura,
+                            cierre: h.cierre,
+                          })),
+                        ),
+                      )}
+                    </span>
+                  </li>
                 </ul>
               )}
 
@@ -412,6 +494,12 @@ function DisponibilidadPublicaPanel({
               Crea la agenda del empleado en una sucursal para que aparezca al
               reservar online. Luego asignás servicios y franjas.
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              <strong>Prioridad</strong> es el orden en la reserva online: el
+              número más chico aparece primero en la lista de profesionales, y
+              es a quien se le asigna el turno cuando la clienta elige “sin
+              preferencia”. Si dos tienen el mismo número, ordena por nombre.
+            </p>
           </div>
           <label className="space-y-1.5 text-sm">
             <span className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -460,6 +548,7 @@ function DisponibilidadPublicaPanel({
               name="prioridad"
               min={0}
               defaultValue={0}
+              title="Orden en la reserva online: el número más chico aparece primero, y es a quien se le asigna el turno cuando la clienta elige “sin preferencia”. Empatados, ordena por nombre."
               className="w-24 rounded-md border border-border bg-card px-3 py-2 text-sm tabular-nums"
             />
           </label>

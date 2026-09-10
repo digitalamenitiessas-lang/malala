@@ -45,6 +45,9 @@ import {
 } from "./movimientos-bancarios-helpers";
 import { notificarLiquidacionEmpleadoPush } from "@/lib/integraciones/push";
 import { fechaArDeISO, hoyAr } from "@/lib/fecha-ar";
+// Mismo cálculo que muestra la ficha de la empleada: el total que la encargada
+// verifica en pantalla y el que se paga acá tienen que ser el mismo número.
+import { horasDeFranjasEnRango } from "@/lib/horas-franjas";
 
 function createId() {
   return crypto.randomUUID();
@@ -208,37 +211,6 @@ async function fetchLineasPendientes(args: {
 }
 
 /** "09:30" → 570. */
-function aMinutos(hhmm: string): number {
-  const [h, m] = hhmm.split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
-}
-
-/**
- * Horas de jornada en el rango, sumando las franjas semanales que caen en cada
- * día. Recorre día por día en vez de multiplicar por semanas: una quincena no
- * tiene un número entero de semanas y el sábado del medio contaría de más.
- */
-function horasDeFranjasEnRango(
-  desde: string,
-  hasta: string,
-  franjas: Array<{ diaSemana: number; apertura: string; cierre: string }>,
-): number {
-  const porDia = new Map<number, number>();
-  for (const f of franjas) {
-    const mins = Math.max(0, aMinutos(f.cierre) - aMinutos(f.apertura));
-    porDia.set(f.diaSemana, (porDia.get(f.diaSemana) ?? 0) + mins);
-  }
-
-  let minutos = 0;
-  const cur = new Date(`${desde}T12:00:00`);
-  const fin = new Date(`${hasta}T12:00:00`);
-  while (cur <= fin) {
-    minutos += porDia.get(cur.getDay()) ?? 0;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return Math.round((minutos / 60) * 100) / 100;
-}
-
 /** Cuenta los días del rango [desde, hasta] cuyo día de semana está en `dias`. */
 function contarDiasLaborables(
   desde: string,
