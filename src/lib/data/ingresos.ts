@@ -973,6 +973,11 @@ export async function createIngreso(
   revalidatePath("/dashboard");
   revalidatePath("/caja");
   revalidatePath("/bancos");
-  if (usaCc) revalidatePath("/catalogos/clientes");
+  if (usaCc) {
+    revalidatePath("/catalogos/clientes");
+    // El saldo del cliente cambió: el aviso de "tiene X a favor" del form de
+    // venta tiene que reflejarlo en la próxima venta.
+    revalidatePath("/ventas/nueva");
+  }
   return { ok: true, ingresoId, warnings: warnings.length ? warnings : undefined };
 }

@@ -109,7 +109,12 @@ export default async function EditarClientePage({
           <Dato label="Nombre" value={cliente.nombre} />
           <Dato label="Teléfono" value={cliente.telefono ?? "—"} />
           <Dato label="Email" value={cliente.email ?? "—"} />
-          <Dato label="Saldo CC" value={formatARS(cliente.saldo_cc)} />
+          <Dato
+            label={cliente.saldo_cc < -0.01 ? "Saldo a favor" : "Saldo CC"}
+            value={formatARS(
+              cliente.saldo_cc < -0.01 ? -cliente.saldo_cc : cliente.saldo_cc,
+            )}
+          />
           <div className="sm:col-span-2">
             <Dato label="Observación" value={cliente.observacion ?? "—"} />
           </div>

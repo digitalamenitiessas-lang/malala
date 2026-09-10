@@ -15,7 +15,10 @@ import {
 } from "@/lib/data/caja";
 import { getAperturaDeFecha } from "@/lib/data/apertura-caja";
 import { listSucursales } from "@/lib/data/sucursales";
-import { getDeudoresCc } from "@/lib/data/cuenta-corriente";
+import {
+  getDeudoresCc,
+  getSaldosAFavorCc,
+} from "@/lib/data/cuenta-corriente";
 import { formatARS, formatLongDate } from "@/lib/utils";
 
 function formatYMD(ymd: string): string {
@@ -88,6 +91,9 @@ export default async function CajaPage({
 
   const deudores = await getDeudoresCc();
   const totalDeuda = deudores.reduce((sum, d) => sum + d.saldo, 0);
+
+  const aFavor = await getSaldosAFavorCc();
+  const totalAFavor = aFavor.reduce((sum, c) => sum + c.a_favor, 0);
 
   return (
     <div className="space-y-8 max-w-6xl">
@@ -413,6 +419,53 @@ export default async function CajaPage({
               </tbody>
             </table>
           </div>
+        </section>
+      )}
+
+      {aFavor.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
+              Saldo a favor · clientas con plata a cuenta
+            </h2>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {aFavor.length} cliente{aFavor.length !== 1 ? "s" : ""} · total{" "}
+              <strong className="text-sage-700">{formatARS(totalAFavor)}</strong>
+            </span>
+          </div>
+          <div className="overflow-hidden rounded-md border border-sage-300 bg-card">
+            <table className="w-full text-sm">
+              <thead className="bg-sage-50 text-xs uppercase tracking-wider text-sage-900">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Cliente</th>
+                  <th className="px-4 py-3 text-right font-medium">A favor</th>
+                  <th className="w-24 px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {aFavor.map((c) => (
+                  <tr key={c.cliente_id} className="hover:bg-sage-50/50">
+                    <td className="px-4 py-3 font-medium">{c.nombre}</td>
+                    <td className="px-4 py-3 text-right font-medium tabular-nums text-sage-700">
+                      {formatARS(c.a_favor)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/catalogos/clientes/${c.cliente_id}`}
+                        className="inline-flex items-center rounded-md border border-sage-700 px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-sage-700 transition-colors hover:bg-sage-50"
+                      >
+                        Ver
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Esa plata ya está en la caja: se les descuenta cobrando la próxima
+            venta con el medio “CC”.
+          </p>
         </section>
       )}
 

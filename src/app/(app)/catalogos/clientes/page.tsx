@@ -79,8 +79,19 @@ export default async function ClientesPage({
                 <td className="px-4 py-3 text-muted-foreground">
                   {c.observacion ?? "—"}
                 </td>
+                {/* saldo_cc negativo es plata a favor del cliente, no una
+                    deuda negativa: se muestra en positivo y etiquetado. */}
                 <td className="px-4 py-3 text-right tabular-nums">
-                  {formatARS(c.saldo_cc)}
+                  {c.saldo_cc < -0.01 ? (
+                    <span className="text-sage-700">
+                      {formatARS(-c.saldo_cc)}
+                      <span className="ml-1 text-xs uppercase tracking-wider">
+                        a favor
+                      </span>
+                    </span>
+                  ) : (
+                    formatARS(c.saldo_cc)
+                  )}
                 </td>
                 <td className="px-4 py-3 text-center">
                   {c.activo ? (

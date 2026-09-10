@@ -283,6 +283,11 @@ export function NuevaVentaForm({
   const clienteSel = clientesList.find((c) => c.id === clienteId);
   const clienteTieneCc =
     !!medioCc && !!clienteSel?.cuenta_corriente_habilitada;
+  // saldo_cc negativo = plata que la clienta dejó a cuenta.
+  const saldoAFavorCliente =
+    clienteTieneCc && clienteSel && clienteSel.saldo_cc < -0.01
+      ? -clienteSel.saldo_cc
+      : 0;
   const mp1EsCc = !!medioCc && mp1Id === medioCc.id;
   const mp2EsCc = !!medioCc && mp2Id === medioCc.id;
   const usaCc = mp1EsCc || mp2EsCc;
@@ -1011,6 +1016,19 @@ export function NuevaVentaForm({
         <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
           Medios de pago
         </h2>
+
+        {/* La plata a favor no se descuenta sola: se cobra con el medio "CC",
+            que genera el cargo que la consume. Si no se avisa acá, nadie se
+            entera de que estaba. */}
+        {saldoAFavorCliente > 0 && (
+          <p className="rounded-md border border-sage-300 bg-sage-50 px-3 py-2 text-xs text-sage-900">
+            <strong>{clienteSel?.nombre}</strong> tiene{" "}
+            <strong className="tabular-nums">
+              {formatARS(saldoAFavorCliente)}
+            </strong>{" "}
+            a favor. Para usarlo, cobrá esa parte con <strong>CC</strong>.
+          </p>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">

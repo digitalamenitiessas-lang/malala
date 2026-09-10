@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
@@ -130,6 +130,39 @@ export async function getDeudoresCc(): Promise<DeudorCc[]> {
   });
 }
 
+export interface SaldoAFavorCc {
+  cliente_id: string;
+  nombre: string;
+  /** Siempre positivo: lo que el local le debe al cliente. */
+  a_favor: number;
+}
+
+/**
+ * Clientes con plata a favor. Es el mismo saldo_cc que la deuda pero del otro
+ * lado del cero (negativo), y se devuelve en positivo para que la vista no
+ * tenga que acordarse del signo.
+ */
+export async function getSaldosAFavorCc(): Promise<SaldoAFavorCc[]> {
+  requireSupabaseRuntime("La cuenta corriente requiere Supabase configurado.");
+  const db = getDb();
+
+  const rows = await db
+    .select({
+      id: clientesTable.id,
+      nombre: clientesTable.nombre,
+      saldo: clientesTable.saldoCc,
+    })
+    .from(clientesTable)
+    .where(lt(clientesTable.saldoCc, -EPS))
+    .orderBy(asc(clientesTable.saldoCc));
+
+  return rows.map((r) => ({
+    cliente_id: r.id,
+    nombre: r.nombre,
+    a_favor: -r.saldo,
+  }));
+}
+
 export async function toggleCuentaCorriente(
   clienteId: string,
 ): Promise<ActionResult> {
@@ -231,11 +264,23 @@ export async function registrarCargoCc(
 }
 
 /**
- * Registra un pago de cuenta corriente: baja la deuda del cliente e ingresa la
- * plata a bancos por el medio de pago elegido. No permite pagar de más.
+ * Asiento compartido de "el cliente entrega plata": baja su saldo e ingresa el
+ * monto a bancos por el medio de pago elegido.
+ *
+ * Pagar una deuda y dejar saldo a favor son el mismo asiento; lo único que
+ * cambia es hasta dónde se puede bajar el saldo. El pago se frena en cero (si
+ * paga de más, es un vuelto que hay que devolver, no un pago) y el saldo a
+ * favor justamente lo cruza.
  */
-export async function registrarPagoCc(
+async function recibirPlataDeClienteCc(
   formData: FormData,
+  modo: {
+    topeEnLaDeuda: boolean;
+    refTipo: string;
+    descripcionPorDefecto: string | null;
+    descripcionBanco: string;
+    errorGenerico: string;
+  },
 ): Promise<ActionResult> {
   const user = await requireRole(["admin", "encargada"]);
   requireSupabaseRuntime("La cuenta corriente requiere Supabase configurado.");
@@ -265,15 +310,17 @@ export async function registrarPagoCc(
       if (!cliente.cuentaCorrienteHabilitada) {
         throw new Error("El cliente no tiene la cuenta corriente habilitada");
       }
-      if (cliente.saldoCc <= EPS) {
-        throw new Error("El cliente no tiene deuda pendiente");
-      }
 
       const monto = data.monto;
-      if (monto > cliente.saldoCc + EPS) {
-        throw new Error(
-          `El pago no puede superar la deuda (${cliente.saldoCc.toFixed(2)})`,
-        );
+      if (modo.topeEnLaDeuda) {
+        if (cliente.saldoCc <= EPS) {
+          throw new Error("El cliente no tiene deuda pendiente");
+        }
+        if (monto > cliente.saldoCc + EPS) {
+          throw new Error(
+            `El pago no puede superar la deuda (${cliente.saldoCc.toFixed(2)})`,
+          );
+        }
       }
 
       await tx.insert(movimientosCcTable).values({
@@ -284,9 +331,9 @@ export async function registrarPagoCc(
         monto,
         sucursalId: sucursal?.id ?? null,
         mpId: data.mp_id,
-        refTipo: "manual",
+        refTipo: modo.refTipo,
         refId: null,
-        descripcion: data.descripcion ?? null,
+        descripcion: data.descripcion ?? modo.descripcionPorDefecto,
         usuarioId: user.id,
       });
 
@@ -295,10 +342,10 @@ export async function registrarPagoCc(
         .set({ saldoCc: cliente.saldoCc - monto })
         .where(eq(clientesTable.id, data.cliente_id));
 
-      // El pago entra a bancos por la cuenta elegida en el form (override) o,
+      // La plata entra a bancos por la cuenta elegida en el form (override) o,
       // si no se eligió, por la cuenta por defecto del medio de pago. Si no hay
-      // ninguna, el pago igual se registra (baja la deuda) pero no impacta en
-      // bancos hasta asignarle una cuenta.
+      // ninguna, igual se registra (baja el saldo) pero no impacta en bancos
+      // hasta asignarle una cuenta.
       const cuentaId =
         data.cuenta_id ?? (await getCuentaIdForMpTx(tx, data.mp_id));
       if (cuentaId) {
@@ -310,7 +357,7 @@ export async function registrarPagoCc(
           sucursalId: sucursal?.id ?? null,
           refTipo: "cc_pago",
           refId: data.cliente_id,
-          descripcion: "Pago de cuenta corriente",
+          descripcion: modo.descripcionBanco,
           usuarioId: user.id,
         });
       }
@@ -319,13 +366,55 @@ export async function registrarPagoCc(
     return {
       ok: false,
       errors: {
-        _: [error instanceof Error ? error.message : "No se pudo registrar el pago"],
+        _: [error instanceof Error ? error.message : modo.errorGenerico],
       },
     };
   }
 
   revalidatePath(`/catalogos/clientes/${data.cliente_id}`);
   revalidatePath("/catalogos/clientes");
+  revalidatePath("/caja");
   revalidatePath("/bancos");
+  // El form de venta avisa cuánto tiene a favor la clienta: si no se revalida,
+  // sigue mostrando el saldo viejo.
+  revalidatePath("/ventas/nueva");
   return { ok: true };
+}
+
+/**
+ * Registra un pago de cuenta corriente: baja la deuda del cliente e ingresa la
+ * plata a bancos por el medio de pago elegido. No permite pagar de más.
+ */
+export async function registrarPagoCc(
+  formData: FormData,
+): Promise<ActionResult> {
+  return recibirPlataDeClienteCc(formData, {
+    topeEnLaDeuda: true,
+    refTipo: "manual",
+    descripcionPorDefecto: null,
+    descripcionBanco: "Pago de cuenta corriente",
+    errorGenerico: "No se pudo registrar el pago",
+  });
+}
+
+/**
+ * La clienta deja plata a favor: paga con un billete grande, no se lleva el
+ * vuelto y lo usa la próxima vez.
+ *
+ * Esa plata queda en la caja hoy, así que entra a bancos igual que cualquier
+ * cobro — si no, el arqueo del día cerraría con sobrante. Lo que queda pendiente
+ * no es plata sino la obligación con la clienta, y eso es el saldo_cc en
+ * negativo. Se consume solo: la próxima venta cobrada con el medio "CC" genera
+ * el cargo que lo lleva de vuelta a cero.
+ */
+export async function registrarSaldoAFavorCc(
+  formData: FormData,
+): Promise<ActionResult> {
+  return recibirPlataDeClienteCc(formData, {
+    topeEnLaDeuda: false,
+    refTipo: "saldo_favor",
+    descripcionPorDefecto: "Saldo a favor (no se llevó el vuelto)",
+    descripcionBanco: "Saldo a favor de clienta",
+    errorGenerico: "No se pudo registrar el saldo a favor",
+  });
 }
