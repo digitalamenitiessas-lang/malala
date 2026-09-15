@@ -170,6 +170,8 @@ export default async function EditarEmpleadoPage({
       />
 
       <AccesoEmpleadoPanel
+        empleadoId={id}
+        empleadoNombre={empleado.nombre}
         acceso={acceso}
         rolesDisponibles={rolesDisponibles}
         action={crearAcceso}

@@ -3,7 +3,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { getDb } from "@/lib/db/client/postgres";
+import { getDb, getSqlClient } from "@/lib/db/client/postgres";
 import { createSupabaseAdminClient } from "@/lib/db/client/supabase-admin";
 import { requireSupabaseRuntime } from "@/lib/db/env";
 import {
@@ -33,6 +33,13 @@ export interface AccesoEmpleado {
   email: string;
   rol: Rol;
   activo: boolean;
+  /**
+   * Si tiene historia cargada (ventas, gastos, movimientos…), el acceso NO se
+   * puede borrar: la base lo impide y con razón, porque esos registros dicen
+   * quién los hizo. La pantalla usa esto para ofrecer desactivar en vez de
+   * borrar, y explicar por qué.
+   */
+  tiene_historia: boolean;
 }
 
 export async function getAccesoDeEmpleado(
@@ -42,6 +49,7 @@ export async function getAccesoDeEmpleado(
   const db = getDb();
   const [row] = await db
     .select({
+      userId: profilesTable.userId,
       email: profilesTable.email,
       rol: profilesTable.rol,
       activo: profilesTable.activo,
@@ -49,7 +57,46 @@ export async function getAccesoDeEmpleado(
     .from(profilesTable)
     .where(eq(profilesTable.empleadoId, empleadoId))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  return {
+    email: row.email,
+    rol: row.rol,
+    activo: row.activo,
+    tiene_historia: (await contarHistoriaDeUsuario(row.userId)) > 0,
+  };
+}
+
+/**
+ * Cuántos registros de la operación llevan la firma de este usuario.
+ *
+ * Casi todas las tablas referencian profiles con ON DELETE NO ACTION, así que
+ * esto no es una precaución cosmética: si da distinto de cero, el DELETE lo
+ * rechaza la base. Se consulta todo junto para no pagar una ida y vuelta por
+ * tabla.
+ */
+async function contarHistoriaDeUsuario(userId: string): Promise<number> {
+  const sql = getSqlClient();
+  const [row] = await sql<{ n: number }[]>`
+    select (
+      (select count(*) from ingresos where usuario_id = ${userId}) +
+      (select count(*) from ingresos where revisado_por = ${userId}) +
+      (select count(*) from egresos where usuario_id = ${userId}) +
+      (select count(*) from movimientos_bancarios where usuario_id = ${userId}) +
+      (select count(*) from movimientos_cc where usuario_id = ${userId}) +
+      (select count(*) from movimientos_stock where usuario_id = ${userId}) +
+      (select count(*) from anticipos where usuario_id = ${userId}) +
+      (select count(*) from viaticos where usuario_id = ${userId}) +
+      (select count(*) from liquidaciones where usuario_id = ${userId}) +
+      (select count(*) from gift_cards where usuario_id = ${userId}) +
+      (select count(*) from gift_card_movimientos where usuario_id = ${userId}) +
+      (select count(*) from aperturas_caja where abierto_por = ${userId}) +
+      (select count(*) from cierres_caja where cerrado_por = ${userId}) +
+      (select count(*) from cliente_ficha_registros where usuario_id = ${userId}) +
+      (select count(*) from turnos where creado_por_usuario_id = ${userId}) +
+      (select count(*) from turnos where actualizado_por_usuario_id = ${userId}) +
+      (select count(*) from turno_eventos where actor_usuario_id = ${userId})
+    )::int as n`;
+  return row?.n ?? 0;
 }
 
 /**
@@ -311,6 +358,268 @@ export async function crearAccesoEmpleado(
 
   revalidatePath(`/catalogos/empleados/${empleadoId}`);
   revalidatePath("/catalogos/empleados");
+  return { ok: true };
+}
+
+/**
+ * Guardas comunes a toda gestión de un acceso ya creado.
+ *
+ * Las dos que importan de verdad son las de escalamiento: nadie se gestiona a
+ * sí mismo (si no, alguien se sube el rol o se deja afuera sin querer), y sólo
+ * se puede tocar un acceso cuyo rol uno podría haber asignado — o sea que un
+ * admin no puede cambiarle la contraseña a otro admin.
+ */
+async function cargarAccesoParaGestion(empleadoId: string): Promise<
+  | {
+      ok: true;
+      actor: Awaited<ReturnType<typeof requireUser>>;
+      profile: typeof profilesTable.$inferSelect;
+    }
+  | { ok: false; errors: Record<string, string[]> }
+> {
+  const actor = await requireRole(["admin"]);
+  requireSupabaseRuntime("La gestión de accesos requiere Supabase configurado.");
+
+  const empleado = await getEmpleado(empleadoId);
+  if (!empleado) return { ok: false, errors: { _: ["Empleado no encontrado"] } };
+
+  const scope = buildAccessScope(actor);
+  if (!isSucursalAllowed(scope, empleado.sucursal_principal_id)) {
+    return {
+      ok: false,
+      errors: { _: ["No podés gestionar empleados de esa sucursal"] },
+    };
+  }
+
+  const db = getDb();
+  const [profile] = await db
+    .select()
+    .from(profilesTable)
+    .where(eq(profilesTable.empleadoId, empleadoId))
+    .limit(1);
+  if (!profile) {
+    return { ok: false, errors: { _: ["Este empleado no tiene acceso"] } };
+  }
+  if (profile.userId === actor.id) {
+    return {
+      ok: false,
+      errors: {
+        _: ["Este es tu propio acceso: pedile a otro administrador que lo cambie."],
+      },
+    };
+  }
+  if (!rolesAsignables(actor.rol).includes(profile.rol as Rol)) {
+    return {
+      ok: false,
+      errors: {
+        _: [`No tenés permiso para gestionar un acceso de rol ${profile.rol}.`],
+      },
+    };
+  }
+
+  return { ok: true, actor, profile };
+}
+
+function revalidarAcceso(empleadoId: string) {
+  revalidatePath(`/catalogos/empleados/${empleadoId}`);
+  revalidatePath("/catalogos/empleados");
+}
+
+/** Cambia la contraseña de un empleado. La define el administrador y se la pasa. */
+export async function cambiarPasswordAcceso(
+  empleadoId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const guard = await cargarAccesoParaGestion(empleadoId);
+  if (!guard.ok) return guard;
+
+  const parsed = z
+    .object({
+      password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+    })
+    .safeParse({ password: formData.get("password") });
+  if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(guard.profile.userId, {
+    password: parsed.data.password,
+  });
+  if (error) {
+    return { ok: false, errors: { password: [error.message] } };
+  }
+
+  revalidarAcceso(empleadoId);
+  return { ok: true };
+}
+
+/** Cambia el email con el que entra al sistema. */
+export async function cambiarEmailAcceso(
+  empleadoId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const guard = await cargarAccesoParaGestion(empleadoId);
+  if (!guard.ok) return guard;
+
+  const parsed = z
+    .object({
+      email: z
+        .string()
+        .email("Email inválido")
+        .transform((s) => s.trim().toLowerCase()),
+    })
+    .safeParse({ email: formData.get("email") });
+  if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
+
+  const email = parsed.data.email;
+  if (email === guard.profile.email) return { ok: true };
+
+  // Auth primero: es el que puede rechazar por email repetido. Si se actualizara
+  // el profile antes, un choque ahí dejaría las dos tablas diciendo cosas
+  // distintas sobre con qué email entra esta persona.
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(guard.profile.userId, {
+    email,
+    email_confirm: true,
+  });
+  if (error) {
+    const repetido = /already|exists|registered/i.test(error.message);
+    return {
+      ok: false,
+      errors: {
+        email: [
+          repetido ? "Ya hay un acceso con ese email" : error.message,
+        ],
+      },
+    };
+  }
+
+  const db = getDb();
+  await db
+    .update(profilesTable)
+    .set({ email })
+    .where(eq(profilesTable.userId, guard.profile.userId));
+
+  revalidarAcceso(empleadoId);
+  return { ok: true };
+}
+
+/** Cambia el rol (empleado / encargada / admin, según quién lo pida). */
+export async function cambiarRolAcceso(
+  empleadoId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const guard = await cargarAccesoParaGestion(empleadoId);
+  if (!guard.ok) return guard;
+
+  const parsed = z
+    .object({ rol: z.enum(["empleado", "encargada", "admin"]) })
+    .safeParse({ rol: formData.get("rol") });
+  if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
+
+  if (!rolesAsignables(guard.actor.rol).includes(parsed.data.rol)) {
+    return { ok: false, errors: { rol: ["No podés asignar ese rol"] } };
+  }
+
+  const db = getDb();
+  await db
+    .update(profilesTable)
+    .set({ rol: parsed.data.rol })
+    .where(eq(profilesTable.userId, guard.profile.userId));
+
+  revalidarAcceso(empleadoId);
+  return { ok: true };
+}
+
+/**
+ * Suspende o rehabilita el acceso sin borrar nada.
+ *
+ * Es la forma correcta de sacarle el sistema a alguien que ya trabajó: su
+ * historia queda intacta y las ventas que cargó siguen diciendo quién las hizo.
+ * Con `activo` en false la sesión deja de validar en el primer chequeo; además
+ * se banea en Auth para cortar cualquier sesión que siguiera abierta, pero eso
+ * es refuerzo: si Auth falla, el acceso ya quedó bloqueado igual.
+ */
+export async function toggleAccesoActivo(
+  empleadoId: string,
+): Promise<ActionResult> {
+  const guard = await cargarAccesoParaGestion(empleadoId);
+  if (!guard.ok) return guard;
+
+  const activar = !guard.profile.activo;
+  const db = getDb();
+  await db
+    .update(profilesTable)
+    .set({ activo: activar })
+    .where(eq(profilesTable.userId, guard.profile.userId));
+
+  const admin = createSupabaseAdminClient();
+  await admin.auth.admin
+    .updateUserById(guard.profile.userId, {
+      ban_duration: activar ? "none" : "876000h",
+    })
+    .catch(() => {});
+
+  revalidarAcceso(empleadoId);
+  return { ok: true };
+}
+
+/**
+ * Borra el acceso de verdad: el perfil y el usuario de Auth.
+ *
+ * Sólo se puede si esa persona nunca cargó nada. Casi todas las tablas de la
+ * operación referencian profiles con ON DELETE NO ACTION, así que con una sola
+ * venta cargada la base rechaza el borrado — y hace bien: ese registro dice
+ * quién lo hizo. En ese caso la salida es desactivar.
+ */
+export async function eliminarAcceso(empleadoId: string): Promise<ActionResult> {
+  const guard = await cargarAccesoParaGestion(empleadoId);
+  if (!guard.ok) return guard;
+
+  const historia = await contarHistoriaDeUsuario(guard.profile.userId);
+  if (historia > 0) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          `No se puede borrar: este usuario tiene ${historia} registro${historia !== 1 ? "s" : ""} cargado${historia !== 1 ? "s" : ""} (ventas, gastos, movimientos). Borrarlo dejaría esos registros sin saber quién los hizo. Usá "Quitar acceso", que le corta la entrada y conserva la historia.`,
+        ],
+      },
+    };
+  }
+
+  // El profile primero: si una referencia que no previmos lo frena, la base lo
+  // rechaza y el usuario de Auth sigue existiendo (recuperable). Al revés
+  // quedaría un perfil apuntando a un usuario que ya no existe.
+  const db = getDb();
+  try {
+    await db
+      .delete(profilesTable)
+      .where(eq(profilesTable.userId, guard.profile.userId));
+  } catch {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          'Este usuario tiene registros asociados y no se puede borrar. Usá "Quitar acceso".',
+        ],
+      },
+    };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(guard.profile.userId);
+  if (error) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          `Se borró el perfil pero quedó el usuario en Auth (${error.message}). Avisá para limpiarlo a mano.`,
+        ],
+      },
+    };
+  }
+
+  revalidarAcceso(empleadoId);
   return { ok: true };
 }
 
