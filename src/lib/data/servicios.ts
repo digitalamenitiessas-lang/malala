@@ -105,6 +105,77 @@ export async function listRubrosServicios(): Promise<string[]> {
   return rows.map((r) => r.rubro).filter((r): r is string => Boolean(r));
 }
 
+export interface CodigoSugerido {
+  rubro: string;
+  /** El último que usaron en ese rubro, para que se vea de dónde sale. */
+  ultimo: string;
+  /** El siguiente libre, respetando el formato y salteando los ocupados. */
+  siguiente: string;
+}
+
+const FORMATO_CODIGO = /^([A-Za-z]+)(\d+)$/;
+
+/**
+ * Último código usado en cada rubro y cuál sigue.
+ *
+ * El salón numera con letras de familia + dígitos (PEL, NAI, CEP, FAC…), y
+ * dentro de cada familia usa un bloque por rubro: los cortes van por PEL100,
+ * los lavados por PEL200, los adicionales por PEL700. Por eso la sugerencia va
+ * POR RUBRO y no como un único "último código": lo que sigue después de PEL705
+ * no sirve para dar de alta un corte.
+ *
+ * Cuando un rubro tiene códigos de familias distintas gana la más usada, que es
+ * la que la persona va a querer continuar.
+ */
+export async function getCodigosSugeridos(): Promise<CodigoSugerido[]> {
+  const db = getDb();
+  const rows = await db
+    .select({ rubro: serviciosTable.rubro, codigo: serviciosTable.codigo })
+    .from(serviciosTable);
+
+  const ocupados = new Set(
+    rows.map((r) => r.codigo?.trim().toUpperCase()).filter(Boolean) as string[],
+  );
+
+  // rubro -> prefijo -> { cantidad, mayor, ancho }
+  const porRubro = new Map<
+    string,
+    Map<string, { cantidad: number; mayor: number; ancho: number }>
+  >();
+
+  for (const row of rows) {
+    const codigo = row.codigo?.trim().toUpperCase();
+    if (!codigo || !row.rubro) continue;
+    const m = FORMATO_CODIGO.exec(codigo);
+    if (!m) continue;
+    const [, prefijo, digitos] = m;
+    const familias = porRubro.get(row.rubro) ?? new Map();
+    const actual = familias.get(prefijo) ?? { cantidad: 0, mayor: -1, ancho: digitos.length };
+    actual.cantidad += 1;
+    actual.mayor = Math.max(actual.mayor, Number(digitos));
+    actual.ancho = Math.max(actual.ancho, digitos.length);
+    familias.set(prefijo, actual);
+    porRubro.set(row.rubro, familias);
+  }
+
+  const salida: CodigoSugerido[] = [];
+  for (const [rubro, familias] of porRubro) {
+    // La familia dominante del rubro; a igualdad, la de número más alto.
+    const [prefijo, datos] = [...familias].sort(
+      (a, b) => b[1].cantidad - a[1].cantidad || b[1].mayor - a[1].mayor,
+    )[0];
+
+    const arma = (n: number) => `${prefijo}${String(n).padStart(datos.ancho, "0")}`;
+    let n = datos.mayor + 1;
+    // Saltea los que ya existen en otro rubro de la misma familia.
+    while (ocupados.has(arma(n))) n += 1;
+
+    salida.push({ rubro, ultimo: arma(datos.mayor), siguiente: arma(n) });
+  }
+
+  return salida.sort((a, b) => a.rubro.localeCompare(b.rubro));
+}
+
 export async function getServicio(servicioId: string): Promise<Servicio | null> {
   const db = getDb();
   const [row] = await db

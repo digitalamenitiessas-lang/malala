@@ -6,11 +6,13 @@ import { useActionStateFeedback } from "@/components/feedback/action-feedback";
 import { cn } from "@/lib/utils";
 import { CurrencyField, LoadingButton } from "./field";
 import type { Servicio } from "@/lib/types";
-import type { ActionResult } from "@/lib/data/servicios";
+import type { ActionResult, CodigoSugerido } from "@/lib/data/servicios";
 
 interface Props {
   servicio?: Servicio;
   rubros?: string[];
+  /** Último código y siguiente libre de cada rubro, para seguir la numeración. */
+  codigos?: CodigoSugerido[];
   action: (
     state: ActionResult | null,
     formData: FormData,
@@ -23,6 +25,7 @@ const NUEVO = "__nuevo__";
 export function ServicioForm({
   servicio,
   rubros = [],
+  codigos = [],
   action,
   submitLabel,
 }: Props) {
@@ -44,6 +47,10 @@ export function ServicioForm({
   const [nuevoRubro, setNuevoRubro] = useState("");
   const esNuevo = seleccion === NUEVO;
   const rubroFinal = esNuevo ? nuevoRubro : seleccion;
+
+  // El código se controla para poder completarlo con la sugerencia de un clic.
+  const [codigo, setCodigo] = useState(servicio?.codigo ?? "");
+  const sugerencia = codigos.find((c) => c.rubro === rubroFinal);
 
   return (
     <form action={formAction} className="max-w-xl space-y-6">
@@ -91,12 +98,38 @@ export function ServicioForm({
       <Field
         label="Código"
         name="codigo"
-        defaultValue={servicio?.codigo ?? ""}
+        value={codigo}
+        onChange={(e) => setCodigo(e.target.value)}
         error={errors.codigo}
         maxLength={20}
-        placeholder="PEL100"
+        placeholder={sugerencia?.siguiente ?? "PEL100"}
         className="uppercase"
       />
+
+      {/* La numeración es del salón, no del sistema: acá sólo se le muestra por
+          dónde venía en ESE rubro. Se sugiere por rubro y no un único "último
+          código" porque cada familia usa un bloque por rubro — lo que sigue
+          después de PEL705 (adicionales) no sirve para dar de alta un corte. */}
+      {sugerencia && !servicio && (
+        <p className="-mt-4 text-xs text-muted-foreground">
+          En {sugerencia.rubro} el último fue{" "}
+          <strong className="tabular-nums">{sugerencia.ultimo}</strong>.
+          {codigo.trim().toUpperCase() !== sugerencia.siguiente && (
+            <>
+              {" "}
+              Sigue{" "}
+              <button
+                type="button"
+                onClick={() => setCodigo(sugerencia.siguiente)}
+                className="font-medium tabular-nums text-sage-700 underline underline-offset-2 hover:text-sage-900"
+              >
+                {sugerencia.siguiente}
+              </button>
+              , tocalo para usarlo.
+            </>
+          )}
+        </p>
+      )}
       {/* El Field local de este archivo no acepta `hint`; la aclaración va suelta. */}
       <p className="-mt-3 text-xs text-muted-foreground">
         Código de la planilla del salón. Opcional: dejalo vacío si esta sede no

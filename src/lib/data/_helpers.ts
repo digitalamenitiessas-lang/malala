@@ -108,6 +108,9 @@ export function s(input: unknown): string | undefined {
  */
 export function revalidarCatalogoServicios() {
   revalidatePath("/catalogos/servicios");
+  // El alta sugiere el siguiente código libre: sin revalidarla, después de
+  // crear un servicio seguiría proponiendo el mismo y chocaría por repetido.
+  revalidatePath("/catalogos/servicios/nuevo");
   revalidatePath("/catalogos/promociones");
   revalidatePath("/catalogos");
   revalidatePath("/ventas/nueva");
