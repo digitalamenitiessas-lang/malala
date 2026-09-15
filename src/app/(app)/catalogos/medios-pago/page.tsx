@@ -73,9 +73,34 @@ export default async function MediosPagoPage() {
           Medios de pago
         </h1>
         <p className="text-sm text-muted-foreground">
-          {medios.length} medios · cada uno pertenece a una sucursal y dirige a una cuenta de esa misma sucursal
+          Cada medio de pago decide <strong>en qué cuenta cae la plata</strong>{" "}
+          cuando cobrás con él.
         </p>
       </header>
+
+      {/* La pantalla mostraba una columna "Cuenta destino" y un desplegable, sin
+          decir nunca qué significaba. Sin esto, la relación medio → cuenta no se
+          entiende y se configura a ciegas. */}
+      <div className="rounded-md border border-border bg-cream/30 p-4 text-sm">
+        <p className="text-foreground">
+          Si cobrás $10.000 por transferencia y el medio{" "}
+          <em>Transferencia</em> apunta a la cuenta <em>Galicia</em>, esos
+          $10.000 se suman al saldo de Galicia. Eso es lo que después ves en
+          Caja y en Bancos.
+        </p>
+        <p className="mt-2 text-muted-foreground">
+          Un medio sin cuenta no rompe nada visible: la venta se registra igual,
+          pero la plata no se suma en ningún lado y no aparece en la caja del
+          día. Las cuentas se crean en{" "}
+          <a
+            href="/catalogos/cuentas-bancarias"
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            Catálogos → Cuentas bancarias
+          </a>
+          .
+        </p>
+      </div>
 
       {cuentas.length === 0 && (
         <div className="bg-warning/10 border border-warning/30 text-brown-900 rounded-md p-4 text-sm">
@@ -214,7 +239,9 @@ export default async function MediosPagoPage() {
               <th className="text-left font-medium px-4 py-3 w-32">Sucursal</th>
               <th className="text-left font-medium px-4 py-3 w-24">Código</th>
               <th className="text-left font-medium px-4 py-3">Nombre</th>
-              <th className="text-left font-medium px-4 py-3 w-64">Cuenta destino</th>
+              <th className="text-left font-medium px-4 py-3 w-64">
+                ¿Dónde cae la plata?
+              </th>
               <th className="text-left font-medium px-4 py-3 w-40">Recargo %</th>
               <th className="text-center font-medium px-4 py-3 w-28">Estado</th>
               <th className="px-4 py-3 w-32"></th>
@@ -225,6 +252,11 @@ export default async function MediosPagoPage() {
               const cuenta = m.cuenta_id ? cuentaById.get(m.cuenta_id) : null;
               const cuentasDeLaSucursal =
                 cuentasBySucursal.get(m.sucursal_id) ?? [];
+              // Gift card es el único que NO debe tener cuenta: pagar con una
+              // tarjeta de regalo no ingresa plata nueva, entró cuando la
+              // compraron. Sin esta aclaración su fila se ve rota igual que las
+              // que sí están mal configuradas.
+              const esGift = m.codigo.toUpperCase() === "GIFT";
               return (
                 <tr key={m.id} className="hover:bg-cream/30">
                   <td className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">
@@ -233,6 +265,12 @@ export default async function MediosPagoPage() {
                   <td className="px-4 py-3 font-medium tabular-nums">{m.codigo}</td>
                   <td className="px-4 py-3">{m.nombre}</td>
                   <td className="px-4 py-3">
+                    {esGift ? (
+                      <p className="text-xs text-muted-foreground">
+                        No lleva cuenta. Pagar con una gift card no ingresa
+                        plata nueva: entró cuando la compraron.
+                      </p>
+                    ) : (
                     <form action={setCuenta} className="flex items-center gap-2">
                       <input type="hidden" name="id" value={m.id} />
                       <select
@@ -254,6 +292,7 @@ export default async function MediosPagoPage() {
                         Guardar
                       </SubmitButton>
                     </form>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <form action={setRecargo} className="flex items-center gap-2">
