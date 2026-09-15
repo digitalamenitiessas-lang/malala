@@ -1,14 +1,13 @@
 "use server";
 
 import { and, asc, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   servicios as serviciosTable,
   servicioSucursal as servicioSucursalTable,
 } from "@/lib/db/schema";
 import { getActiveSucursalForUser } from "@/lib/auth/session";
-import { requireRole } from "./_helpers";
+import { requireRole, revalidarCatalogoServicios } from "./_helpers";
 import { aplicarAumento, pctValido } from "@/lib/aumento-precios";
 
 /**
@@ -178,8 +177,7 @@ export async function aplicarAumentoServicios(
     }
   });
 
-  revalidatePath("/catalogos/servicios");
-  revalidatePath("/ventas/nueva");
+  revalidarCatalogoServicios();
   return {
     ok: true,
     actualizados: preview.filas.length,

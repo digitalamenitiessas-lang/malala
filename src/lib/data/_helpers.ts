@@ -2,6 +2,7 @@
  * Helpers compartidos por la capa de datos.
  */
 import { requireUser } from "@/lib/auth/session";
+import { revalidatePath } from "next/cache";
 import type { Rol, Usuario } from "@/lib/types";
 
 export type ActionResult =
@@ -92,4 +93,25 @@ export function s(input: unknown): string | undefined {
   if (typeof input !== "string") return undefined;
   const t = input.trim();
   return t || undefined;
+}
+
+/**
+ * Revalida todas las pantallas que muestran el catálogo de servicios.
+ *
+ * Existe porque el bug es silencioso y se repite: se edita el precio de un
+ * servicio, se ve bien en Catálogos, y la pantalla de venta sigue ofreciendo
+ * el precio viejo porque nadie revalidó esa ruta. Como no falla nada, se
+ * factura mal sin que salte ningún error.
+ *
+ * Las promociones entran acá porque son servicios con otra etiqueta
+ * (`es_promo`), así que las mismas pantallas las leen.
+ */
+export function revalidarCatalogoServicios() {
+  revalidatePath("/catalogos/servicios");
+  revalidatePath("/catalogos/promociones");
+  revalidatePath("/catalogos");
+  revalidatePath("/ventas/nueva");
+  revalidatePath("/turnos");
+  // La landing pública: ahí se reserva online y se muestran precios.
+  revalidatePath("/");
 }

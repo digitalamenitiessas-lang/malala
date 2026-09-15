@@ -9,6 +9,7 @@ import {
 import { getActiveSucursalForUser, requireUser } from "@/lib/auth/session";
 import { promocionSchema } from "@/lib/validations/promocion";
 import type { Promocion, PromocionComponente } from "@/lib/types";
+import { revalidarCatalogoServicios } from "./_helpers";
 
 export { estaVigente } from "@/lib/promo-vigencia";
 
@@ -210,8 +211,7 @@ export async function createPromocion(formData: FormData): Promise<ActionResult>
     }
   });
 
-  revalidatePath("/catalogos/promociones");
-  revalidatePath("/");
+  revalidarCatalogoServicios();
   return { ok: true, id: promoId };
 }
 
@@ -265,9 +265,8 @@ export async function updatePromocion(
     );
   });
 
-  revalidatePath("/catalogos/promociones");
+  revalidarCatalogoServicios();
   revalidatePath(`/catalogos/promociones/${id}`);
-  revalidatePath("/");
   return { ok: true, id };
 }
 
@@ -291,7 +290,6 @@ export async function togglePromocionActiva(id: string): Promise<ActionResult> {
     .set({ activo: !row.activo })
     .where(eq(serviciosTable.id, id));
 
-  revalidatePath("/catalogos/promociones");
-  revalidatePath("/");
+  revalidarCatalogoServicios();
   return { ok: true, id };
 }

@@ -1,5 +1,4 @@
 import { and, asc, eq, ilike, or } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   servicios as serviciosTable,
@@ -7,7 +6,7 @@ import {
 } from "@/lib/db/schema";
 import { getActiveSucursalForUser, requireUser } from "@/lib/auth/session";
 import { servicioSchema } from "@/lib/validations/servicio";
-import { esCodigoDuplicado } from "./_helpers";
+import { esCodigoDuplicado, revalidarCatalogoServicios } from "./_helpers";
 import type { Servicio } from "@/lib/types";
 
 const CODIGO_REPETIDO = {
@@ -192,8 +191,7 @@ export async function createServicio(formData: FormData): Promise<ActionResult> 
     });
   }
 
-  revalidatePath("/catalogos/servicios");
-  revalidatePath("/");
+  revalidarCatalogoServicios();
   return { ok: true };
 }
 
@@ -242,8 +240,7 @@ export async function updateServicio(
     throw err;
   }
 
-  revalidatePath("/catalogos/servicios");
-  revalidatePath("/");
+  revalidarCatalogoServicios();
   return { ok: true };
 }
 
@@ -269,7 +266,6 @@ export async function toggleServicioActivo(
     .set({ activo: !row.activo })
     .where(eq(serviciosTable.id, servicioId));
 
-  revalidatePath("/catalogos/servicios");
-  revalidatePath("/");
+  revalidarCatalogoServicios();
   return { ok: true };
 }
