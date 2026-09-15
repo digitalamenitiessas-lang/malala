@@ -9,6 +9,12 @@ import type { AperturaCuentaSugerida } from "@/lib/data/apertura-caja";
 import { formatARS } from "@/lib/utils";
 import { CurrencyInput } from "./currency-input";
 
+/** "2026-09-10" → "10/09/2026". */
+function fmtFecha(ymd: string): string {
+  const [y, m, d] = ymd.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 interface Props {
   sucursalId: string;
   fecha: string;
@@ -18,6 +24,8 @@ interface Props {
 export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
   const { pending, run } = useTransitionFeedback();
   const [error, setError] = useState<string | null>(null);
+  /** Fecha de la caja que quedó abierta y bloquea abrir otra, si es el caso. */
+  const [cajaAbierta, setCajaAbierta] = useState<string | null>(null);
   const [observacion, setObservacion] = useState("");
   const [declarado, setDeclarado] = useState<Record<string, number>>(() =>
     Object.fromEntries(cuentas.map((cuenta) => [cuenta.cuenta.id, cuenta.esperado])),
@@ -36,6 +44,7 @@ export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setCajaAbierta(null);
     const fd = new FormData();
     fd.set("sucursal_id", sucursalId);
     fd.set("fecha", fecha);
@@ -51,7 +60,13 @@ export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
       async () => {
         const result = await crearApertura(null, fd);
         if (!result.ok) {
-          setError(Object.values(result.errors).flat().join(", ") || "Error");
+          const bloqueante = result.errors.caja_abierta?.[0] ?? null;
+          setCajaAbierta(bloqueante);
+          setError(
+            bloqueante
+              ? null
+              : Object.values(result.errors).flat().join(", ") || "Error",
+          );
         }
         return result;
       },
@@ -170,6 +185,26 @@ export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {/* Un "cerrala antes de abrir otra" sin decir dónde deja a la encargada
+          sin salida. Acá el aviso trae el botón que lleva directo a cerrarla. */}
+      {cajaAbierta && (
+        <div className="space-y-2 rounded-md border border-warning/40 bg-warning/10 p-4">
+          <p className="text-sm font-medium text-brown-900">
+            Quedó abierta la caja del {fmtFecha(cajaAbierta)}
+          </p>
+          <p className="text-xs text-brown-700">
+            Hay que cerrarla antes de abrir una nueva. Cerrar es declarar con
+            cuánto terminó ese día; después podés abrir la de hoy.
+          </p>
+          <Link
+            href={`/caja/nuevo?fecha=${cajaAbierta}`}
+            className="inline-flex items-center gap-1.5 rounded-md bg-warning px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-brown-900 transition-colors hover:bg-warning/90"
+          >
+            Cerrar la caja del {fmtFecha(cajaAbierta)}
+          </Link>
+        </div>
+      )}
 
       <div className="flex items-center gap-3">
         <LoadingButton

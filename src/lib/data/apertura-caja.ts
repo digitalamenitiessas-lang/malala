@@ -30,6 +30,19 @@ function createId() {
 // Diferencias menores a un centavo se consideran iguales (ruido de float).
 const EPSILON = 0.005;
 
+/**
+ * No se puede abrir una caja nueva si quedó otra sin cerrar. Lleva la fecha
+ * aparte del mensaje porque la pantalla necesita armar con ella el link para
+ * ir a cerrarla: quedarse sólo con la frase dejaba a la encargada trabada sin
+ * saber adónde ir.
+ */
+class CajaAbiertaError extends Error {
+  constructor(readonly fecha: string) {
+    super(`Ya hay una caja abierta del ${fecha}. Cerrala antes de abrir otra.`);
+    this.name = "CajaAbiertaError";
+  }
+}
+
 function mapApertura(row: typeof aperturasCajaTable.$inferSelect): AperturaCaja {
   return {
     id: row.id,
@@ -183,10 +196,7 @@ export async function crearApertura(
       ]);
       const fechasCerradas = new Set(cierres.map((c) => c.fecha));
       const abierta = aperturas.find((a) => !fechasCerradas.has(a.fecha));
-      if (abierta)
-        throw new Error(
-          `Ya hay una caja abierta del ${abierta.fecha}. Cerrala antes de abrir otra.`,
-        );
+      if (abierta) throw new CajaAbiertaError(abierta.fecha);
       if (aperturas.some((a) => a.fecha === data.fecha))
         throw new Error("La caja de este día ya está abierta");
 
@@ -230,6 +240,14 @@ export async function crearApertura(
       }
     });
   } catch (error) {
+    // La fecha bloqueante viaja aparte del texto, para que la pantalla pueda
+    // ofrecer el link de cierre sin tener que leerla de la frase.
+    if (error instanceof CajaAbiertaError) {
+      return {
+        ok: false,
+        errors: { _: [error.message], caja_abierta: [error.fecha] },
+      };
+    }
     return {
       ok: false,
       errors: {

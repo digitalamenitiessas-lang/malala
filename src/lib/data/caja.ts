@@ -7,6 +7,7 @@ import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import { hoyAr } from "@/lib/fecha-ar";
 import {
+  aperturasCaja as aperturasCajaTable,
   cierresCaja as cierresCajaTable,
   cierreCajaCuentas as cierreCajaCuentasTable,
   cuentasBancarias as cuentasBancariasTable,
@@ -745,30 +746,53 @@ export async function getCajasPendientesDeCierre(
   const hoy = todayYMD();
   const ayer = addDaysYMD(hoy, -1);
   const inicio = addDaysYMD(hoy, -dias);
-  if (ayer < inicio) return [];
 
   const desde = isoStartOfDay(inicio);
   const hasta = isoEndOfDay(ayer);
 
-  const [ingresos, egresos, cierres] = await Promise.all([
+  const db = getDb();
+  const [ingresos, egresos, cierres, aperturas] = await Promise.all([
     listIngresos({ sucursalId, desde, hasta }),
     listEgresos({ sucursalId, desde, hasta }),
     listCierres({ sucursalId }),
+    db
+      .select({ fecha: aperturasCajaTable.fecha })
+      .from(aperturasCajaTable)
+      .where(eq(aperturasCajaTable.sucursalId, sucursalId)),
   ]);
 
-  // Un día "tuvo movimiento" si hubo algún ingreso o algún egreso pagado.
-  const conMovimiento = new Set<string>();
-  for (const row of ingresos) conMovimiento.add(isoToLocalYMD(row.ingreso.fecha));
-  for (const row of egresos) {
-    if (row.egreso.pagado) conMovimiento.add(isoToLocalYMD(row.egreso.fecha));
-  }
-  if (conMovimiento.size === 0) return [];
-
   const cerradas = new Set(cierres.map((c) => c.cierre.fecha));
+  const pendientes = new Set<string>();
 
-  return [...conMovimiento]
-    .filter((ymd) => ymd >= inicio && ymd <= ayer && !cerradas.has(ymd))
-    .sort();
+  // 1) Aperturas sin cierre. Esta es la lista que importa: es EXACTAMENTE la
+  //    misma condición con la que crearApertura bloquea abrir una caja nueva.
+  //    Va sin ventana de días y sin pedir que el día haya tenido movimiento,
+  //    porque una caja abierta bloquea igual aunque esté vacía y aunque sea
+  //    vieja. Antes esto no se miraba y pasaba lo peor posible: el sistema te
+  //    frenaba por una caja que la pantalla no mostraba en ningún lado, y no
+  //    había forma de cerrarla.
+  for (const a of aperturas) {
+    if (!cerradas.has(a.fecha)) pendientes.add(a.fecha);
+  }
+
+  // 2) Días que operaron sin haber abierto caja, dentro de la ventana. No
+  //    bloquean nada, pero conviene cerrarlos para que el arqueo cuadre.
+  if (ayer >= inicio) {
+    const conMovimiento = new Set<string>();
+    for (const row of ingresos) {
+      conMovimiento.add(isoToLocalYMD(row.ingreso.fecha));
+    }
+    for (const row of egresos) {
+      if (row.egreso.pagado) conMovimiento.add(isoToLocalYMD(row.egreso.fecha));
+    }
+    for (const ymd of conMovimiento) {
+      if (ymd >= inicio && ymd <= ayer && !cerradas.has(ymd)) {
+        pendientes.add(ymd);
+      }
+    }
+  }
+
+  return [...pendientes].sort();
 }
 
 export async function getCierre(cierreId: string): Promise<CierreConDetalle | null> {
