@@ -39,9 +39,19 @@ export function GiftCardForm({
   action,
   submitLabel,
 }: Props) {
-  const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
+  // Arranca en un medio que tenga cuenta asignada. Antes tomaba el primero de
+  // la lista sin mirar, y si ese no tenía cuenta la plata no entraba a la caja
+  // sin que nadie se enterara.
+  const [mpId, setMpId] = useState(
+    () => (mediosPago.find((m) => m.cuenta_id) ?? mediosPago[0])?.id ?? "",
+  );
   const [cuentaId, setCuentaId] = useState("");
   const mp = mediosPago.find((m) => m.id === mpId);
+
+  // Sin cuenta —ni la del medio ni una elegida a mano— el cobro no impacta en
+  // caja. El servidor lo permite igual (no frena la venta por configuración),
+  // así que el aviso tiene que estar acá, antes de guardar.
+  const sinCuenta = !!mp && !mp.cuenta_id && !cuentaId;
 
   return (
     <CrudForm
@@ -102,6 +112,19 @@ export function GiftCardForm({
               <p className="text-xs text-destructive">
                 {errors.mp_id.join(", ")}
               </p>
+            )}
+            {sinCuenta && (
+              <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
+                <p className="text-xs font-medium text-brown-900">
+                  {mp?.nombre} no tiene cuenta asignada
+                </p>
+                <p className="mt-1 text-xs text-brown-700">
+                  La gift card se va a emitir igual, pero{" "}
+                  <strong>esos pesos no van a aparecer en la caja del día</strong>.
+                  Asignale una cuenta en Catálogos → Medios de pago, o elegí otro
+                  medio.
+                </p>
+              </div>
             )}
           </div>
 

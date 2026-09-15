@@ -314,6 +314,17 @@ export function NuevaVentaForm({
   const diff = total - pagado;
   const pagosOk = Math.abs(diff) < 0.01;
 
+  // Medios sin cuenta asignada: la venta se registra pero la plata no impacta
+  // en la caja del día, y hasta ahora eso pasaba en silencio. Fiado (CC) y gift
+  // card quedan afuera: esos NO tienen que mover plata, es su comportamiento
+  // correcto.
+  const sinCuenta = [
+    { mp: mp1, esCc: mp1EsCc, esGift: mp1EsGift, override: mp1CuentaId, monto: Number(valor1) || 0 },
+    { mp: mp2, esCc: mp2EsCc, esGift: mp2EsGift, override: mp2CuentaId, monto: Number(valor2) || 0 },
+  ]
+    .filter((p) => p.mp && !p.esCc && !p.esGift && !p.mp.cuenta_id && !p.override && p.monto > 0)
+    .map((p) => p.mp!.nombre);
+
   // Gift card: hay que haber elegido cuál, y no se puede cobrar más de lo que
   // le queda. La base lo frena igual con el UPDATE condicional, pero ahí ya se
   // perdió la carga entera; acá se ve antes de apretar Guardar.
@@ -1020,6 +1031,20 @@ export function NuevaVentaForm({
         {/* La plata a favor no se descuenta sola: se cobra con el medio "CC",
             que genera el cargo que la consume. Si no se avisa acá, nadie se
             entera de que estaba. */}
+        {sinCuenta.length > 0 && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
+            <p className="text-xs font-medium text-brown-900">
+              {sinCuenta.join(" y ")}{" "}
+              {sinCuenta.length > 1 ? "no tienen" : "no tiene"} cuenta asignada
+            </p>
+            <p className="mt-1 text-xs text-brown-700">
+              La venta se va a guardar, pero{" "}
+              <strong>esa plata no va a aparecer en la caja del día</strong>.
+              Asignale una cuenta en Catálogos → Medios de pago.
+            </p>
+          </div>
+        )}
+
         {saldoAFavorCliente > 0 && (
           <p className="rounded-md border border-sage-300 bg-sage-50 px-3 py-2 text-xs text-sage-900">
             <strong>{clienteSel?.nombre}</strong> tiene{" "}

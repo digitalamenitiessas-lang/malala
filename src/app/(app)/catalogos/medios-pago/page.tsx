@@ -178,6 +178,35 @@ export default async function MediosPagoPage() {
         </form>
       </section>
 
+      {/* Un medio sin cuenta no rompe nada visible: la venta se guarda igual y
+          la plata simplemente no aparece en la caja. Por eso conviene gritarlo
+          acá, que es donde se arregla. El medio GIFT queda afuera: ese NO tiene
+          que tener cuenta, porque canjear una tarjeta no mueve plata nueva. */}
+      {(() => {
+        const huerfanos = medios.filter(
+          (m) => m.activo && !m.cuenta_id && m.codigo.toUpperCase() !== "GIFT",
+        );
+        if (huerfanos.length === 0) return null;
+        return (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-4">
+            <p className="text-sm font-medium text-brown-900">
+              {huerfanos.length === 1
+                ? "Hay un medio de pago sin cuenta destino"
+                : `Hay ${huerfanos.length} medios de pago sin cuenta destino`}
+            </p>
+            <p className="mt-1 text-xs text-brown-700">
+              Lo que se cobre con{" "}
+              {huerfanos
+                .map((m) => `${m.nombre} (${sucursalNombreById.get(m.sucursal_id) ?? m.sucursal_id})`)
+                .join(", ")}{" "}
+              <strong>no va a entrar a la caja del día</strong>: la venta queda
+              registrada pero la plata no impacta en ninguna cuenta. Asignales
+              una acá abajo.
+            </p>
+          </div>
+        );
+      })()}
+
       <div className="bg-card border border-border rounded-md overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">
