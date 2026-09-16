@@ -6,6 +6,7 @@ import { listSucursales } from "@/lib/data/sucursales";
 import { listMotivosDescuento } from "@/lib/data/motivos-descuento";
 import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { SatisfaccionVentaForm } from "@/components/forms/satisfaccion-venta";
+import { AnularVenta } from "@/components/forms/anular-venta";
 import { formatARS } from "@/lib/utils";
 
 export default async function VentaDetallePage({
@@ -120,6 +121,14 @@ export default async function VentaDetallePage({
           </p>
         </div>
       </div>
+
+      {puedeRevisar && (
+        <AnularVenta
+          ingresoId={ingreso.id}
+          total={ingreso.total}
+          anulado={ingreso.anulado}
+        />
+      )}
 
       {/* Satisfacción del cliente */}
       <SatisfaccionVentaForm

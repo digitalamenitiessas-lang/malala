@@ -3,7 +3,17 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
-import { ingresos as ingresosTable } from "@/lib/db/schema";
+import {
+  clientes as clientesTable,
+  giftCardMovimientos as giftCardMovimientosTable,
+  giftCards as giftCardsTable,
+  ingresos as ingresosTable,
+  movimientosCc as movimientosCcTable,
+  movimientosStock as movimientosStockTable,
+} from "@/lib/db/schema";
+import { deleteMovimientosByRefTx } from "./movimientos-bancarios-helpers";
+import { getCierreQueBloqueaFecha } from "./caja";
+import { applyMovementTx } from "./stock";
 import type { CreateIngresoResult } from "./ingresos";
 import { createIngreso as createIngresoImpl } from "./ingresos";
 import { buildAccessScope } from "@/lib/auth/access";
@@ -54,5 +64,157 @@ export async function setSatisfaccionVenta(
 
   revalidatePath(`/ventas/${id}`);
   revalidatePath("/ventas");
+  return { ok: true };
+}
+
+/**
+ * Anula una venta y deshace todo lo que movió.
+ *
+ * NO se edita ni se borra: la fila queda con `anulado = true`, y todas las
+ * lecturas (listado, caja, reportes, dashboard, comisiones) ya filtran por esa
+ * bandera, así que desaparece de los números pero queda el rastro de que
+ * existió. Editar en el lugar dejaría una caja que no se puede explicar: un
+ * total cambiado sin registro de qué cambió.
+ *
+ * Lo que revierte, que es todo lo que escribe createIngreso:
+ *   · movimientos bancarios del cobro, y los impuestos que hayan generado
+ *     (comparten ref_id, por eso se borran juntos)
+ *   · el cargo de cuenta corriente y el saldo del cliente, si se fió
+ *   · el saldo de la gift card, si se canjeó una
+ *   · el stock consumido por receta, con un movimiento que lo devuelve
+ *
+ * El freno es el cierre de caja: si el día ya se cerró, sus totales quedaron
+ * congelados y anular acá los dejaría sin respaldo. Primero hay que reabrir
+ * ese cierre.
+ */
+export async function anularIngreso(
+  ingresoId: string,
+  motivo?: string,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+
+  const db = getDb();
+  const [venta] = await db
+    .select()
+    .from(ingresosTable)
+    .where(eq(ingresosTable.id, ingresoId))
+    .limit(1);
+  if (!venta) return failure("Venta no encontrada");
+  if (!scope.sucursalIdsPermitidas.includes(venta.sucursalId)) {
+    return failure("No tenés acceso a esa venta");
+  }
+  if (venta.anulado) return failure("Esta venta ya estaba anulada");
+
+  const cierre = await getCierreQueBloqueaFecha(
+    venta.sucursalId,
+    venta.fecha.toISOString(),
+  );
+  if (cierre) {
+    return failure(
+      `La caja del ${cierre.fecha} ya está cerrada y esta venta entró en ese arqueo. Reabrí ese cierre desde Caja y volvé a intentarlo.`,
+    );
+  }
+
+  const nota = motivo?.trim();
+
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Plata: el cobro y sus impuestos comparten ref_id.
+      await deleteMovimientosByRefTx(tx, "ingreso", ingresoId);
+
+      // 2. Fiado: se borra el cargo y se le devuelve el saldo al cliente.
+      const cargos = await tx
+        .select()
+        .from(movimientosCcTable)
+        .where(eq(movimientosCcTable.refId, ingresoId));
+      for (const cargo of cargos) {
+        const [cli] = await tx
+          .select({ saldoCc: clientesTable.saldoCc })
+          .from(clientesTable)
+          .where(eq(clientesTable.id, cargo.clienteId))
+          .limit(1);
+        if (cli) {
+          await tx
+            .update(clientesTable)
+            .set({ saldoCc: cli.saldoCc - cargo.monto })
+            .where(eq(clientesTable.id, cargo.clienteId));
+        }
+      }
+      if (cargos.length > 0) {
+        await tx
+          .delete(movimientosCcTable)
+          .where(eq(movimientosCcTable.refId, ingresoId));
+      }
+
+      // 3. Gift cards: vuelve el saldo que se había canjeado.
+      const canjes = await tx
+        .select()
+        .from(giftCardMovimientosTable)
+        .where(eq(giftCardMovimientosTable.ingresoId, ingresoId));
+      for (const canje of canjes) {
+        const [gc] = await tx
+          .select({ saldo: giftCardsTable.saldo, importe: giftCardsTable.importe })
+          .from(giftCardsTable)
+          .where(eq(giftCardsTable.id, canje.giftCardId))
+          .limit(1);
+        if (!gc) continue;
+        // El canje guardó el monto en positivo; se devuelve sin pasarse del
+        // importe original de la tarjeta.
+        const devuelto = Math.min(gc.saldo + Math.abs(canje.monto), gc.importe);
+        await tx
+          .update(giftCardsTable)
+          .set({ saldo: devuelto })
+          .where(eq(giftCardsTable.id, canje.giftCardId));
+      }
+      if (canjes.length > 0) {
+        await tx
+          .delete(giftCardMovimientosTable)
+          .where(eq(giftCardMovimientosTable.ingresoId, ingresoId));
+      }
+
+      // 4. Stock: se devuelve con un movimiento propio en vez de borrar el de
+      //    la venta. El stock es un libro: que se vea que salió y volvió.
+      const consumos = await tx
+        .select()
+        .from(movimientosStockTable)
+        .where(eq(movimientosStockTable.refId, ingresoId));
+      for (const consumo of consumos) {
+        await applyMovementTx(tx, {
+          insumo_id: consumo.insumoId,
+          sucursal_id: consumo.sucursalId,
+          delta: -consumo.cantidad,
+          tipo: "ajuste_manual",
+          motivo: `Devolución por venta anulada`,
+          ref_tipo: "ingreso_anulado",
+          ref_id: ingresoId,
+          usuario_id: user.id,
+        });
+      }
+
+      // 5. La venta queda, marcada.
+      await tx
+        .update(ingresosTable)
+        .set({
+          anulado: true,
+          observacion: nota
+            ? `${venta.observacion ? `${venta.observacion} · ` : ""}ANULADA: ${nota}`
+            : `${venta.observacion ? `${venta.observacion} · ` : ""}ANULADA`,
+        })
+        .where(eq(ingresosTable.id, ingresoId));
+    });
+  } catch (error) {
+    return failure(
+      error instanceof Error ? error.message : "No se pudo anular la venta",
+    );
+  }
+
+  revalidatePath(`/ventas/${ingresoId}`);
+  revalidatePath("/ventas");
+  revalidatePath("/caja");
+  revalidatePath("/bancos");
+  revalidatePath("/stock");
+  revalidatePath("/dashboard");
+  revalidatePath("/catalogos/clientes");
   return { ok: true };
 }

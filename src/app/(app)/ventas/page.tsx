@@ -18,6 +18,7 @@ interface SearchParams {
   empleado?: string;
   cliente?: string;
   revision?: "ok" | "error" | "sin";
+  anuladas?: string;
 }
 
 const RANGOS: Array<{ value: NonNullable<SearchParams["rango"]>; label: string }> = [
@@ -83,6 +84,7 @@ export default async function VentasPage({
     desde,
     hasta,
     revision: !esEmpleado ? sp.revision : undefined,
+    incluirAnulados: !esEmpleado && sp.anuladas === "1",
   });
 
   // Vista personal del empleado: sólo sus líneas y su comisión
@@ -400,6 +402,21 @@ export default async function VentasPage({
             <option value="sin">Sin dato</option>
           </select>
         </div>
+        {/* Una venta anulada sale de todos los números pero tiene que poder
+            encontrarse: si no, el rastro que justifica anular en vez de editar
+            queda inalcanzable. */}
+        {!esEmpleado && (
+          <label className="flex items-center gap-2 pb-2 text-sm">
+            <input
+              type="checkbox"
+              name="anuladas"
+              value="1"
+              defaultChecked={sp.anuladas === "1"}
+              className="h-4 w-4 rounded border-border accent-sage-500"
+            />
+            <span>Ver anuladas</span>
+          </label>
+        )}
         <button
           type="submit"
           className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium uppercase tracking-wider hover:bg-brown-700 transition-colors"
@@ -481,6 +498,11 @@ export default async function VentasPage({
                     </td>
                     <td className="px-4 py-3 font-medium">
                       {row.cliente?.nombre ?? "Consumidor Final"}
+                      {row.ingreso.anulado && (
+                        <span className="ml-2 rounded bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                          Anulada
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                       {row.lineas.length}
