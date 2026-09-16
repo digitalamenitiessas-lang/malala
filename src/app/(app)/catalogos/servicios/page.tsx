@@ -108,7 +108,23 @@ export default async function ServiciosPage({
                           <span className="text-muted-foreground/50">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">{s.nombre}</td>
+                      {/* El nombre abre la edición. Los botones de acción viven
+                          en la última columna de una tabla de 52rem: desde el
+                          celular hay que arrastrarla hasta el extremo derecho
+                          para verlos, y en la práctica no se encuentran. Acá se
+                          llega tocando lo primero que se busca, el servicio. */}
+                      <td className="px-4 py-3">
+                        {user.rol === "admin" ? (
+                          <Link
+                            href={`/catalogos/servicios/${s.id}`}
+                            className="underline decoration-transparent underline-offset-2 transition-colors hover:decoration-inherit"
+                          >
+                            {s.nombre}
+                          </Link>
+                        ) : (
+                          s.nombre
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatARS(s.precio_lista)}
                       </td>
