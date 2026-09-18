@@ -884,6 +884,7 @@ export function seed(): Store {
       mp_id: mpTR.id,
       observacion: "Reposicion coloracion",
       pagado: true,
+      anulado: false,
       usuario_id: userEncargadaCentro.id,
     },
     {
@@ -895,6 +896,7 @@ export function seed(): Store {
       mp_id: mpEF.id,
       observacion: "Limpieza y mantenimiento",
       pagado: true,
+      anulado: false,
       usuario_id: userEncargadaNorte.id,
     },
     {
@@ -906,6 +908,7 @@ export function seed(): Store {
       mp_id: mpMP.id,
       observacion: "Amenidades clientes",
       pagado: true,
+      anulado: false,
       usuario_id: userAdmin.id,
     },
   ];

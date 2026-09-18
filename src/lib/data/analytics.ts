@@ -176,6 +176,8 @@ export async function getAnalyticsSnapshot(
     inArray(egresosTable.sucursalId, scope.sucursalIdsPermitidas),
     gte(egresosTable.fecha, desde),
     lte(egresosTable.fecha, hasta),
+    // Los anulados no cuentan: ver drizzle/0034_egresos_anulado.sql.
+    eq(egresosTable.anulado, false),
   ];
   if (sucursalId) {
     egresoFilters.push(eq(egresosTable.sucursalId, sucursalId));

@@ -10,14 +10,18 @@ import {
 import { requireUser } from "@/lib/auth/session";
 import { hoyAr } from "@/lib/fecha-ar";
 import {
+  anticipos as anticiposTable,
   aperturasCaja as aperturasCajaTable,
   cierresCaja as cierresCajaTable,
   egresos as egresosTable,
+  liquidaciones as liquidacionesTable,
+  movimientosStock as movimientosStockTable,
   insumos as insumosTable,
   mediosPago as mediosPagoTable,
   proveedores as proveedoresTable,
   rubrosGasto as rubrosGastoTable,
   sucursales as sucursalesTable,
+  viaticos as viaticosTable,
 } from "@/lib/db/schema";
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
 import { egresoSchema } from "@/lib/validations/egreso";
@@ -44,6 +48,8 @@ export interface EgresoFiltros {
   desde?: string; // ISO
   hasta?: string; // ISO
   soloPendientes?: boolean;
+  /** Por defecto los anulados no se listan: no cuentan en ningún número. */
+  incluirAnulados?: boolean;
 }
 
 function createId() {
@@ -67,6 +73,7 @@ function mapEgreso(row: typeof egresosTable.$inferSelect): Egreso {
     mp2_cuenta_id: row.mp2CuentaId ?? undefined,
     observacion: row.observacion ?? undefined,
     pagado: row.pagado,
+    anulado: row.anulado,
     usuario_id: row.usuarioId,
   };
 }
@@ -236,6 +243,9 @@ export async function listEgresos(
   }
 
   const filters = [inArray(egresosTable.sucursalId, scope.sucursalIdsPermitidas)];
+  if (!filtros.incluirAnulados) {
+    filters.push(eq(egresosTable.anulado, false));
+  }
   if (filtros.sucursalId) {
     filters.push(eq(egresosTable.sucursalId, filtros.sucursalId));
   }
@@ -607,5 +617,173 @@ export async function togglePagadoEgreso(
   revalidatePath("/caja");
   revalidatePath("/catalogos/proveedores");
   revalidatePath("/bancos");
+  return { ok: true };
+}
+
+/**
+ * Anula un gasto y deshace lo que movió.
+ *
+ * No se borra: se marca, y las lecturas lo filtran (listEgresos, analytics, el
+ * total por proveedor y el efectivo de la liquidación). Así el gasto sale de
+ * todos los números pero queda el rastro de que existió, igual que las ventas.
+ *
+ * Revierte:
+ *   · los movimientos bancarios y sus impuestos, si estaba pagado
+ *   · el stock que sumó la compra, con un movimiento que lo descuenta
+ *   · la deuda con el proveedor, si estaba pendiente de pago
+ *
+ * Lo que NO revierte, y conviene saberlo: el precio del insumo. Una compra
+ * pisa el precio del envase con lo que se pagó, y el anterior no queda guardado
+ * en ningún lado, así que no hay a qué volver. Si el precio quedó mal, se
+ * corrige a mano en el insumo.
+ */
+export async function anularEgreso(
+  egresoId: string,
+  motivo?: string,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+  const db = getDb();
+
+  const [egreso] = await db
+    .select()
+    .from(egresosTable)
+    .where(eq(egresosTable.id, egresoId))
+    .limit(1);
+  if (!egreso) return { ok: false, errors: { _: ["Gasto no encontrado"] } };
+  if (!isSucursalAllowed(scope, egreso.sucursalId)) {
+    return { ok: false, errors: { _: ["No tenés acceso a ese gasto"] } };
+  }
+  if (egreso.anulado) {
+    return { ok: false, errors: { _: ["Este gasto ya estaba anulado"] } };
+  }
+
+  // Los gastos que nacen de un viático, un anticipo o una liquidación los
+  // maneja esa pantalla: anularlos por acá dejaría al viático o a la
+  // liquidación apuntando a un gasto anulado, sin enterarse.
+  const [dueñoViatico] = await db
+    .select({ id: viaticosTable.id })
+    .from(viaticosTable)
+    .where(eq(viaticosTable.egresoId, egresoId))
+    .limit(1);
+  const [dueñoAnticipo] = await db
+    .select({ id: anticiposTable.id })
+    .from(anticiposTable)
+    .where(eq(anticiposTable.egresoId, egresoId))
+    .limit(1);
+  const [dueñoLiquidacion] = await db
+    .select({ id: liquidacionesTable.id })
+    .from(liquidacionesTable)
+    .where(eq(liquidacionesTable.egresoId, egresoId))
+    .limit(1);
+  const dueño = dueñoViatico
+    ? 'viáticos'
+    : dueñoAnticipo
+      ? 'anticipos'
+      : dueñoLiquidacion
+        ? 'liquidaciones'
+        : null;
+  if (dueño) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          `Este gasto lo generó un registro de ${dueño}. Anulalo desde ahí, no desde Gastos.`,
+        ],
+      },
+    };
+  }
+
+  // La caja de ese día no puede estar cerrada: sus totales quedaron congelados.
+  const ymdEgreso = egreso.fecha.toLocaleDateString('en-CA', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+  });
+  const [cierre] = await db
+    .select({ fecha: cierresCajaTable.fecha })
+    .from(cierresCajaTable)
+    .where(
+      and(
+        eq(cierresCajaTable.sucursalId, egreso.sucursalId),
+        eq(cierresCajaTable.fecha, ymdEgreso),
+      ),
+    )
+    .limit(1);
+  if (cierre) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          `La caja del ${cierre.fecha} ya está cerrada y este gasto entró en ese arqueo. Reabrí ese cierre desde Caja y volvé a intentarlo.`,
+        ],
+      },
+    };
+  }
+
+  const nota = motivo?.trim();
+
+  try {
+    await db.transaction(async (tx) => {
+      // Plata: sólo hay movimientos si estaba pagado. Los impuestos comparten
+      // ref_id, así que se van con el mismo delete.
+      await deleteMovimientosByRefTx(tx, "egreso", egresoId);
+
+      // Stock: se descuenta lo que la compra había sumado, con su propio
+      // movimiento para que en el libro se vea que entró y salió.
+      const compras = await tx
+        .select()
+        .from(movimientosStockTable)
+        .where(eq(movimientosStockTable.refId, egresoId));
+      for (const compra of compras) {
+        await applyMovementTx(tx, {
+          insumo_id: compra.insumoId,
+          sucursal_id: compra.sucursalId,
+          delta: -compra.cantidad,
+          tipo: "ajuste_manual",
+          motivo: "Salida por gasto anulado",
+          ref_tipo: "egreso_anulado",
+          ref_id: egresoId,
+          usuario_id: user.id,
+        });
+      }
+
+      // Deuda con el proveedor: sólo se había sumado si quedó sin pagar.
+      if (!egreso.pagado && egreso.proveedorId) {
+        const [prov] = await tx
+          .select({ deuda: proveedoresTable.deudaPendiente })
+          .from(proveedoresTable)
+          .where(eq(proveedoresTable.id, egreso.proveedorId))
+          .limit(1);
+        if (prov) {
+          await tx
+            .update(proveedoresTable)
+            .set({ deudaPendiente: prov.deuda - egreso.valor })
+            .where(eq(proveedoresTable.id, egreso.proveedorId));
+        }
+      }
+
+      await tx
+        .update(egresosTable)
+        .set({
+          anulado: true,
+          observacion: `${egreso.observacion ? `${egreso.observacion} · ` : ""}ANULADO${nota ? `: ${nota}` : ""}`,
+        })
+        .where(eq(egresosTable.id, egresoId));
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      errors: {
+        _: [error instanceof Error ? error.message : "No se pudo anular el gasto"],
+      },
+    };
+  }
+
+  revalidatePath("/egresos");
+  revalidatePath("/caja");
+  revalidatePath("/bancos");
+  revalidatePath("/stock");
+  revalidatePath("/dashboard");
+  revalidatePath("/catalogos/proveedores");
+  revalidatePath("/catalogos/insumos");
   return { ok: true };
 }

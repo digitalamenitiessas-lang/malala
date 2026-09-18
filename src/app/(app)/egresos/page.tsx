@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Clock, Plus, Sandwich } from "lucide-react";
+import { Ban, Check, Clock, Plus, Sandwich } from "lucide-react";
 import { redirect } from "next/navigation";
 import { clampSucursalId, getAccessScopeForUser } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
@@ -11,12 +11,14 @@ import { listRubrosGasto } from "@/lib/data/rubros-gasto";
 import { listSucursales } from "@/lib/data/sucursales";
 import { formatARS } from "@/lib/utils";
 import { TogglePagadoButton } from "./toggle-pagado-button";
+import { AnularGastoButton } from "./anular-gasto-button";
 
 interface SearchParams {
   rango?: "hoy" | "semana" | "mes" | "todo";
   rubro?: string;
   proveedor?: string;
   pendientes?: string;
+  anulados?: string;
   sucursal?: string;
 }
 
@@ -79,6 +81,7 @@ export default async function EgresosPage({
       rubroId: sp.rubro,
       proveedorId: sp.proveedor,
       soloPendientes: sp.pendientes === "1",
+      incluirAnulados: sp.anulados === "1",
       desde,
       hasta,
     }),
@@ -223,6 +226,20 @@ export default async function EgresosPage({
           <span>Solo pendientes</span>
         </label>
 
+        {/* Un gasto anulado sale de todos los numeros pero tiene que poder
+            encontrarse: si no, el rastro que justifica anular en vez de borrar
+            queda inalcanzable. */}
+        <label className="flex items-center gap-2 pb-2 text-sm">
+          <input
+            type="checkbox"
+            name="anulados"
+            value="1"
+            defaultChecked={sp.anulados === "1"}
+            className="h-4 w-4 rounded border-border accent-sage-500"
+          />
+          <span>Ver anulados</span>
+        </label>
+
         <button
           type="submit"
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium uppercase tracking-wider text-primary-foreground transition-colors hover:bg-brown-700"
@@ -297,7 +314,12 @@ export default async function EgresosPage({
                     {formatARS(row.egreso.valor)}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {row.egreso.pagado ? (
+                    {row.egreso.anulado ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-destructive ring-1 ring-inset ring-destructive/30">
+                        <Ban className="h-3.5 w-3.5 stroke-[2.5]" />
+                        Anulado
+                      </span>
+                    ) : row.egreso.pagado ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wider bg-sage-100 text-sage-800 ring-1 ring-inset ring-sage-700/30">
                         <Check className="h-3.5 w-3.5 stroke-[2.5]" />
                         Pagado
@@ -311,10 +333,25 @@ export default async function EgresosPage({
                   </td>
                   {puedeCargar ? (
                     <td className="px-4 py-3 text-right">
-                      <TogglePagadoButton
-                        egresoId={row.egreso.id}
-                        pagado={row.egreso.pagado}
-                      />
+                      <div className="flex flex-col items-end gap-1.5">
+                        {!row.egreso.anulado && (
+                          <TogglePagadoButton
+                            egresoId={row.egreso.id}
+                            pagado={row.egreso.pagado}
+                          />
+                        )}
+                        <AnularGastoButton
+                          egresoId={row.egreso.id}
+                          detalle={
+                            row.insumo?.nombre ??
+                            row.egreso.observacion ??
+                            row.rubro?.rubro ??
+                            "gasto"
+                          }
+                          monto={row.egreso.valor}
+                          anulado={row.egreso.anulado}
+                        />
+                      </div>
                     </td>
                   ) : null}
                 </tr>

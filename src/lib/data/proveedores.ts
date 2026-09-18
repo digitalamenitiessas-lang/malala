@@ -78,7 +78,9 @@ export async function listProveedoresConTotal(opts?: {
         proveedorId: egresosTable.proveedorId,
         valor: egresosTable.valor,
       })
-      .from(egresosTable),
+      .from(egresosTable)
+      // Un gasto anulado no le debe plata a nadie.
+      .where(eq(egresosTable.anulado, false)),
   ]);
   const proveedoresRows = opts?.sucursalId
     ? await (async () => {

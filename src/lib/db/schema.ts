@@ -714,6 +714,9 @@ export const egresos = pgTable("egresos", {
   mp2CuentaId: text("mp2_cuenta_id").references(() => cuentasBancarias.id),
   observacion: text("observacion"),
   pagado: boolean("pagado").notNull().default(false),
+  // Anulado: el gasto no se borra, se marca, y las lecturas lo filtran. Ver
+  // drizzle/0034_egresos_anulado.sql.
+  anulado: boolean("anulado").notNull().default(false),
   usuarioId: uuid("usuario_id")
     .notNull()
     .references(() => profiles.userId),

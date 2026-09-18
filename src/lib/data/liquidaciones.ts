@@ -1114,6 +1114,7 @@ export async function getEfectivoEsperadoPeriodo(args: {
       and(
         eq(egresosTable.sucursalId, args.sucursalId),
         eq(egresosTable.pagado, true),
+        eq(egresosTable.anulado, false),
         eq(egresosTable.mpId, mpEf.id),
         gte(egresosTable.fecha, desdeIso),
         lte(egresosTable.fecha, hastaIso),

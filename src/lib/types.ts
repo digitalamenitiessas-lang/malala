@@ -467,6 +467,7 @@ export interface Egreso {
   mp2_cuenta_id?: ID;
   observacion?: string;
   pagado: boolean;
+  anulado: boolean;
   usuario_id: ID;
 }
 
