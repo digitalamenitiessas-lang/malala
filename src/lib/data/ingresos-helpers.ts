@@ -474,7 +474,10 @@ export function rendimientoPorEmpleado(
         costoInsumos: 0,
         netoNegocio: 0,
       };
-      entry.servicios += linea.cantidad;
+      // Solo las líneas de servicio cuentan como servicios hechos. Una venta de
+      // producto con vendedora asignada suma facturado y comisión, pero no es
+      // un servicio: contar 3 shampoos como 3 servicios infla la columna.
+      if (!linea.insumo) entry.servicios += linea.cantidad;
       entry.facturado += facturadoLinea;
       entry.comisiones += linea.comision_monto;
       entry.costoInsumos += linea.costoInsumos;

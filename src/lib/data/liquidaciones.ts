@@ -16,6 +16,7 @@ import {
   egresos as egresosTable,
   ingresoLineas as ingresoLineasTable,
   ingresos as ingresosTable,
+  insumos as insumosTable,
   liquidacionLineas as liquidacionLineasTable,
   liquidaciones as liquidacionesTable,
   mediosPago as mediosPagoTable,
@@ -174,6 +175,7 @@ async function fetchLineasPendientes(args: {
       ingresoId: ingresoLineasTable.ingresoId,
       fecha: ingresosTable.fecha,
       servicioNombre: serviciosTable.nombre,
+      insumoNombre: insumosTable.nombre,
       precio: ingresoLineasTable.precioEfectivo,
       pct: ingresoLineasTable.comisionPct,
       monto: ingresoLineasTable.comisionMonto,
@@ -181,7 +183,11 @@ async function fetchLineasPendientes(args: {
     })
     .from(ingresoLineasTable)
     .innerJoin(ingresosTable, eq(ingresoLineasTable.ingresoId, ingresosTable.id))
-    .innerJoin(serviciosTable, eq(ingresoLineasTable.servicioId, serviciosTable.id))
+    // leftJoin y no innerJoin: una línea de venta de producto no tiene
+    // servicio_id, y con el innerJoin quedaba afuera de la liquidación — la
+    // comisión se registraba en la venta y no se le pagaba nunca.
+    .leftJoin(serviciosTable, eq(ingresoLineasTable.servicioId, serviciosTable.id))
+    .leftJoin(insumosTable, eq(ingresoLineasTable.insumoId, insumosTable.id))
     .leftJoin(
       liquidacionLineasTable,
       eq(liquidacionLineasTable.ingresoLineaId, ingresoLineasTable.id),
@@ -202,7 +208,7 @@ async function fetchLineasPendientes(args: {
       ingreso_linea_id: r.lineaId,
       ingreso_id: r.ingresoId,
       fecha: ymd(r.fecha),
-      servicio_nombre: r.servicioNombre,
+      servicio_nombre: r.servicioNombre ?? r.insumoNombre ?? "—",
       precio: r.precio,
       comision_pct: r.pct,
       comision_monto: r.monto,

@@ -754,17 +754,29 @@ export async function createIngreso(
         data.lineas.map((linea) => {
           if (linea.tipo === "producto") {
             const subtotalProd = linea.precio_efectivo * linea.cantidad;
+            // Sin vendedora asignada no hay comisión, aunque venga un % en el
+            // payload: la comisión es de alguien o no es.
+            const pctProd = linea.empleado_id ? linea.comision_pct : 0;
             return {
               id: createId(),
               ingresoId,
               servicioId: null,
               insumoId: linea.insumo_id,
-              empleadoId: null,
+              empleadoId: linea.empleado_id ?? null,
               precioEfectivo: linea.precio_efectivo,
               cantidad: linea.cantidad,
               subtotal: subtotalProd,
-              comisionPct: 0,
-              comisionMonto: 0,
+              comisionPct: pctProd,
+              // Sobre lo efectivamente cobrado por la línea: el subtotal menos
+              // su parte del descuento del ticket. Mismo criterio que una línea
+              // de servicio con "la empleada absorbe el descuento".
+              comisionMonto: comisionMontoServicio({
+                precioEfectivo: subtotalProd,
+                comisionPct: pctProd,
+                soportaDescuento: true,
+                subtotal,
+                descuentoMonto,
+              }),
               promoServicioId: null,
             };
           }

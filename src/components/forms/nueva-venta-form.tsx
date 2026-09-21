@@ -49,6 +49,11 @@ type LineaProductoForm = {
   // Igual que en los servicios. Solo se puede mover a "efectivo" si el producto
   // tiene cargado un precio efectivo; si no, la línea queda siempre en "lista".
   precio_tipo: "lista" | "efectivo";
+  // Quién vendió el producto y con qué %. Opcional: una reventa de mostrador
+  // sin vendedora asignada es normal. El % arranca en 0 y lo pone el salón,
+  // porque la comisión de venta no es la misma que la de servicio.
+  empleado_id: string;
+  comision_pct: number;
 };
 
 type LineaForm = LineaServicioForm | LineaProductoForm;
@@ -119,6 +124,8 @@ const newLineaProducto = (): LineaProductoForm => ({
   cantidad: 1,
   precio: 0,
   precio_tipo: "lista",
+  empleado_id: "",
+  comision_pct: 0,
 });
 
 /** El precio del producto según el botón elegido, con "lista" de respaldo. */
@@ -149,6 +156,20 @@ function comisionLineaServicio(
     subtotalLineas > 0 ? descMonto * (sub / subtotalLineas) : 0;
   const base = l.soporta_descuento ? sub - descProrrateado : precioLista;
   return base * ((Number(l.comision_pct) || 0) / 100);
+}
+
+// Comisión de una línea de producto. Siempre sobre lo que realmente se cobró
+// por esa línea (subtotal menos su parte del descuento del ticket): no tiene
+// sentido pagarle comisión sobre plata que el local no cobró.
+function comisionLineaProducto(
+  l: LineaProductoForm,
+  subtotalLineas: number,
+  descMonto: number,
+): number {
+  const sub = subtotalLinea(l);
+  const descProrrateado =
+    subtotalLineas > 0 ? descMonto * (sub / subtotalLineas) : 0;
+  return (sub - descProrrateado) * ((Number(l.comision_pct) || 0) / 100);
 }
 
 export function NuevaVentaForm({
@@ -276,7 +297,10 @@ export function NuevaVentaForm({
       : Number(descValor) || 0;
   const total = Math.max(0, subtotal - descMonto); // neto de servicios/productos (antes de recargo)
 
-  const comisionDe = (l: LineaServicioForm) => {
+  const comisionDe = (l: LineaForm) => {
+    if (l.tipo === "producto") {
+      return comisionLineaProducto(l, subtotal, descMonto);
+    }
     const s = servicios.find((x) => x.id === l.servicio_id);
     return comisionLineaServicio(
       l,
@@ -285,10 +309,7 @@ export function NuevaVentaForm({
       descMonto,
     );
   };
-  const totalComisiones = lineas.reduce(
-    (acc, l) => (l.tipo === "servicio" ? acc + comisionDe(l) : acc),
-    0,
-  );
+  const totalComisiones = lineas.reduce((acc, l) => acc + comisionDe(l), 0);
   const paraElLocal = total - totalComisiones;
 
   // Cliente seleccionado y si admite cuenta corriente.
@@ -377,7 +398,7 @@ export function NuevaVentaForm({
   const comisionPorEmpleado = lineas.reduce<
     Map<string, { nombre: string; total: number; lineas: number }>
   >((acc, l) => {
-    if (l.tipo !== "servicio" || !l.empleado_id) return acc;
+    if (!l.empleado_id) return acc;
     const emp = empleados.find((e) => e.id === l.empleado_id);
     if (!emp) return acc;
     const com = comisionDe(l);
@@ -599,6 +620,8 @@ export function NuevaVentaForm({
               insumo_id: l.insumo_id,
               cantidad: Number(l.cantidad) || 0,
               precio_efectivo: Number(l.precio) || 0,
+              empleado_id: l.empleado_id || undefined,
+              comision_pct: Number(l.comision_pct) || 0,
             };
           }
           return {
@@ -812,6 +835,9 @@ export function NuevaVentaForm({
                   onCantidad={(v) => updateLinea(idx, { cantidad: v })}
                   onPrecio={(v) => updateLinea(idx, { precio: v })}
                   onPrecioTipo={(t) => handlePrecioTipoProducto(idx, t)}
+                  empleados={empleadosActivos}
+                  onEmpleado={(id) => updateLinea(idx, { empleado_id: id })}
+                  onComisionPct={(v) => updateLinea(idx, { comision_pct: v })}
                   onRemove={() => removeLinea(idx)}
                   removable={lineas.length > 1}
                 />
@@ -944,7 +970,7 @@ export function NuevaVentaForm({
 
             {repartoEmpleados.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">
-                Asigná empleados a las líneas de servicio para ver el reparto.
+                Asigná empleados a las líneas para ver el reparto.
               </p>
             ) : (
               repartoEmpleados.map((r) => (
@@ -1832,19 +1858,25 @@ function GiftCardSelector({
 function LineaProductoRow({
   linea,
   productos,
+  empleados,
   onProducto,
   onCantidad,
   onPrecio,
   onPrecioTipo,
+  onEmpleado,
+  onComisionPct,
   onRemove,
   removable,
 }: {
   linea: LineaProductoForm;
   productos: Insumo[];
+  empleados: Empleado[];
   onProducto: (id: string) => void;
   onCantidad: (v: number) => void;
   onPrecio: (v: number) => void;
   onPrecioTipo: (tipo: "lista" | "efectivo") => void;
+  onEmpleado: (id: string) => void;
+  onComisionPct: (v: number) => void;
   onRemove: () => void;
   removable: boolean;
 }) {
@@ -1921,36 +1953,78 @@ function LineaProductoRow({
       </div>
     </div>
 
-      {dosPrecios && producto && (
+      {linea.insumo_id && (
         <div className="grid grid-cols-12 gap-2">
-          <div className="col-span-12 sm:col-start-3 sm:col-span-6 flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-              Precio
-            </span>
-            <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
-              <button
-                type="button"
-                onClick={() => onPrecioTipo("lista")}
-                className={`px-2.5 py-1 transition-colors ${
-                  linea.precio_tipo === "lista"
-                    ? "bg-ink text-white"
-                    : "bg-card hover:bg-cream"
-                }`}
-              >
-                Lista · {formatARS(producto.precio_venta!)}
-              </button>
-              <button
-                type="button"
-                onClick={() => onPrecioTipo("efectivo")}
-                className={`px-2.5 py-1 border-l border-border transition-colors ${
-                  linea.precio_tipo === "efectivo"
-                    ? "bg-ink text-white"
-                    : "bg-card hover:bg-cream"
-                }`}
-              >
-                Efectivo · {formatARS(producto.precio_venta_efectivo!)}
-              </button>
+          {dosPrecios && producto && (
+            <div className="col-span-12 sm:col-start-3 sm:col-span-4 flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                Precio
+              </span>
+              <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+                <button
+                  type="button"
+                  onClick={() => onPrecioTipo("lista")}
+                  className={`px-2.5 py-1 transition-colors ${
+                    linea.precio_tipo === "lista"
+                      ? "bg-ink text-white"
+                      : "bg-card hover:bg-cream"
+                  }`}
+                >
+                  Lista · {formatARS(producto.precio_venta!)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPrecioTipo("efectivo")}
+                  className={`px-2.5 py-1 border-l border-border transition-colors ${
+                    linea.precio_tipo === "efectivo"
+                      ? "bg-ink text-white"
+                      : "bg-card hover:bg-cream"
+                  }`}
+                >
+                  Efectivo · {formatARS(producto.precio_venta_efectivo!)}
+                </button>
+              </div>
             </div>
+          )}
+
+          {/* Quién lo vendió. Es opcional: sin empleada la venta se registra
+              igual y la comisión no existe, que es lo que pasaba siempre. */}
+          <div
+            className={`col-span-12 flex items-center gap-2 ${
+              dosPrecios ? "sm:col-span-5" : "sm:col-start-3 sm:col-span-9"
+            }`}
+          >
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+              Vendió
+            </span>
+            <select
+              value={linea.empleado_id}
+              onChange={(e) => onEmpleado(e.target.value)}
+              className="min-w-0 flex-1 rounded-md border border-border bg-card px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">— Sin comisión —</option>
+              {empleados.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.nombre}
+                </option>
+              ))}
+            </select>
+            {linea.empleado_id && (
+              <div className="flex items-center gap-1 whitespace-nowrap">
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="100"
+                  value={linea.comision_pct}
+                  onChange={(e) => onComisionPct(Number(e.target.value))}
+                  className="w-16 rounded-md border border-border bg-card px-2 py-1 text-right tabular-nums text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <span className="text-[10px] text-muted-foreground">
+                  % comisión
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

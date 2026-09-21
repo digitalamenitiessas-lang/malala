@@ -21,6 +21,13 @@ export const lineaProductoSchema = z.object({
   insumo_id: z.string().min(1, "Producto requerido"),
   cantidad: z.coerce.number().positive("Cantidad debe ser mayor a 0"),
   precio_efectivo: z.coerce.number().nonnegative(),
+  // Quién vendió el producto. Opcional, a diferencia del servicio: una reventa
+  // de mostrador sin vendedora asignada es normal y no tiene comisión.
+  empleado_id: z
+    .string()
+    .nullish()
+    .transform((s) => (s ? s : undefined)),
+  comision_pct: z.coerce.number().min(0).max(100).default(0),
 });
 
 export const lineaSchema = z.discriminatedUnion("tipo", [
