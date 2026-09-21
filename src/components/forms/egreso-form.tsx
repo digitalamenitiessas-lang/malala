@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useActionStateFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyField, Field, FormButtons, GlobalError, SelectField } from "./field";
 import { formatARS } from "@/lib/utils";
@@ -83,6 +84,10 @@ export function EgresoForm({
   // La sucursal es siempre la activa (se cambia globalmente, solo superadmin).
   const sucursalId = defaultSucursalId;
   const [proveedorId, setProveedorId] = useState(defaultProveedorId ?? "");
+  const [rubroId, setRubroId] = useState("");
+  const esRubroSueldos =
+    rubros.find((r) => r.id === rubroId)?.rubro.trim().toLowerCase() ===
+    "sueldos";
   const [insumoId, setInsumoId] = useState("");
   const [nuevoUnidad, setNuevoUnidad] = useState("ml");
   const [nuevoTamano, setNuevoTamano] = useState<number>(0);
@@ -194,6 +199,8 @@ export function EgresoForm({
           <SelectField
             label="Rubro"
             name="rubro_id"
+            value={rubroId}
+            onChange={(e) => setRubroId(e.currentTarget.value)}
             error={errors.rubro_id}
             options={rubros
               .filter((r) => r.activo)
@@ -204,6 +211,23 @@ export function EgresoForm({
             placeholder="Seleccioná rubro"
             required
           />
+          {/* Un adelanto cargado acá sale de la caja pero no queda atado a
+              nadie, así que después no se descuenta del sueldo. El camino que
+              sí lo ata es la ficha de la empleada. */}
+          {esRubroSueldos && (
+            <p className="-mt-3 text-xs text-muted-foreground">
+              ¿Es un adelanto a una empleada? Cargalo desde{" "}
+              <Link
+                href="/catalogos/empleados"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                su ficha
+              </Link>
+              , en <strong>Anticipos</strong>: hace este mismo gasto y además lo
+              deja anotado a su nombre para descontarlo en la liquidación. Si lo
+              cargás acá, sale de la caja pero no se le descuenta a nadie.
+            </p>
+          )}
           <input type="hidden" name="insumo_id" value="" />
         </>
       )}
