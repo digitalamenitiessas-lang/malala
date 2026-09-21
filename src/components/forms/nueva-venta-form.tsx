@@ -117,6 +117,13 @@ function usaCuentaBanco(mp: MedioPago | undefined): boolean {
   return cod !== "EF" && cod !== "CC" && cod !== "GIFT";
 }
 
+/**
+ * Comisión por vender un producto. Regla fija del salón, distinta de la de
+ * servicios (que sale del % de cada empleada). Viene puesta en la línea y se
+ * puede cambiar a mano; sin vendedora asignada no se paga nada.
+ */
+const COMISION_PRODUCTO_PCT = 10;
+
 const newLineaProducto = (): LineaProductoForm => ({
   tempId: crypto.randomUUID(),
   tipo: "producto",
@@ -125,7 +132,7 @@ const newLineaProducto = (): LineaProductoForm => ({
   precio: 0,
   precio_tipo: "lista",
   empleado_id: "",
-  comision_pct: 0,
+  comision_pct: COMISION_PRODUCTO_PCT,
 });
 
 /** El precio del producto según el botón elegido, con "lista" de respaldo. */
