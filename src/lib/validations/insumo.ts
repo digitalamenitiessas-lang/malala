@@ -27,6 +27,11 @@ export const insumoSchema = z
     precio_venta: z
       .union([z.coerce.number().nonnegative(), z.literal("").transform(() => undefined)])
       .optional(),
+    // Opcional incluso para los de venta: el salón decide si este producto
+    // tiene un precio distinto pagando en efectivo o uno solo.
+    precio_venta_efectivo: z
+      .union([z.coerce.number().nonnegative(), z.literal("").transform(() => undefined)])
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.tipo === "venta" && (data.precio_venta == null || data.precio_venta <= 0)) {
@@ -34,6 +39,21 @@ export const insumoSchema = z
         code: "custom",
         path: ["precio_venta"],
         message: "Indicá un precio de venta mayor a 0",
+      });
+    }
+    // Un efectivo por encima del de lista es casi siempre un error de tipeo
+    // (los dos campos están uno al lado del otro). Se avisa, no se adivina.
+    if (
+      data.tipo === "venta" &&
+      data.precio_venta_efectivo != null &&
+      data.precio_venta_efectivo > 0 &&
+      data.precio_venta != null &&
+      data.precio_venta_efectivo > data.precio_venta
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["precio_venta_efectivo"],
+        message: "El precio efectivo no puede ser mayor al de lista",
       });
     }
   })
@@ -44,6 +64,11 @@ export const insumoSchema = z
     // `vendible` se deriva de `tipo` (columna legacy sincronizada).
     vendible: data.tipo === "venta",
     precio_venta: data.tipo === "venta" ? data.precio_venta : undefined,
+    // 0 y vacío son lo mismo acá: "este producto no tiene precio efectivo".
+    precio_venta_efectivo:
+      data.tipo === "venta" && data.precio_venta_efectivo
+        ? data.precio_venta_efectivo
+        : undefined,
   }));
 
 export type InsumoInput = z.infer<typeof insumoSchema>;

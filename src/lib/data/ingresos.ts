@@ -177,6 +177,7 @@ function mapInsumo(row: typeof insumosTable.$inferSelect): Insumo {
     tipo: row.tipo,
     vendible: row.vendible,
     precio_venta: row.precioVenta ?? undefined,
+    precio_venta_efectivo: row.precioVentaEfectivo ?? undefined,
   };
 }
 

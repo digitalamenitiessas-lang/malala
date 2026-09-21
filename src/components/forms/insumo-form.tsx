@@ -4,7 +4,13 @@ import { useState } from "react";
 import { CrudForm } from "./crud-form";
 import { CurrencyInput } from "./currency-input";
 import { CheckboxField, CurrencyField, Field, SelectField } from "./field";
-import type { Insumo, MedioPago, Proveedor, Sucursal } from "@/lib/types";
+import type {
+  BloqueCodigoInsumo,
+  Insumo,
+  MedioPago,
+  Proveedor,
+  Sucursal,
+} from "@/lib/types";
 import type { ActionResult } from "@/lib/data/_helpers";
 
 interface Props {
@@ -17,6 +23,8 @@ interface Props {
   sucursales?: Sucursal[];
   mediosPago?: MedioPago[];
   defaultSucursalId?: string;
+  /** Numeración actual de la sucursal, para seguir la del salón. */
+  bloquesCodigo?: BloqueCodigoInsumo[];
   action: (
     state: ActionResult | null,
     formData: FormData,
@@ -42,10 +50,17 @@ export function InsumoForm({
   sucursales,
   mediosPago,
   defaultSucursalId,
+  bloquesCodigo = [],
   action,
   submitLabel,
 }: Props) {
   const [tipo, setTipo] = useState<"bacha" | "venta">(insumo?.tipo ?? "bacha");
+  // Controlado para poder completarlo con un clic desde la numeración.
+  const [codigo, setCodigo] = useState(insumo?.codigo ?? "");
+  // Los bloques del tipo elegido: al dar de alta una tintura no sirve ver la
+  // numeración de la reventa. Si no hay ninguno de ese tipo, se muestran todos.
+  const bloquesDelTipo = bloquesCodigo.filter((b) => b.tipo === tipo);
+  const bloques = bloquesDelTipo.length > 0 ? bloquesDelTipo : bloquesCodigo;
   const mostrarCompraInicial =
     !insumo &&
     sucursales !== undefined &&
@@ -81,13 +96,53 @@ export function InsumoForm({
           <Field
             label="Código"
             name="codigo"
-            defaultValue={insumo?.codigo ?? ""}
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value)}
             error={errors.codigo}
             maxLength={20}
-            placeholder="INS001"
+            placeholder={bloques[0]?.siguiente ?? "INS001"}
             hint="Código de la planilla del salón. Opcional."
             className="uppercase"
           />
+
+          {/* La numeración es del salón, no del sistema: acá solo se le muestra
+              cómo viene numerando para que la pueda seguir. Va por bloque y no
+              como un único "siguiente código" porque cada bloque es una familia
+              — lo que sigue después de INS859 no sirve para una tintura. */}
+          {bloques.length > 0 && !insumo && (
+            <details className="-mt-2 rounded-md border border-border bg-cream/40 px-3 py-2">
+              <summary className="cursor-pointer text-xs text-muted-foreground">
+                ¿Qué código le pongo? Ver cómo viene numerado
+              </summary>
+              <ul className="mt-2 space-y-1.5">
+                {bloques.map((b) => (
+                  <li key={b.bloque} className="text-xs">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <strong className="tabular-nums">{b.bloque}</strong>
+                      <span className="text-muted-foreground">
+                        último <span className="tabular-nums">{b.ultimo}</span>
+                      </span>
+                      {codigo.trim().toUpperCase() !== b.siguiente && (
+                        <button
+                          type="button"
+                          onClick={() => setCodigo(b.siguiente)}
+                          className="tabular-nums underline underline-offset-2 hover:text-foreground"
+                        >
+                          usar {b.siguiente}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {b.cantidad} {b.cantidad === 1 ? "producto" : "productos"}
+                      {b.ejemplos.length > 0
+                        ? ` · ${b.ejemplos.join(", ")}…`
+                        : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           <div className="space-y-1.5">
             <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Proveedores
@@ -184,13 +239,22 @@ export function InsumoForm({
                 : "Producto de bacha: envase grande de uso interno. Solo estos alimentan las recetas."}
             </p>
             {tipo === "venta" && (
-              <CurrencyField
-                label="Precio de venta"
-                name="precio_venta"
-                defaultValue={insumo?.precio_venta}
-                error={errors.precio_venta}
-                hint="Precio sugerido para vender este producto en una venta"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <CurrencyField
+                  label="Precio de lista"
+                  name="precio_venta"
+                  defaultValue={insumo?.precio_venta}
+                  error={errors.precio_venta}
+                  hint="El que se cobra por defecto"
+                />
+                <CurrencyField
+                  label="Precio efectivo"
+                  name="precio_venta_efectivo"
+                  defaultValue={insumo?.precio_venta_efectivo}
+                  error={errors.precio_venta_efectivo}
+                  hint="Opcional. Si lo cargás, la venta deja elegir entre los dos con un botón, igual que en los servicios."
+                />
+              </div>
             )}
           </div>
 

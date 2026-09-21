@@ -9,7 +9,8 @@ import {
   insumos as insumosTable,
   rubrosGasto as rubrosGastoTable,
 } from "@/lib/db/schema";
-import type { Insumo } from "@/lib/types";
+import type { BloqueCodigoInsumo, Insumo } from "@/lib/types";
+import { bloquesDeCodigos } from "@/lib/codigos-insumo";
 import { insumoSchema } from "@/lib/validations/insumo";
 import { getActiveSucursalForUser } from "@/lib/auth/session";
 import {
@@ -40,6 +41,7 @@ function mapInsumo(
     tipo: row.tipo,
     vendible: row.vendible,
     precio_venta: row.precioVenta ?? undefined,
+    precio_venta_efectivo: row.precioVentaEfectivo ?? undefined,
   };
 }
 
@@ -155,6 +157,7 @@ function parse(formData: FormData) {
     activo: formData.get("activo") === "on" || formData.get("activo") === "true",
     tipo: formData.get("tipo") === "venta" ? "venta" : "bacha",
     precio_venta: formData.get("precio_venta"),
+    precio_venta_efectivo: formData.get("precio_venta_efectivo"),
   });
 }
 
@@ -251,6 +254,7 @@ export async function registrarCompraInsumo(
       tipo: "bacha",
       vendible: false,
       precioVenta: null,
+      precioVentaEfectivo: null,
     });
 
     const provNuevo = String(formData.get("proveedor_id") ?? "");
@@ -394,9 +398,19 @@ export async function aumentarPreciosProveedor(
       for (const row of vendibles) {
         const nuevoPrecioVenta =
           Math.round((row.precioVenta as number) * factor * 100) / 100;
+        // El precio efectivo sube en la misma proporción: si no, un aumento
+        // dejaría el descuento por efectivo cada vez más grande sin que nadie
+        // lo haya decidido. Mismo criterio que el aumento de servicios.
+        const nuevoPrecioEfectivo =
+          row.precioVentaEfectivo != null
+            ? Math.round(row.precioVentaEfectivo * factor * 100) / 100
+            : null;
         await tx
           .update(insumosTable)
-          .set({ precioVenta: nuevoPrecioVenta })
+          .set({
+            precioVenta: nuevoPrecioVenta,
+            precioVentaEfectivo: nuevoPrecioEfectivo,
+          })
           .where(eq(insumosTable.id, row.id));
       }
     });
@@ -468,6 +482,33 @@ export async function listInsumosVendibles(
     .filter((i) => i.activo);
 }
 
+/**
+ * La numeración de insumos de la sucursal activa, partida en bloques, con el
+ * último de cada uno y cuál sigue. El equivalente de [[getCodigosSugeridos]]
+ * de servicios. El agrupado vive en [[bloquesDeCodigos]], que está probado
+ * contra los códigos reales del salón.
+ *
+ * El código es único POR SUCURSAL, así que la sugerencia también: en una
+ * sucursal sin insumos cargados no hay nada que sugerir y devuelve vacío.
+ */
+export async function getBloquesCodigoInsumo(): Promise<BloqueCodigoInsumo[]> {
+  const user = await requireRole(["admin", "encargada"]);
+  const sucursal = await getActiveSucursalForUser(user);
+  if (!sucursal) return [];
+
+  const db = getDb();
+  const rows = await db
+    .select({
+      codigo: insumosTable.codigo,
+      nombre: insumosTable.nombre,
+      tipo: insumosTable.tipo,
+    })
+    .from(insumosTable)
+    .where(eq(insumosTable.sucursalId, sucursal.id));
+
+  return bloquesDeCodigos(rows);
+}
+
 export async function createInsumo(formData: FormData): Promise<ActionResult> {
   const user = await requireRole(["admin"]);
   requireSupabaseRuntime(
@@ -501,6 +542,7 @@ export async function createInsumo(formData: FormData): Promise<ActionResult> {
       tipo: parsed.data.tipo,
       vendible: parsed.data.vendible,
       precioVenta: parsed.data.precio_venta ?? null,
+      precioVentaEfectivo: parsed.data.precio_venta_efectivo ?? null,
     });
   } catch (err) {
     if (esCodigoDuplicado(err))
@@ -584,6 +626,7 @@ export async function updateInsumo(
         tipo: parsed.data.tipo,
         vendible: parsed.data.vendible,
         precioVenta: parsed.data.precio_venta ?? null,
+        precioVentaEfectivo: parsed.data.precio_venta_efectivo ?? null,
       })
       .where(eq(insumosTable.id, insumoId));
   } catch (err) {

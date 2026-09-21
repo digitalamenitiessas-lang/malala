@@ -130,6 +130,9 @@ export default async function InsumosPage({
                     {i.tipo === "venta" ? (
                       <span className="bg-cream text-sage-900 border border-border px-2 py-0.5 rounded text-xs">
                         Venta{i.precio_venta != null ? ` · ${formatARS(i.precio_venta)}` : ""}
+                        {i.precio_venta_efectivo != null
+                          ? ` / ${formatARS(i.precio_venta_efectivo)} ef.`
+                          : ""}
                       </span>
                     ) : (
                       <span className="bg-stone-100 text-stone-600 px-2 py-0.5 rounded text-xs">

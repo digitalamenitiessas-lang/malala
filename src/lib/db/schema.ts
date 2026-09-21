@@ -361,6 +361,9 @@ export const insumos = pgTable(
     // con lecturas existentes. El código nuevo clasifica por `tipo`.
     vendible: boolean("vendible").notNull().default(false),
     precioVenta: doublePrecision("precio_venta"),
+    // Segundo precio para la reventa, el equivalente de servicios.precio_efectivo.
+    // null = el producto tiene un solo precio. Ver drizzle/0035.
+    precioVentaEfectivo: doublePrecision("precio_venta_efectivo"),
   },
   (table) => ({
     // Cada sede tiene su catálogo, así que el código es único por sucursal.

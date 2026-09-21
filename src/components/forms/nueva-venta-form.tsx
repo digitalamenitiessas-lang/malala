@@ -46,6 +46,9 @@ type LineaProductoForm = {
   insumo_id: string;
   cantidad: number;
   precio: number;
+  // Igual que en los servicios. Solo se puede mover a "efectivo" si el producto
+  // tiene cargado un precio efectivo; si no, la línea queda siempre en "lista".
+  precio_tipo: "lista" | "efectivo";
 };
 
 type LineaForm = LineaServicioForm | LineaProductoForm;
@@ -115,7 +118,16 @@ const newLineaProducto = (): LineaProductoForm => ({
   insumo_id: "",
   cantidad: 1,
   precio: 0,
+  precio_tipo: "lista",
 });
+
+/** El precio del producto según el botón elegido, con "lista" de respaldo. */
+function precioProducto(p: Insumo, tipo: "lista" | "efectivo"): number {
+  if (tipo === "efectivo" && p.precio_venta_efectivo != null) {
+    return p.precio_venta_efectivo;
+  }
+  return p.precio_venta ?? 0;
+}
 
 function subtotalLinea(l: LineaForm): number {
   const precio = Number(l.precio) || 0;
@@ -335,9 +347,7 @@ export function NuevaVentaForm({
   const giftOk = !giftFalta && !giftSinSaldo;
 
   // Aviso (no bloquea): descuento manual + línea a precio efectivo = 20% + otro descuento.
-  const hayLineaEfectivo = lineas.some(
-    (l) => l.tipo === "servicio" && l.precio_tipo === "efectivo",
-  );
+  const hayLineaEfectivo = lineas.some((l) => l.precio_tipo === "efectivo");
   const avisoDobleDescuento = descMonto > 0 && hayLineaEfectivo;
 
   // Advertencia (no bloquea): promos en el carrito fuera de franja o vencidas.
@@ -446,9 +456,26 @@ export function NuevaVentaForm({
       updateLinea(idx, { insumo_id: "" });
       return;
     }
+    // Si el producto elegido no tiene precio efectivo, la línea vuelve a lista:
+    // si no, quedaría marcada en "efectivo" cobrando el precio de lista.
+    const tipo =
+      l.precio_tipo === "efectivo" && p.precio_venta_efectivo != null
+        ? "efectivo"
+        : "lista";
     updateLinea(idx, {
       insumo_id: insumoId,
-      precio: p.precio_venta ?? 0,
+      precio_tipo: tipo,
+      precio: precioProducto(p, tipo),
+    });
+  }
+
+  function handlePrecioTipoProducto(idx: number, tipo: "lista" | "efectivo") {
+    const l = lineas[idx];
+    if (l.tipo !== "producto") return;
+    const p = productos.find((x) => x.id === l.insumo_id);
+    updateLinea(idx, {
+      precio_tipo: tipo,
+      precio: p ? precioProducto(p, tipo) : l.precio,
     });
   }
 
@@ -784,6 +811,7 @@ export function NuevaVentaForm({
                   onProducto={(id) => handleProductoChange(idx, id)}
                   onCantidad={(v) => updateLinea(idx, { cantidad: v })}
                   onPrecio={(v) => updateLinea(idx, { precio: v })}
+                  onPrecioTipo={(t) => handlePrecioTipoProducto(idx, t)}
                   onRemove={() => removeLinea(idx)}
                   removable={lineas.length > 1}
                 />
@@ -1807,6 +1835,7 @@ function LineaProductoRow({
   onProducto,
   onCantidad,
   onPrecio,
+  onPrecioTipo,
   onRemove,
   removable,
 }: {
@@ -1815,11 +1844,17 @@ function LineaProductoRow({
   onProducto: (id: string) => void;
   onCantidad: (v: number) => void;
   onPrecio: (v: number) => void;
+  onPrecioTipo: (tipo: "lista" | "efectivo") => void;
   onRemove: () => void;
   removable: boolean;
 }) {
   const subtotal = subtotalLinea(linea);
+  const producto = productos.find((p) => p.id === linea.insumo_id);
+  // El botón solo aparece si el producto tiene los dos precios cargados.
+  const dosPrecios =
+    producto?.precio_venta != null && producto.precio_venta_efectivo != null;
   return (
+    <div className="space-y-2">
     <div className="grid grid-cols-12 gap-2 items-start">
       <div className="col-span-12 sm:col-span-2 flex items-center">
         <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded bg-warning/10 text-brown-700 ring-1 ring-inset ring-warning/40">
@@ -1838,6 +1873,9 @@ function LineaProductoRow({
             <option key={p.id} value={p.id}>
               {p.nombre}
               {p.precio_venta != null ? ` · ${formatARS(p.precio_venta)}` : ""}
+              {p.precio_venta_efectivo != null
+                ? ` / ${formatARS(p.precio_venta_efectivo)} ef.`
+                : ""}
             </option>
           ))}
         </select>
@@ -1881,6 +1919,41 @@ function LineaProductoRow({
           <X className="h-4 w-4 stroke-[1.5]" />
         </button>
       </div>
+    </div>
+
+      {dosPrecios && producto && (
+        <div className="grid grid-cols-12 gap-2">
+          <div className="col-span-12 sm:col-start-3 sm:col-span-6 flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+              Precio
+            </span>
+            <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+              <button
+                type="button"
+                onClick={() => onPrecioTipo("lista")}
+                className={`px-2.5 py-1 transition-colors ${
+                  linea.precio_tipo === "lista"
+                    ? "bg-ink text-white"
+                    : "bg-card hover:bg-cream"
+                }`}
+              >
+                Lista · {formatARS(producto.precio_venta!)}
+              </button>
+              <button
+                type="button"
+                onClick={() => onPrecioTipo("efectivo")}
+                className={`px-2.5 py-1 border-l border-border transition-colors ${
+                  linea.precio_tipo === "efectivo"
+                    ? "bg-ink text-white"
+                    : "bg-card hover:bg-cream"
+                }`}
+              >
+                Efectivo · {formatARS(producto.precio_venta_efectivo!)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

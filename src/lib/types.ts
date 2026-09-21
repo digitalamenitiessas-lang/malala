@@ -314,6 +314,32 @@ export interface Insumo {
   // Legacy sincronizado: vendible === (tipo === "venta").
   vendible: boolean;
   precio_venta?: number;
+  // Segundo precio, el que se cobra pagando en efectivo/transferencia. Opcional:
+  // si no está, el producto tiene un precio solo y la venta no ofrece el botón.
+  precio_venta_efectivo?: number;
+}
+
+/**
+ * Un bloque de numeración del catálogo de insumos y cuál sigue.
+ *
+ * Los insumos no tienen rubro, así que el bloque hace de rubro: el salón numera
+ * INS100 para L'Oréal, INS300 para Bonacure, INS500 para Olaplex, VPC100 para
+ * los productos de reventa. Lo que sigue después de INS859 no sirve para dar de
+ * alta una tintura de la línea 100.
+ */
+export interface BloqueCodigoInsumo {
+  /** Etiqueta del bloque, como "INS1xx". */
+  bloque: string;
+  /** "bacha" o "venta": el tipo que predomina en el bloque. */
+  tipo: InsumoTipo;
+  /** El mayor código usado en el bloque. */
+  ultimo: string;
+  /** El siguiente libre, salteando los que ya existen en la sucursal. */
+  siguiente: string;
+  /** Un par de nombres del bloque, para reconocer de qué familia es. */
+  ejemplos: string[];
+  /** Cuántos insumos hay en el bloque. */
+  cantidad: number;
 }
 
 export interface Receta {

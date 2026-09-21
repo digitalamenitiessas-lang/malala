@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { InsumoForm } from "@/components/forms/insumo-form";
-import { createInsumo } from "@/lib/data/insumos";
+import { createInsumo, getBloquesCodigoInsumo } from "@/lib/data/insumos";
 import { listMediosPago } from "@/lib/data/medios-pago";
 import { listProveedores } from "@/lib/data/proveedores";
 import { listSucursales } from "@/lib/data/sucursales";
@@ -9,12 +9,13 @@ import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 export default async function NuevoInsumoPage() {
   const user = await requireUser();
   if (user.rol !== "admin") redirect("/catalogos/insumos");
-  const [proveedores, sucursales, mediosPago, sucursalActiva] =
+  const [proveedores, sucursales, mediosPago, sucursalActiva, bloquesCodigo] =
     await Promise.all([
       listProveedores(),
       listSucursales({ soloActivas: true }),
       listMediosPago({ soloActivos: true, excluirGiftCard: true }),
       getActiveSucursal(),
+      getBloquesCodigoInsumo(),
     ]);
 
   // La compra inicial debe ir a la MISMA sucursal donde se crea el insumo
@@ -40,6 +41,7 @@ export default async function NuevoInsumoPage() {
         sucursales={sucursalesParaCompra}
         mediosPago={mediosPago}
         defaultSucursalId={sucursalActiva?.id}
+        bloquesCodigo={bloquesCodigo}
         action={action}
         submitLabel="Crear"
       />
