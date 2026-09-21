@@ -9,7 +9,7 @@ import { aggregateEgresos } from "@/lib/data/egresos-helpers";
 import { listProveedores } from "@/lib/data/proveedores";
 import { listRubrosGasto } from "@/lib/data/rubros-gasto";
 import { listSucursales } from "@/lib/data/sucursales";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateShort } from "@/lib/utils";
 import { TogglePagadoButton } from "./toggle-pagado-button";
 import { AnularGastoButton } from "./anular-gasto-button";
 
@@ -271,11 +271,7 @@ export default async function EgresosPage({
               {egresos.map((row) => (
                 <tr key={row.egreso.id} className="hover:bg-cream/30">
                   <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                    {new Date(row.egreso.fecha).toLocaleDateString("es-AR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                    })}
+                    {formatDateShort(row.egreso.fecha)}
                   </td>
                   <td className="px-4 py-3">
                     {row.rubro

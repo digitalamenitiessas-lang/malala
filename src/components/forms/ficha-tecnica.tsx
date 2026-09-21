@@ -7,6 +7,7 @@ import { LoadingButton } from "./field";
 import type { Cliente, FichaRegistro } from "@/lib/types";
 import type { ActionResult } from "@/lib/data/_helpers";
 import { hoyAr } from "@/lib/fecha-ar";
+import { formatDate } from "@/lib/utils";
 
 type Accion = (
   state: ActionResult | null,
@@ -32,11 +33,7 @@ interface Props {
 }
 
 function fmtFecha(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return formatDate(iso);
 }
 
 export function FichaTecnica({

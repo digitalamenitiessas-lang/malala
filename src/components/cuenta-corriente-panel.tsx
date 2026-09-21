@@ -12,7 +12,7 @@ import {
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyInput } from "@/components/forms/currency-input";
 import { LoadingButton } from "@/components/forms/field";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateTime } from "@/lib/utils";
 import {
   registrarCargoCc,
   registrarPagoCc,
@@ -44,13 +44,7 @@ function usaCuentaBanco(mp: MedioPago | undefined): boolean {
 
 function fmtFechaHora(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(d);
 }
 
 export function CuentaCorrientePanel({

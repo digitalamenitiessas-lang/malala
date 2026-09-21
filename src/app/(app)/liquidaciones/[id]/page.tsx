@@ -8,7 +8,7 @@ import {
   getLiquidacion,
 } from "@/lib/data/liquidaciones";
 import { listMediosPago } from "@/lib/data/medios-pago";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateTime } from "@/lib/utils";
 import { MarcarPagadaForm } from "@/components/forms/marcar-pagada-form";
 import { AnularLiquidacionForm } from "@/components/forms/anular-liquidacion-form";
 
@@ -219,7 +219,7 @@ export default async function LiquidacionDetallePage({
               {liquidacion.fecha_pago && (
                 <p>
                   <span className="text-muted-foreground">Fecha:</span>{" "}
-                  {new Date(liquidacion.fecha_pago).toLocaleString("es-AR")}
+                  {formatDateTime(liquidacion.fecha_pago)}
                 </p>
               )}
               {liquidacion.observacion && (

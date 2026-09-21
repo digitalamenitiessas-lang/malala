@@ -16,7 +16,7 @@ import { BarChart } from "@/components/charts/bar-chart";
 import { PrintButton } from "@/components/print-button";
 import { ReporteFiltroForm } from "../_filter-form";
 import { parseReporteFiltros, type ReporteFiltrosInput } from "../_filters";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateTimeLong } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -151,13 +151,7 @@ export default async function ReporteExportarPage({ searchParams }: PageProps) {
   const motivosById = new Map(motivos.map((m) => [m.id, m]));
   const descuentos = descuentosPorMotivo(ingresos, motivosById);
 
-  const generado = new Date().toLocaleString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const generado = formatDateTimeLong(new Date());
 
   return (
     <div className="space-y-6 max-w-5xl">

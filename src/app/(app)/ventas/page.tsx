@@ -11,7 +11,7 @@ import {
 import { listEmpleados } from "@/lib/data/empleados";
 import { listClientes } from "@/lib/data/clientes";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDayTime } from "@/lib/utils";
 
 interface SearchParams {
   rango?: "hoy" | "semana" | "mes" | "todo";
@@ -206,12 +206,7 @@ export default async function VentasPage({
                   {misLineas.map((row) => (
                     <tr key={row.linea.id} className="hover:bg-cream/30">
                       <td className="px-4 py-3 text-muted-foreground tabular-nums">
-                        {new Date(row.ingreso.fecha).toLocaleString("es-AR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatDayTime(row.ingreso.fecha)}
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {row.linea.servicio?.nombre ??
@@ -489,12 +484,7 @@ export default async function VentasPage({
                 {ingresos.map((row) => (
                   <tr key={row.ingreso.id} className="hover:bg-cream/30">
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">
-                      {new Date(row.ingreso.fecha).toLocaleString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatDayTime(row.ingreso.fecha)}
                     </td>
                     <td className="px-4 py-3 font-medium">
                       {row.cliente?.nombre ?? "Consumidor Final"}

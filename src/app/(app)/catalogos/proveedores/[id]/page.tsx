@@ -12,7 +12,7 @@ import { listEgresos } from "@/lib/data/egresos";
 import { listInsumosByProveedor } from "@/lib/data/insumos";
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateShort } from "@/lib/utils";
 import type { EgresoConDetalle } from "@/lib/data/egresos-helpers";
 
 interface SearchParams {
@@ -325,11 +325,7 @@ export default async function EditarProveedorPage({
                 {egresos.map((row) => (
                   <tr key={row.egreso.id} className="hover:bg-cream/30">
                     <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                      {new Date(row.egreso.fecha).toLocaleDateString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "2-digit",
-                      })}
+                      {formatDateShort(row.egreso.fecha)}
                     </td>
                     <td className="px-4 py-3">
                       {row.insumo ? (

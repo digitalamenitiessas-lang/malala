@@ -8,7 +8,7 @@ import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { SatisfaccionVentaForm } from "@/components/forms/satisfaccion-venta";
 import { AnularVenta } from "@/components/forms/anular-venta";
 import { CambiarClienteVenta } from "@/components/forms/cambiar-cliente-venta";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateTimeLong } from "@/lib/utils";
 
 export default async function VentaDetallePage({
   params,
@@ -53,13 +53,7 @@ export default async function VentaDetallePage({
           Ticket
         </h1>
         <p className="text-sm text-muted-foreground tabular-nums">
-          {new Date(ingreso.fecha).toLocaleString("es-AR", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}{" "}
+          {formatDateTimeLong(ingreso.fecha)}{" "}
           · {sucursal?.nombre ?? "—"}
         </p>
       </header>

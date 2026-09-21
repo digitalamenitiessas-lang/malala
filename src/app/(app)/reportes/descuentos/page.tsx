@@ -6,7 +6,7 @@ import { listIngresos } from "@/lib/data/ingresos";
 import { listSucursales } from "@/lib/data/sucursales";
 import { listMotivosDescuento } from "@/lib/data/motivos-descuento";
 import { aggregate, descuentosPorMotivo } from "@/lib/data/ingresos-helpers";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateShort } from "@/lib/utils";
 import { parseReporteFiltros, type ReporteFiltrosInput } from "../_filters";
 import { ReporteFiltroForm } from "../_filter-form";
 import { TableActionLink } from "@/components/table-action-link";
@@ -179,11 +179,7 @@ export default async function ReportesDescuentosPage({
               {conDescuento.map((row) => (
                 <tr key={row.ingreso.id} className="hover:bg-cream/30">
                   <td className="px-4 py-2 tabular-nums text-muted-foreground whitespace-nowrap">
-                    {new Date(row.ingreso.fecha).toLocaleDateString("es-AR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                    })}
+                    {formatDateShort(row.ingreso.fecha)}
                   </td>
                   {multiSucursal && (
                     <td className="px-4 py-2 text-xs uppercase tracking-wider text-muted-foreground">

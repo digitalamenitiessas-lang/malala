@@ -5,7 +5,7 @@ import { Wallet, Plus, AlertTriangle } from "lucide-react";
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyInput } from "@/components/forms/currency-input";
 import { LoadingButton } from "@/components/forms/field";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDate } from "@/lib/utils";
 import { registrarAnticipo } from "@/lib/data/anticipos";
 import type { Anticipo, MedioPago } from "@/lib/types";
 
@@ -16,11 +16,7 @@ interface Props {
 }
 
 function fmtFecha(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return formatDate(iso);
 }
 
 export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {

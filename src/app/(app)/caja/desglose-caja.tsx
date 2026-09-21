@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TableActionLink } from "@/components/table-action-link";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatTime } from "@/lib/utils";
 import type { ResumenDelDia } from "@/lib/data/caja";
 
 /**
@@ -65,10 +65,7 @@ function Egresos({ resumen }: { resumen: ResumenDelDia }) {
             {resumen.egresos.map((e) => (
               <tr key={e.id}>
                 <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                  {new Date(e.fecha).toLocaleTimeString("es-AR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatTime(e.fecha)}
                 </td>
                 <td className="px-4 py-3">
                   {e.concepto}
@@ -297,10 +294,7 @@ function Tickets({ resumen }: { resumen: ResumenDelDia }) {
             {resumen.tickets.map((t) => (
               <tr key={t.id}>
                 <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                  {new Date(t.fecha).toLocaleTimeString("es-AR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatTime(t.fecha)}
                 </td>
                 <td className="px-4 py-3">
                   {t.cliente?.nombre ?? "Consumidor Final"}

@@ -7,7 +7,7 @@ import { listSucursales } from "@/lib/data/sucursales";
 import { listEmpleados } from "@/lib/data/empleados";
 import { listMotivosDescuento } from "@/lib/data/motivos-descuento";
 import { aggregate, descuentosPorMotivo } from "@/lib/data/ingresos-helpers";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateShort } from "@/lib/utils";
 import {
   parseReporteFiltros,
   type ReporteFiltrosInput,
@@ -174,14 +174,7 @@ export default async function ReportesVentasPage({ searchParams }: PageProps) {
                 return (
                   <tr key={row.ingreso.id} className="hover:bg-cream/30">
                     <td className="px-3 py-3 tabular-nums text-muted-foreground whitespace-nowrap">
-                      {new Date(row.ingreso.fecha).toLocaleDateString(
-                        "es-AR",
-                        {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "2-digit",
-                        },
-                      )}
+                      {formatDateShort(row.ingreso.fecha)}
                     </td>
                     {multiSucursal && (
                       <td className="px-3 py-3 text-xs uppercase tracking-wider text-muted-foreground">

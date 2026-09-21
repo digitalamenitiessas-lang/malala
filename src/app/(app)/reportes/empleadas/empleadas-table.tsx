@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateShort } from "@/lib/utils";
 
 export interface EmpleadaFila {
   empleadoId: string;
@@ -33,11 +33,7 @@ interface Props {
 }
 
 function fmtFecha(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-  });
+  return formatDateShort(iso);
 }
 
 export function EmpleadasReportTable({ filas, detalle, totales }: Props) {

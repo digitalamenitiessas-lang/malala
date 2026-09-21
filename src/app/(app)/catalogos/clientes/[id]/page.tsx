@@ -20,15 +20,10 @@ import { listMovimientosCc } from "@/lib/data/cuenta-corriente";
 import { listMediosPago } from "@/lib/data/medios-pago";
 import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDate } from "@/lib/utils";
 
 function fmtFecha(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return formatDate(iso);
 }
 
 export default async function EditarClientePage({

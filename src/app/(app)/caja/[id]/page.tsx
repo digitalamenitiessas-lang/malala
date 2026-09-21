@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCierre, getCierreCuentas, getResumenDelDia } from "@/lib/data/caja";
 import { requireUser } from "@/lib/auth/session";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateTimeLong } from "@/lib/utils";
 import { ReabrirCierreButton } from "./reabrir-button";
 import { DesgloseCaja } from "../desglose-caja";
 
@@ -38,12 +38,7 @@ export default async function CierreDetallePage({
             <p className="text-sm text-muted-foreground tabular-nums">
               {formatYMD(cierre.fecha)} · {sucursal_nombre} · cerrado por{" "}
               {cerrado_por_nombre} ·{" "}
-              {new Date(cierre.fecha_cierre).toLocaleString("es-AR", {
-                day: "2-digit",
-                month: "long",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {formatDateTimeLong(cierre.fecha_cierre)}
             </p>
           </div>
           {isAdmin && <ReabrirCierreButton cierreId={cierre.id} />}

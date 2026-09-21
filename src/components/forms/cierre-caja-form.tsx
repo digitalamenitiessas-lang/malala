@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useActionStateFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyField, FormButtons, GlobalError } from "./field";
 import { DENOMINACIONES_ARS } from "@/lib/validations/caja";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatTime } from "@/lib/utils";
 import type { ResumenDelDia, SugerenciasArrastre } from "@/lib/data/caja";
 import type { CreateCierreResult } from "@/lib/data/caja";
 
@@ -185,10 +185,7 @@ export function CierreCajaForm({
                 {resumen.tickets.map((t) => (
                   <tr key={t.id}>
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">
-                      {new Date(t.fecha).toLocaleTimeString("es-AR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTime(t.fecha)}
                     </td>
                     <td className="px-4 py-3">
                       {t.cliente?.nombre ?? "Consumidor Final"}

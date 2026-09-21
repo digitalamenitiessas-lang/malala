@@ -11,7 +11,7 @@ import {
 } from "@/lib/data/auditoria-helpers";
 import { listSucursales } from "@/lib/data/sucursales";
 import { listUsuariosApp } from "@/lib/data/usuarios";
-import { formatARS } from "@/lib/utils";
+import { formatARS, formatDateTime } from "@/lib/utils";
 import { getAnalyticsSnapshot } from "@/lib/data/analytics";
 
 interface SearchParams {
@@ -372,13 +372,7 @@ export default async function ReportesPage({
                 {events.map((e) => (
                   <tr key={e.id} className="hover:bg-cream/30">
                     <td className="px-4 py-3 text-muted-foreground tabular-nums whitespace-nowrap">
-                      {new Date(e.fecha).toLocaleString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatDateTime(e.fecha)}
                     </td>
                     <td className="px-4 py-3">
                       <span

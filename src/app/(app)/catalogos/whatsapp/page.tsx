@@ -3,6 +3,7 @@ import {
   listIntegracionesManychat,
   listUltimosEnvios,
 } from "@/lib/data/integraciones-manychat";
+import { formatDateTime } from "@/lib/utils";
 import { IntegracionManychatForm } from "./form";
 import { ProbarEnvioForm } from "./probar-envio";
 import { ConexionWhatsapp } from "./conexion-whatsapp";
@@ -69,7 +70,7 @@ async function SucursalCard({
             {integ.actualizado_en && (
               <>
                 {" · Última edición: "}
-                {new Date(integ.actualizado_en).toLocaleString("es-AR")}
+                {formatDateTime(integ.actualizado_en)}
               </>
             )}
           </p>
@@ -106,7 +107,7 @@ async function SucursalCard({
                     className="flex items-start justify-between gap-2"
                   >
                     <span className="text-muted-foreground">
-                      {new Date(e.enviado_en).toLocaleString("es-AR")}
+                      {formatDateTime(e.enviado_en)}
                     </span>
                     <span className="flex-1 text-ink">
                       {e.tipo} → {e.telefono}

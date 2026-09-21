@@ -1,4 +1,5 @@
 import { listMovimientos } from "@/lib/data/stock";
+import { formatDateTime } from "@/lib/utils";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -59,13 +60,7 @@ export default async function MovimientosPage() {
               {movs.map((m) => (
                 <tr key={m.id} className="hover:bg-cream/30">
                   <td className="px-4 py-3 text-muted-foreground tabular-nums">
-                    {new Date(m.fecha).toLocaleString("es-AR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatDateTime(m.fecha)}
                   </td>
                   <td className="px-4 py-3">
                     <span

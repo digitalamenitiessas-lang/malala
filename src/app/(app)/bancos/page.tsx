@@ -9,6 +9,7 @@ import { listSucursales } from "@/lib/data/sucursales";
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
 import { CurrencyField } from "@/components/forms/field";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +23,7 @@ function fmtMoney(n: number) {
 
 function fmtFecha(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(d);
 }
 
 const tipoLabel: Record<string, string> = {
