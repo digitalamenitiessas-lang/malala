@@ -7,6 +7,7 @@ import { listMotivosDescuento } from "@/lib/data/motivos-descuento";
 import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { SatisfaccionVentaForm } from "@/components/forms/satisfaccion-venta";
 import { AnularVenta } from "@/components/forms/anular-venta";
+import { CambiarClienteVenta } from "@/components/forms/cambiar-cliente-venta";
 import { formatARS } from "@/lib/utils";
 
 export default async function VentaDetallePage({
@@ -76,6 +77,14 @@ export default async function VentaDetallePage({
             <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
               {cliente.telefono}
             </p>
+          )}
+          {puedeRevisar && (
+            <CambiarClienteVenta
+              ingresoId={ingreso.id}
+              sucursalId={ingreso.sucursal_id}
+              clienteActualNombre={cliente?.nombre ?? null}
+              anulado={ingreso.anulado}
+            />
           )}
         </div>
         <div className="bg-card border border-border rounded-md p-5">

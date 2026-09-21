@@ -1,9 +1,10 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
+  clienteSucursal as clienteSucursalTable,
   clientes as clientesTable,
   giftCardMovimientos as giftCardMovimientosTable,
   giftCards as giftCardsTable,
@@ -64,6 +65,152 @@ export async function setSatisfaccionVenta(
 
   revalidatePath(`/ventas/${id}`);
   revalidatePath("/ventas");
+  return { ok: true };
+}
+
+/**
+ * Cambia a quién está adjudicada una venta ya registrada.
+ *
+ * El caso real: se cobra rápido, se deja en Consumidor Final, y después hay
+ * que ponerle el cliente para que le quede en su historial. Hasta ahora el
+ * único camino era anular y volver a cargar, y ese camino se traba cuando la
+ * caja del día ya se cerró — que es justo cuando se dan cuenta.
+ *
+ * Esta acción NO se frena con el cierre de caja, a propósito: no toca ni el
+ * total, ni el medio de pago, ni el stock, así que el arqueo de ese día da
+ * exactamente igual antes y después. Lo único que se mueve es de quién es la
+ * venta, y —si se fió— de quién es la deuda.
+ *
+ * Es la única edición que se permite sobre una venta. Cualquier otra cosa
+ * (importes, líneas, medio de pago) sigue siendo anular y volver a cargar:
+ * esas sí cambian la caja y necesitan dejar rastro de qué cambió.
+ */
+export async function reasignarClienteVenta(
+  ingresoId: string,
+  clienteId: string | null,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+
+  const db = getDb();
+  const [venta] = await db
+    .select()
+    .from(ingresosTable)
+    .where(eq(ingresosTable.id, ingresoId))
+    .limit(1);
+  if (!venta) return failure("Venta no encontrada");
+  if (!scope.sucursalIdsPermitidas.includes(venta.sucursalId)) {
+    return failure("No tenés acceso a esa venta");
+  }
+  if (venta.anulado) {
+    return failure("Esta venta está anulada: no se le puede cambiar el cliente");
+  }
+
+  const nuevoId = clienteId?.trim() || null;
+  if (nuevoId === (venta.clienteId ?? null)) {
+    return failure("La venta ya está a nombre de ese cliente");
+  }
+
+  // Si se fió, la deuda tiene que cambiar de dueño junto con la venta.
+  const cargos = await db
+    .select()
+    .from(movimientosCcTable)
+    .where(eq(movimientosCcTable.refId, ingresoId));
+  const fiada = cargos.length > 0;
+
+  if (fiada && !nuevoId) {
+    return failure(
+      "Esta venta se fió a cuenta corriente: la deuda tiene que quedar a nombre de alguien. Si hay que sacarla, anulá la venta.",
+    );
+  }
+
+  let nombreNuevo = "Consumidor Final";
+  if (nuevoId) {
+    const [cli] = await db
+      .select()
+      .from(clientesTable)
+      .where(eq(clientesTable.id, nuevoId))
+      .limit(1);
+    if (!cli) return failure("Cliente no encontrado");
+    if (!cli.activo) return failure("Ese cliente está dado de baja");
+    // Misma regla que el formulario de venta: solo clientes de la sucursal.
+    const [membresia] = await db
+      .select({ id: clienteSucursalTable.id })
+      .from(clienteSucursalTable)
+      .where(
+        and(
+          eq(clienteSucursalTable.clienteId, nuevoId),
+          eq(clienteSucursalTable.sucursalId, venta.sucursalId),
+        ),
+      )
+      .limit(1);
+    if (!membresia) {
+      return failure("Ese cliente no está dado de alta en esta sucursal");
+    }
+    if (fiada && !cli.cuentaCorrienteHabilitada) {
+      return failure(
+        "Esta venta se fió y ese cliente no tiene cuenta corriente habilitada. Habilitásela en su ficha o anulá la venta.",
+      );
+    }
+    nombreNuevo = cli.nombre;
+  }
+
+  const sello = `Cliente cambiado a ${nombreNuevo}`;
+
+  try {
+    await db.transaction(async (tx) => {
+      for (const cargo of cargos) {
+        // Se le saca la deuda al anterior y se le suma al nuevo. El movimiento
+        // es el mismo (mismo monto, misma fecha): solo cambia de cuenta.
+        const [viejo] = await tx
+          .select({ saldoCc: clientesTable.saldoCc })
+          .from(clientesTable)
+          .where(eq(clientesTable.id, cargo.clienteId))
+          .limit(1);
+        if (viejo) {
+          await tx
+            .update(clientesTable)
+            .set({ saldoCc: viejo.saldoCc - cargo.monto })
+            .where(eq(clientesTable.id, cargo.clienteId));
+        }
+        const [nuevo] = await tx
+          .select({ saldoCc: clientesTable.saldoCc })
+          .from(clientesTable)
+          .where(eq(clientesTable.id, nuevoId!))
+          .limit(1);
+        if (!nuevo) throw new Error("Cliente no encontrado");
+        await tx
+          .update(clientesTable)
+          .set({ saldoCc: nuevo.saldoCc + cargo.monto })
+          .where(eq(clientesTable.id, nuevoId!));
+        await tx
+          .update(movimientosCcTable)
+          .set({ clienteId: nuevoId! })
+          .where(eq(movimientosCcTable.id, cargo.id));
+      }
+
+      await tx
+        .update(ingresosTable)
+        .set({
+          clienteId: nuevoId,
+          observacion: venta.observacion
+            ? `${venta.observacion} · ${sello}`
+            : sello,
+        })
+        .where(eq(ingresosTable.id, ingresoId));
+    });
+  } catch (error) {
+    return failure(
+      error instanceof Error
+        ? error.message
+        : "No se pudo cambiar el cliente de la venta",
+    );
+  }
+
+  revalidatePath(`/ventas/${ingresoId}`);
+  revalidatePath("/ventas");
+  revalidatePath("/catalogos/clientes");
+  revalidatePath("/cuenta-corriente");
   return { ok: true };
 }
 

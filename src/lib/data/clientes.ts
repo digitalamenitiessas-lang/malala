@@ -55,6 +55,12 @@ export async function listClientes(opts?: {
   q?: string;
   /** Si se pasa, solo clientes habilitados en esa sucursal (membresía). */
   sucursalId?: string;
+  /**
+   * Corta el resultado. Para los buscadores que se escriben a mano: son casi
+   * 2000 clientes y un "a" los trae a todos por el cable. Se aplica después de
+   * filtrar por sucursal, así que el tope es de filas realmente devueltas.
+   */
+  limit?: number;
 }): Promise<Cliente[]> {
   const q = opts?.q?.trim();
   // Endpoint (este archivo es "use server"): sin sesión no se lista la base de
@@ -89,16 +95,19 @@ export async function listClientes(opts?: {
           .from(clientesTable)
           .orderBy(asc(clientesTable.nombre));
 
+  const tope = (lista: typeof rows) =>
+    opts?.limit != null ? lista.slice(0, opts.limit) : lista;
+
   if (opts?.sucursalId) {
     const miembros = await db
       .select({ clienteId: clienteSucursalTable.clienteId })
       .from(clienteSucursalTable)
       .where(eq(clienteSucursalTable.sucursalId, opts.sucursalId));
     const habilitados = new Set(miembros.map((m) => m.clienteId));
-    return rows.filter((r) => habilitados.has(r.id)).map(mapCliente);
+    return tope(rows.filter((r) => habilitados.has(r.id))).map(mapCliente);
   }
 
-  return rows.map(mapCliente);
+  return tope(rows).map(mapCliente);
 }
 
 /**
