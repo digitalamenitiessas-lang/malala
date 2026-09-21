@@ -5,14 +5,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const ARS = new Intl.NumberFormat("es-AR", {
+const ARS_ENTERO = new Intl.NumberFormat("es-AR", {
   style: "currency",
   currency: "ARS",
   maximumFractionDigits: 0,
 });
 
+const ARS_CENTAVOS = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * Importe en pesos. Muestra centavos solo cuando los hay.
+ *
+ * Casi todos los números del salón son redondos, y llenar cada pantalla de
+ * ",00" las vuelve ilegibles. Pero cuando el importe tiene centavos —una
+ * factura de proveedor, un cálculo de comisión— hay que verlos: antes esto
+ * redondeaba a entero y la pantalla decía algo distinto de lo que estaba
+ * guardado.
+ */
 export function formatARS(value: number): string {
-  return ARS.format(value);
+  const centavos = Math.round(value * 100) % 100;
+  return centavos === 0 ? ARS_ENTERO.format(value) : ARS_CENTAVOS.format(value);
 }
 
 const DATE_FMT = new Intl.DateTimeFormat("es-AR", {

@@ -67,6 +67,7 @@ export function CierreCajaForm({
   const efectivoEsperado =
     saldoInicial + resumen.ef.ingresos - resumen.ef.egresos;
   const diferencia = efectivoContado - efectivoEsperado;
+  const cuadra = Math.abs(diferencia) < 0.005;
 
   return (
     <form action={formAction} className="space-y-8">
@@ -395,21 +396,13 @@ export function CierreCajaForm({
             />
             <SummaryBox
               label="Diferencia"
-              value={formatARS(diferencia)}
-              color={
-                diferencia === 0
-                  ? "sage-700"
-                  : diferencia > 0
-                    ? "ink"
-                    : "danger"
-              }
-              hint={
-                diferencia === 0
-                  ? "Cuadra"
-                  : diferencia > 0
-                    ? "Sobrante"
-                    : "Faltante"
-              }
+              // Medio centavo de tolerancia, y el valor se muestra en cero
+              // cuando cuadra. Comparar contra 0 exacto no servía: la suma de
+              // decimales deja polvo de coma flotante y el cierre decía
+              // "sobrante" por una diezmilésima de peso que nadie puede contar.
+              value={formatARS(cuadra ? 0 : diferencia)}
+              color={cuadra ? "sage-700" : diferencia > 0 ? "ink" : "danger"}
+              hint={cuadra ? "Cuadra" : diferencia > 0 ? "Sobrante" : "Faltante"}
             />
           </div>
         </div>
