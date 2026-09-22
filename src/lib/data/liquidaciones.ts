@@ -45,7 +45,12 @@ import {
   getCuentaIdForMpTx,
 } from "./movimientos-bancarios-helpers";
 import { notificarLiquidacionEmpleadoPush } from "@/lib/integraciones/push";
-import { fechaArDeISO, hoyAr } from "@/lib/fecha-ar";
+import {
+  fechaArDeISO,
+  finDeDiaArISO,
+  hoyAr,
+  inicioDeDiaArISO,
+} from "@/lib/fecha-ar";
 // Mismo cálculo que muestra la ficha de la empleada: el total que la encargada
 // verifica en pantalla y el que se paga acá tienen que ser el mismo número.
 import { horasDeFranjasEnRango } from "@/lib/horas-franjas";
@@ -56,19 +61,14 @@ function createId() {
 
 function ymd(value: string | Date): string {
   if (typeof value === "string") return value.slice(0, 10);
-  const y = value.getFullYear();
-  const m = String(value.getMonth() + 1).padStart(2, "0");
-  const d = String(value.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  // El día argentino del instante, no el del reloj del server (UTC): una venta
+  // de las 21:00 se liquidaba con la fecha del día siguiente.
+  return fechaArDeISO(value.toISOString());
 }
 
-function isoStart(fecha: string): string {
-  return new Date(`${fecha}T00:00:00`).toISOString();
-}
-
-function isoEnd(fecha: string): string {
-  return new Date(`${fecha}T23:59:59.999`).toISOString();
-}
+// Días argentinos, por lo mismo: el rango del período se corría tres horas.
+const isoStart = inicioDeDiaArISO;
+const isoEnd = finDeDiaArISO;
 
 function mapLiquidacion(
   row: typeof liquidacionesTable.$inferSelect,

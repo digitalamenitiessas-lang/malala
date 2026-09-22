@@ -21,19 +21,17 @@ import {
 } from "./movimientos-bancarios-helpers";
 import { anticipoSchema } from "@/lib/validations/anticipo";
 import type { Anticipo } from "@/lib/types";
-import { hoyAr } from "@/lib/fecha-ar";
+import { finDeDiaArISO, hoyAr, inicioDeDiaArISO } from "@/lib/fecha-ar";
 
 function createId() {
   return crypto.randomUUID();
 }
 
-function isoStart(fecha: string): string {
-  return new Date(`${fecha}T00:00:00`).toISOString();
-}
-
-function isoEnd(fecha: string): string {
-  return new Date(`${fecha}T23:59:59.999`).toISOString();
-}
+// El período de una liquidación son días ARGENTINOS. Construirlos con el reloj
+// del proceso (UTC) corría el rango tres horas y dejaba los anticipos del
+// último día de la noche fuera del período que los tenía que descontar.
+const isoStart = inicioDeDiaArISO;
+const isoEnd = finDeDiaArISO;
 
 function mapAnticipo(row: typeof anticiposTable.$inferSelect): Anticipo {
   return {

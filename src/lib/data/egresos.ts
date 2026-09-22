@@ -8,7 +8,7 @@ import {
   isSucursalAllowed,
 } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
-import { hoyAr } from "@/lib/fecha-ar";
+import { hoyAr, instanteEnFechaAr } from "@/lib/fecha-ar";
 import {
   anticipos as anticiposTable,
   aperturasCaja as aperturasCajaTable,
@@ -352,10 +352,10 @@ export async function createEgreso(
 
   let fechaIso: string;
   if (data.fecha && /^\d{4}-\d{2}-\d{2}$/.test(data.fecha)) {
-    const ahora = new Date();
-    const fecha = new Date(`${data.fecha}T00:00:00`);
-    fecha.setHours(ahora.getHours(), ahora.getMinutes(), ahora.getSeconds(), 0);
-    fechaIso = fecha.toISOString();
+    // El gasto tiene que caer en ESE día argentino. Armarlo desde la medianoche
+    // del server (UTC) lo dejaba a las 21:00 del día anterior en Argentina, o
+    // sea en la caja equivocada cuando se cargaba temprano.
+    fechaIso = instanteEnFechaAr(data.fecha);
   } else {
     fechaIso = new Date().toISOString();
   }

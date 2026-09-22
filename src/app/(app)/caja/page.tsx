@@ -27,11 +27,6 @@ function formatYMD(ymd: string): string {
   return `${d}/${m}/${y}`;
 }
 
-function ymdToLocalDate(ymd: string): Date {
-  const [y, m, d] = ymd.split("-").map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1);
-}
-
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -157,7 +152,7 @@ export default async function CajaPage({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            {capitalize(formatLongDate(ymdToLocalDate(hoy)))} · {formatYMD(hoy)}
+            {capitalize(formatLongDate(hoy))} · {formatYMD(hoy)}
           </p>
           <h1 className="font-display text-3xl tracking-[0.2em] uppercase">
             Caja diaria

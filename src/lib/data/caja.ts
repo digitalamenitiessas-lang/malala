@@ -5,7 +5,13 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
-import { hoyAr } from "@/lib/fecha-ar";
+import {
+  fechaArDeISO,
+  finDeDiaArISO,
+  hoyAr,
+  inicioDeDiaArISO,
+  sumarDiasYmd,
+} from "@/lib/fecha-ar";
 import {
   aperturasCaja as aperturasCajaTable,
   cierresCaja as cierresCajaTable,
@@ -124,33 +130,24 @@ function createId() {
   return crypto.randomUUID();
 }
 
-function isoStartOfDay(fecha: string): string {
-  return new Date(`${fecha}T00:00:00`).toISOString();
-}
-
-function isoEndOfDay(fecha: string): string {
-  return new Date(`${fecha}T23:59:59.999`).toISOString();
-}
-
-function ymdLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+// El día de caja es el día ARGENTINO, de 00:00 a 23:59 hora de acá.
+//
+// Estas cuatro funciones construían el día con el reloj del proceso, y el
+// proceso corre en UTC: el arqueo del 15 en realidad iba del 14 a las 21:00 al
+// 15 a las 20:59. Una venta de las 21:03 quedaba fuera de su propio cierre y
+// aparecía como un día suelto sin cerrar — el "16/09" fantasma que el salón no
+// podía cerrar de ninguna manera, porque nunca hubo caja el 16.
+const isoStartOfDay = inicioDeDiaArISO;
+const isoEndOfDay = finDeDiaArISO;
 
 function todayYMD(): string {
   return hoyAr();
 }
 
-function addDaysYMD(fecha: string, delta: number): string {
-  const d = new Date(`${fecha}T00:00:00`);
-  d.setDate(d.getDate() + delta);
-  return ymdLocal(d);
-}
+const addDaysYMD = sumarDiasYmd;
 
 function isoToLocalYMD(iso: string): string {
-  return ymdLocal(new Date(iso));
+  return fechaArDeISO(iso);
 }
 
 function emptyMpTotals() {

@@ -40,3 +40,35 @@ export function hoyArMenosDias(n: number): string {
 export function fechaArDeISO(iso: string): string {
   return new Date(iso).toLocaleDateString("en-CA", { timeZone: TZ });
 }
+
+/**
+ * Suma (o resta) días a una fecha YMD, sin salirse del calendario.
+ *
+ * Aritmética pura de calendario en UTC: sumar días sobre un Date local hace
+ * que el resultado dependa de la zona del proceso, que es exactamente lo que
+ * hay que evitar acá.
+ */
+export function sumarDiasYmd(ymd: string, delta: number): string {
+  const d = new Date(`${ymd}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Instante para una fecha argentina elegida a mano, con la hora del reloj de
+ * Argentina en este momento.
+ *
+ * Sirve para cargar un movimiento con fecha pasada: lo que importa es que caiga
+ * en ESE día argentino. Construirlo como medianoche del server (UTC) lo dejaba
+ * a las 21:00 del día anterior en Argentina, o sea en la caja equivocada.
+ */
+export function instanteEnFechaAr(ymd: string, ahora: Date = new Date()): string {
+  const hora = ahora.toLocaleTimeString("en-GB", {
+    timeZone: TZ,
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  return new Date(`${ymd}T${hora}.000${AR_OFFSET}`).toISOString();
+}

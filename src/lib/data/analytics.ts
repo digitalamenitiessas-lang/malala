@@ -9,7 +9,13 @@ import {
 import { buildAccessScope, clampSucursalId } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client/postgres";
-import { fechaArDeISO, hoyAr } from "@/lib/fecha-ar";
+import {
+  fechaArDeISO,
+  finDeDiaArISO,
+  hoyAr,
+  inicioDeDiaArISO,
+  sumarDiasYmd,
+} from "@/lib/fecha-ar";
 import { estadoEfectivo } from "@/lib/turno-estado";
 import {
   empleados as empleadosTable,
@@ -94,30 +100,16 @@ export interface AnalyticsSnapshot {
   };
 }
 
-function startOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
-
-function endOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(23, 59, 59, 999);
-  return next;
-}
-
 function resolveDateRange(filters: AnalyticsFilters) {
-  // Ancla "hoy" en horario de Argentina (el server corre en UTC).
-  const today = new Date(`${hoyAr()}T12:00:00`);
-  const desde = filters.desde
-    ? startOfDay(new Date(`${filters.desde}T00:00:00`))
-    : startOfDay(
-        new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6),
-      );
-  const hasta = filters.hasta
-    ? endOfDay(new Date(`${filters.hasta}T00:00:00`))
-    : endOfDay(today);
-  return { desde, hasta };
+  // Los límites del rango son días ARGENTINOS. Recortarlos con el reloj del
+  // proceso (UTC) corría la ventana tres horas: los reportes se comían las
+  // ventas de la noche y sumaban las del final del día anterior.
+  const desdeYmd = filters.desde ?? sumarDiasYmd(hoyAr(), -6);
+  const hastaYmd = filters.hasta ?? hoyAr();
+  return {
+    desde: new Date(inicioDeDiaArISO(desdeYmd)),
+    hasta: new Date(finDeDiaArISO(hastaYmd)),
+  };
 }
 
 // Día de negocio (AR) de un instante. Con toISOString, un límite de rango de las
