@@ -95,11 +95,16 @@ export function EgresoForm({
 
   // Pago: monto total + hasta dos medios, cada uno con su cuenta (como en ventas).
   const [valorTotal, setValorTotal] = useState<number>(0);
+  // Con qué medio arranca el gasto. El efectivo primero: es con lo que el
+  // salón paga casi todo, y tomar "el primero de la lista" ordenaba por nombre
+  // y dejaba Cheque por defecto. Un gasto guardado sin mirar salía del banco en
+  // vez de la caja, y el arqueo del día no cerraba. Mismo criterio que la venta.
   const [mp1Id, setMp1Id] = useState(() => {
     const visible = mediosPago.filter(
       (m) => m.sucursal_id === defaultSucursalId && m.activo && esPagable(m),
     );
-    return visible[0]?.id ?? "";
+    const efectivo = visible.find((m) => m.codigo.toUpperCase() === "EF");
+    return (efectivo ?? visible[0])?.id ?? "";
   });
   const [mp1CuentaId, setMp1CuentaId] = useState("");
   const [mp2Id, setMp2Id] = useState("");
