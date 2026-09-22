@@ -194,10 +194,31 @@ function PorMedioDePago({ resumen }: { resumen: ResumenDelDia }) {
                 </td>
               </tr>
             ))}
+            {/* La gift card vendida no es facturación, así que no está en las
+                filas de arriba. Pero la plata entró, y esta tabla es lo que la
+                encargada mira para entender el día: sin esta fila, la pantalla
+                dice $0 mientras el cajón tiene el monto adentro. */}
+            {resumen.giftCards.vendidas > 0 && (
+              <tr className="text-muted-foreground">
+                <td className="px-4 py-3">
+                  Gift cards vendidas
+                  <span className="ml-1 text-xs">
+                    (entró plata, no es facturación)
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {formatARS(resumen.giftCards.vendidas)}
+                </td>
+                <td className="px-4 py-3 text-right tabular-nums">—</td>
+                <td className="px-4 py-3 text-right tabular-nums">
+                  {formatARS(resumen.giftCards.vendidas)}
+                </td>
+              </tr>
+            )}
             <tr className="bg-cream/40 font-medium">
               <td className="px-4 py-3">Totales</td>
               <td className="px-4 py-3 text-right tabular-nums">
-                {formatARS(resumen.totalIngresos)}
+                {formatARS(resumen.totalIngresos + resumen.giftCards.vendidas)}
               </td>
               <td className="px-4 py-3 text-right tabular-nums">
                 {formatARS(resumen.totalEgresos)}
@@ -209,7 +230,7 @@ function PorMedioDePago({ resumen }: { resumen: ResumenDelDia }) {
                     resumen.totalNeto >= 0 ? "var(--sage-700)" : "var(--danger)",
                 }}
               >
-                {formatARS(resumen.totalNeto)}
+                {formatARS(resumen.totalNeto + resumen.giftCards.vendidas)}
               </td>
             </tr>
           </tbody>
