@@ -1,13 +1,146 @@
 [
   {
-    "_ejemplo": "Borrá esta fila y cargá las reales. codigo e importe son obligatorios; el resto es opcional. usada:true carga la tarjeta con saldo 0 (ya se canjeó, queda como registro). venceEl vacío = sin vencimiento (las viejas no lo tenían anotado).",
-    "codigo": "GC-EJEMPLO",
-    "importe": 50000,
-    "fechaVenta": "2026-08-01",
-    "venceEl": null,
-    "compradora": "",
-    "beneficiaria": "",
-    "usada": false,
-    "observacion": ""
+    "codigo": "GC-149",
+    "importe": 40000,
+    "fechaVenta": "2026-08-25",
+    "venceEl": "2026-09-25",
+    "compradora": "daniela vera",
+    "observacion": "Planilla YB: semi manos + semi pies"
+  },
+  {
+    "codigo": "GC-153",
+    "importe": 40000,
+    "fechaVenta": "2026-09-03",
+    "venceEl": "2026-10-03",
+    "compradora": "belen mendiara",
+    "observacion": "Planilla YB: promo semi manos y semi pies. Importe confirmado por el salon."
+  },
+  {
+    "codigo": "GC-154",
+    "importe": 80000,
+    "fechaVenta": "2026-09-04",
+    "venceEl": "2026-10-04",
+    "compradora": "belen bobba",
+    "observacion": "Planilla YB: semi manos y pies + masajes 1 hora"
+  },
+  {
+    "codigo": "GC-155",
+    "importe": 20000,
+    "fechaVenta": "2026-09-04",
+    "venceEl": "2026-10-04",
+    "compradora": "belen bobba",
+    "observacion": "Planilla YB: semi manos"
+  },
+  {
+    "codigo": "GC-156",
+    "importe": 40000,
+    "fechaVenta": "2026-09-05",
+    "venceEl": "2026-10-05",
+    "compradora": "Carolina (empleada)",
+    "observacion": "Planilla YB: semi manos y pies"
+  },
+  {
+    "codigo": "GC-157",
+    "importe": 40000,
+    "fechaVenta": "2026-09-08",
+    "venceEl": "2026-10-08",
+    "compradora": "rocio ceballos",
+    "observacion": "Planilla YB: masajes 1 hora"
+  },
+  {
+    "codigo": "GC-160",
+    "importe": 20000,
+    "fechaVenta": "2026-09-14",
+    "venceEl": "2026-10-14",
+    "compradora": "melina palacios",
+    "observacion": "Planilla YB: semi manos"
+  },
+  {
+    "codigo": "GC-162",
+    "importe": 20000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "marcela casadey",
+    "observacion": "Planilla YB: semi manos"
+  },
+  {
+    "codigo": "GC-163",
+    "importe": 20000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "marcela casadey",
+    "observacion": "Planilla YB: semi manos"
+  },
+  {
+    "codigo": "GC-164",
+    "importe": 36000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "sonia Fordham",
+    "observacion": "Planilla YB: Promo manos y pies tradicional (Belleza + Esmaltado Tradicional Manos y Pies)"
+  },
+  {
+    "codigo": "GC-165",
+    "importe": 36000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "sonia Fordham",
+    "observacion": "Planilla YB: Promo manos y pies tradicional (Belleza + Esmaltado Tradicional Manos y Pies)"
+  },
+  {
+    "codigo": "GC-166",
+    "importe": 36000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "sonia Fordham",
+    "observacion": "Planilla YB: Promo manos y pies tradicional (Belleza + Esmaltado Tradicional Manos y Pies)"
+  },
+  {
+    "codigo": "GC-167",
+    "importe": 19000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "sonia Fordham",
+    "observacion": "Planilla YB: esmaltado tradicional. Importe 19.000 confirmado por el salon (el catalogo dice 18.700)."
+  },
+  {
+    "codigo": "GC-168",
+    "importe": 36000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "sonia Fordham",
+    "observacion": "Planilla YB: Promo manos y pies tradicional (Belleza + Esmaltado Tradicional Manos y Pies)"
+  },
+  {
+    "codigo": "GC-169",
+    "importe": 20000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "Pilar Paz Posse",
+    "observacion": "Planilla YB: semi manos"
+  },
+  {
+    "codigo": "GC-170",
+    "importe": 20000,
+    "fechaVenta": "2026-09-15",
+    "venceEl": "2026-10-15",
+    "compradora": "Pilar Paz Posse",
+    "observacion": "Planilla YB: masajes 30 minutos"
+  },
+  {
+    "codigo": "GC-171",
+    "importe": 100000,
+    "fechaVenta": "2026-09-16",
+    "venceEl": "2026-10-16",
+    "compradora": "Alfredo sosa lopez",
+    "observacion": "Planilla YB: servicios x $100.000"
+  },
+  {
+    "codigo": "GC-173",
+    "importe": 60000,
+    "fechaVenta": "2026-09-18",
+    "venceEl": "2026-10-18",
+    "compradora": "yasmin bittar",
+    "observacion": "Planilla YB: semi de manos + semi pies + 30 min masajes"
   }
 ]
