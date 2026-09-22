@@ -90,3 +90,18 @@ describe("formatARS", () => {
     expect(formatARS(-1234.56)).toContain(",56");
   });
 });
+
+describe("el peligro de tipear encima de un importe ya cargado", () => {
+  it("pegar digitos al final multiplica el monto por cien mil", () => {
+    // Campo que dice "$ 50.000"; se tipea 50000 sin borrar. Los puntos son
+    // separadores de miles, asi que todo se lee como un unico numero.
+    expect(parseMontoArs("$ 50.00050000")).toBe(5000050000);
+    // El campo MUESTRA ese monto, no lo esconde: el problema es lo facil que
+    // es no mirarlo. Por eso el input selecciona todo al hacer clic.
+    expect(textoMontoTipeado("$ 50.00050000")).toBe("$ 5.000.050.000");
+  });
+
+  it("con centavos el pegado se come lo tipeado en vez de agrandarlo", () => {
+    expect(parseMontoArs("$ 50.000,5050000")).toBe(50000.5);
+  });
+});

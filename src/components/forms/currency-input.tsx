@@ -50,6 +50,15 @@ export function CurrencyInput({
         const el = e.currentTarget;
         requestAnimationFrame(() => el.select());
       }}
+      // Un clic sobre el campo selecciona todo, no solo el primero que le da
+      // foco. Sin esto, volver a tocar un importe ya cargado deja el cursor al
+      // final y lo tipeado se PEGA al número anterior: escribir 50000 sobre un
+      // campo que dice "$ 50.000" da "$ 5.000.050.000". Es un error de cien mil
+      // veces el monto y pasa en el gesto más natural, el de corregir.
+      // En un campo de plata se reescribe el importe entero, no se lo edita
+      // letra por letra, así que perder el posicionamiento del cursor no cuesta
+      // nada y evita esto.
+      onMouseUp={(e) => e.currentTarget.select()}
       onBlur={() => setTipeando(null)}
       onChange={(e) => {
         const el = e.currentTarget;
