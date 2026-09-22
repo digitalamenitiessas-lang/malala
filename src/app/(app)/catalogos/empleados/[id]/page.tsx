@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { AnticiposPanel } from "@/components/anticipos-panel";
+import { EditarAgendaProfesional } from "@/components/forms/editar-agenda-profesional";
 import { ServiciosProfesionalForm } from "@/components/forms/servicios-profesional-form";
 import { ViaticosPanel } from "@/components/viaticos-panel";
 import { EmpleadoForm } from "@/components/forms/empleado-form";
@@ -225,6 +226,7 @@ function DisponibilidadPublicaPanel({
       activo_publico: boolean;
       avatar_url: string;
       color: string;
+      prioridad: number;
     };
     horarios: Array<{
       id: string;
@@ -330,6 +332,12 @@ function DisponibilidadPublicaPanel({
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
+                  <EditarAgendaProfesional
+                    agendaId={agenda.id}
+                    especialidad={agenda.especialidad}
+                    color={agenda.color}
+                    prioridad={agenda.prioridad}
+                  />
                   <form action={toggleAgenda}>
                     <input type="hidden" name="agenda_id" value={agenda.id} />
                     <SubmitButton className="text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground">

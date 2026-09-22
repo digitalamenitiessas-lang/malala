@@ -109,6 +109,68 @@ export async function createProfesionalAgenda(
   return { ok: true };
 }
 
+/**
+ * Corrige los datos de una agenda ya creada.
+ *
+ * Hasta ahora una agenda se creaba y quedaba congelada: especialidad, color y
+ * prioridad no se podían tocar nunca más. Un color repetido o una especialidad
+ * mal escrita obligaba a pedir que lo arreglen por base. Es de lo primero que
+ * una encargada quiere cambiar después de ver la agenda armada.
+ *
+ * No se puede mover de sucursal ni de empleado: eso no es corregir un dato, es
+ * otra agenda.
+ */
+export async function updateProfesionalAgenda(
+  agendaId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!puedeGestionar(user.rol)) {
+    return { ok: false, errors: { _: ["No autorizado"] } };
+  }
+
+  const especialidad = String(formData.get("especialidad") ?? "").trim();
+  const color = String(formData.get("color") ?? "").trim();
+  const prioridad = Number(formData.get("prioridad") ?? 0);
+
+  if (!especialidad) {
+    return { ok: false, errors: { especialidad: ["Indicá la especialidad"] } };
+  }
+  if (!HEX.test(color)) {
+    return { ok: false, errors: { color: ["Color inválido"] } };
+  }
+  if (!Number.isInteger(prioridad) || prioridad < 0) {
+    return { ok: false, errors: { prioridad: ["Prioridad inválida"] } };
+  }
+
+  const db = getDb();
+  const [agenda] = await db
+    .select({
+      id: profesionalesAgendaTable.id,
+      empleadoId: profesionalesAgendaTable.empleadoId,
+      sucursalId: profesionalesAgendaTable.sucursalId,
+    })
+    .from(profesionalesAgendaTable)
+    .where(eq(profesionalesAgendaTable.id, agendaId))
+    .limit(1);
+  if (!agenda) return { ok: false, errors: { _: ["Agenda no encontrada"] } };
+
+  const scope = buildAccessScope(user);
+  if (!isSucursalAllowed(scope, agenda.sucursalId)) {
+    return { ok: false, errors: { _: ["No tenés acceso a esa sucursal"] } };
+  }
+
+  await db
+    .update(profesionalesAgendaTable)
+    .set({ especialidad, color, prioridad })
+    .where(eq(profesionalesAgendaTable.id, agendaId));
+
+  revalidatePath(`/catalogos/empleados/${agenda.empleadoId}`);
+  revalidatePath("/turnos");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 /** Muestra/oculta al profesional en la reserva online (toggle activo_publico). */
 export async function toggleProfesionalAgendaActivo(
   agendaId: string,
