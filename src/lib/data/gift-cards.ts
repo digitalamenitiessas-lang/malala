@@ -178,19 +178,41 @@ export async function listMovimientosGiftCard(
   return rows.map(mapMovimiento);
 }
 
+export interface PasivoGiftCards {
+  /** Saldo de las que todavía están en fecha: es deuda exigible. */
+  vigente: number;
+  /**
+   * Saldo de las vencidas. Va aparte porque no es lo mismo: el salón las toma
+   * sólo si decide hacer la excepción. Sumarlo al total hacía que el número
+   * dejara de significar "lo que realmente debemos" — con las vencidas del
+   * sistema viejo cargadas, el pasivo se triplicó de golpe.
+   */
+  vencido: number;
+  total: number;
+}
+
 /**
  * Lo que el salón todavía le debe a sus clientas: la suma de los saldos sin usar.
  * Es plata cobrada por servicios que no se prestaron; no es ganancia hasta que
  * alguien venga a canjear.
  */
-export async function getPasivoGiftCards(sucursalId: string): Promise<number> {
+export async function getPasivoGiftCards(
+  sucursalId: string,
+): Promise<PasivoGiftCards> {
   const user = await requireUser();
   const scope = buildAccessScope(user);
-  if (!isSucursalAllowed(scope, sucursalId)) return 0;
+  if (!isSucursalAllowed(scope, sucursalId)) {
+    return { vigente: 0, vencido: 0, total: 0 };
+  }
 
+  const hoy = hoyAr();
   const db = getDb();
   const [row] = await db
-    .select({ total: sql<number>`coalesce(sum(${giftCardsTable.saldo}), 0)` })
+    .select({
+      // Sin vencimiento cuenta como vigente: no hay fecha que la corte.
+      vigente: sql<number>`coalesce(sum(case when ${giftCardsTable.venceEl} is null or ${giftCardsTable.venceEl} >= ${hoy} then ${giftCardsTable.saldo} else 0 end), 0)`,
+      vencido: sql<number>`coalesce(sum(case when ${giftCardsTable.venceEl} < ${hoy} then ${giftCardsTable.saldo} else 0 end), 0)`,
+    })
     .from(giftCardsTable)
     .where(
       and(
@@ -198,7 +220,9 @@ export async function getPasivoGiftCards(sucursalId: string): Promise<number> {
         eq(giftCardsTable.estado, "activa"),
       ),
     );
-  return Number(row?.total ?? 0);
+  const vigente = Number(row?.vigente ?? 0);
+  const vencido = Number(row?.vencido ?? 0);
+  return { vigente, vencido, total: vigente + vencido };
 }
 
 /**

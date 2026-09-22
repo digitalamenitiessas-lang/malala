@@ -31,7 +31,9 @@ export default async function GiftCardsPage({
 
   const [giftCards, pasivo] = await Promise.all([
     listGiftCards({ sucursalId: sucursal?.id, q }),
-    sucursal ? getPasivoGiftCards(sucursal.id) : Promise.resolve(0),
+    sucursal
+      ? getPasivoGiftCards(sucursal.id)
+      : Promise.resolve({ vigente: 0, vencido: 0, total: 0 }),
   ]);
 
   const hoy = hoyAr();
@@ -58,17 +60,34 @@ export default async function GiftCardsPage({
         </Link>
       </header>
 
-      <div className="rounded-md border border-border bg-card p-5">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-          Saldo sin canjear
-        </p>
-        <p className="mt-2 font-display text-2xl tabular-nums">
-          {formatARS(pasivo)}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Plata ya cobrada por servicios que todavía no se prestaron. No es
-          facturación hasta que alguien venga a canjear.
-        </p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="rounded-md border border-border bg-card p-5">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Saldo sin canjear · en fecha
+          </p>
+          <p className="mt-2 font-display text-2xl tabular-nums">
+            {formatARS(pasivo.vigente)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Plata ya cobrada por servicios que todavía no se prestaron. Es lo
+            que el salón debe de verdad: estas tarjetas se pueden usar hoy.
+          </p>
+        </div>
+        {/* Las vencidas van aparte: se toman sólo si alguien decide hacer la
+            excepción, así que meterlas en el mismo total hacía que el número
+            dejara de significar lo que el salón debe. */}
+        <div className="rounded-md border border-border bg-cream/40 p-5">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Saldo sin canjear · vencidas
+          </p>
+          <p className="mt-2 font-display text-2xl tabular-nums text-muted-foreground">
+            {formatARS(pasivo.vencido)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ya pasó la fecha. Se pueden canjear igual si deciden hacer la
+            excepción, y ahí queda registrado como fuera de término.
+          </p>
+        </div>
       </div>
 
       <GiftCardsSearch />
