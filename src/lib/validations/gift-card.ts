@@ -25,13 +25,33 @@ export const giftCardSchema = z.object({
     .max(32, "El código no puede tener más de 32 caracteres")
     .transform((s) => s.trim().toUpperCase()),
   importe: z.coerce.number().positive("El importe debe ser mayor a 0"),
-  mp_id: z.string().min(1, "Medio de pago requerido"),
+  mp_id: optStr,
   mp_cuenta_id: optStr,
   vence_el: optStr,
   compradora: optStr,
   beneficiaria: optStr,
   observacion: optStr,
-});
+  /**
+   * La tarjeta ya se había vendido antes de usar este sistema.
+   *
+   * Cambia lo único que importa: no se cobra nada hoy. Esa plata entró en su
+   * momento, así que pedir un medio de pago y emitir el ingreso la contaría dos
+   * veces e inflaría el arqueo del día.
+   */
+  pre_sistema: z.coerce.boolean().default(false),
+  /** Cuándo se vendió realmente. Solo para las de antes del sistema. */
+  fecha_venta: optStr,
+})
+  .superRefine((data, ctx) => {
+    // El medio de pago solo se exige cuando hoy entra plata.
+    if (!data.pre_sistema && !data.mp_id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["mp_id"],
+        message: "Medio de pago requerido",
+      });
+    }
+  });
 
 export type GiftCardInput = z.infer<typeof giftCardSchema>;
 

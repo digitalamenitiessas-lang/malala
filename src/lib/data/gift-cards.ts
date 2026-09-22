@@ -250,6 +250,9 @@ export async function emitirGiftCard(
     compradora: formData.get("compradora"),
     beneficiaria: formData.get("beneficiaria"),
     observacion: formData.get("observacion"),
+    pre_sistema: formData.get("pre_sistema") === "on" ||
+      formData.get("pre_sistema") === "true",
+    fecha_venta: formData.get("fecha_venta"),
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
 
@@ -270,7 +273,12 @@ export async function emitirGiftCard(
 
   const db = getDb();
   const giftCardId = createId();
-  const fecha = new Date();
+  // Las de antes del sistema llevan la fecha en que se vendieron de verdad, no
+  // la de hoy: es lo que permite entender despues de cuando viene cada una.
+  const fecha =
+    parsed.data.pre_sistema && parsed.data.fecha_venta
+      ? new Date(`${parsed.data.fecha_venta}T12:00:00-03:00`)
+      : new Date();
   let aviso: string | undefined;
 
   try {
@@ -287,7 +295,7 @@ export async function emitirGiftCard(
         compradora: parsed.data.compradora ?? null,
         beneficiaria: parsed.data.beneficiaria ?? null,
         observacion: parsed.data.observacion ?? null,
-        emitidaPreSistema: false,
+        emitidaPreSistema: parsed.data.pre_sistema,
         usuarioId: user.id,
       });
 
@@ -303,9 +311,14 @@ export async function emitirGiftCard(
         usuarioId: user.id,
       });
 
+      // La tarjeta vendida antes del sistema no cobra nada hoy: esa plata entró
+      // en su momento y ya está contada donde corresponda. Emitir el ingreso
+      // acá la contaría dos veces e inflaría el arqueo del día.
+      if (parsed.data.pre_sistema) return;
+
       const cuentaId =
         parsed.data.mp_cuenta_id ??
-        (await getCuentaIdForMpTx(tx, parsed.data.mp_id));
+        (await getCuentaIdForMpTx(tx, parsed.data.mp_id!));
       if (!cuentaId) {
         // Mismo criterio que createIngreso: no se frena la venta por una
         // configuración incompleta, se avisa.

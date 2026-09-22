@@ -46,12 +46,15 @@ export function GiftCardForm({
     () => (mediosPago.find((m) => m.cuenta_id) ?? mediosPago[0])?.id ?? "",
   );
   const [cuentaId, setCuentaId] = useState("");
+  // Tarjeta que ya se habia vendido antes de usar el sistema: se carga para
+  // poder canjearla y controlar el codigo, pero hoy no se cobra nada.
+  const [preSistema, setPreSistema] = useState(false);
   const mp = mediosPago.find((m) => m.id === mpId);
 
   // Sin cuenta —ni la del medio ni una elegida a mano— el cobro no impacta en
   // caja. El servidor lo permite igual (no frena la venta por configuración),
   // así que el aviso tiene que estar acá, antes de guardar.
-  const sinCuenta = !!mp && !mp.cuenta_id && !cuentaId;
+  const sinCuenta = !preSistema && !!mp && !mp.cuenta_id && !cuentaId;
 
   return (
     <CrudForm
@@ -77,81 +80,126 @@ export function GiftCardForm({
             label="Importe"
             name="importe"
             error={errors.importe}
-            hint="Lo que paga quien la compra. Es el saldo con el que arranca."
+            hint={
+              preSistema
+                ? "El saldo que le queda a la tarjeta hoy."
+                : "Lo que paga quien la compra. Es el saldo con el que arranca."
+            }
             required
           />
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="mp_id"
-              className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
-            >
-              Cómo la pagó
+          <div className="rounded-md border border-border bg-cream/40 p-3 space-y-2">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="pre_sistema"
+                checked={preSistema}
+                onChange={(e) => setPreSistema(e.currentTarget.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-border accent-sage-500"
+              />
+              <span>
+                Se vendio antes de usar este sistema
+                <span className="block text-xs text-muted-foreground">
+                  La clienta trae una tarjeta vieja. Se carga para poder
+                  canjearla, pero hoy no entra plata: ya entro cuando se vendio.
+                </span>
+              </span>
             </label>
-            {mediosPago.length === 0 ? (
-              <p className="text-xs text-destructive">
-                Esta sucursal no tiene medios de pago cargados. Cargalos en
-                Catálogos → Medios de pago.
-              </p>
-            ) : (
-              <select
-                id="mp_id"
-                name="mp_id"
-                value={mpId}
-                onChange={(e) => setMpId(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                {mediosPago.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.mp_id && (
-              <p className="text-xs text-destructive">
-                {errors.mp_id.join(", ")}
-              </p>
-            )}
-            {sinCuenta && (
-              <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
-                <p className="text-xs font-medium text-brown-900">
-                  {mp?.nombre} no tiene cuenta asignada
-                </p>
-                <p className="mt-1 text-xs text-brown-700">
-                  La gift card se va a emitir igual, pero{" "}
-                  <strong>esos pesos no van a aparecer en la caja del día</strong>.
-                  Asignale una cuenta en Catálogos → Medios de pago, o elegí otro
-                  medio.
-                </p>
+            {preSistema && (
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="fecha_venta"
+                  className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
+                  Cuando se vendio (opcional)
+                </label>
+                <input
+                  id="fecha_venta"
+                  name="fecha_venta"
+                  type="date"
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
               </div>
             )}
           </div>
 
-          {usaCuentaBanco(mp) && cuentasBanco.length > 0 ? (
+          {/* Con la tarjeta vieja no se cobra nada hoy, asi que no hay medio
+              de pago ni cuenta que elegir. */}
+          {!preSistema && (
+            <>
             <div className="space-y-1.5">
               <label
-                htmlFor="mp_cuenta_id"
+                htmlFor="mp_id"
                 className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
               >
-                Cuenta
+                Cómo la pagó
               </label>
-              <select
-                id="mp_cuenta_id"
-                name="mp_cuenta_id"
-                value={cuentaId}
-                onChange={(e) => setCuentaId(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">— Cuenta por defecto del medio —</option>
-                {cuentasBanco.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
+              {mediosPago.length === 0 ? (
+                <p className="text-xs text-destructive">
+                  Esta sucursal no tiene medios de pago cargados. Cargalos en
+                  Catálogos → Medios de pago.
+                </p>
+              ) : (
+                <select
+                  id="mp_id"
+                  name="mp_id"
+                  value={mpId}
+                  onChange={(e) => setMpId(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {mediosPago.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nombre}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {errors.mp_id && (
+                <p className="text-xs text-destructive">
+                  {errors.mp_id.join(", ")}
+                </p>
+              )}
+              {sinCuenta && (
+                <div className="rounded-md border border-warning/40 bg-warning/10 p-3">
+                  <p className="text-xs font-medium text-brown-900">
+                    {mp?.nombre} no tiene cuenta asignada
+                  </p>
+                  <p className="mt-1 text-xs text-brown-700">
+                    La gift card se va a emitir igual, pero{" "}
+                    <strong>esos pesos no van a aparecer en la caja del día</strong>.
+                    Asignale una cuenta en Catálogos → Medios de pago, o elegí otro
+                    medio.
+                  </p>
+                </div>
+              )}
             </div>
-          ) : null}
+
+            {usaCuentaBanco(mp) && cuentasBanco.length > 0 ? (
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="mp_cuenta_id"
+                  className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
+                  Cuenta
+                </label>
+                <select
+                  id="mp_cuenta_id"
+                  name="mp_cuenta_id"
+                  value={cuentaId}
+                  onChange={(e) => setCuentaId(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">— Cuenta por defecto del medio —</option>
+                  {cuentasBanco.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            </>
+          )}
 
           <Field
             label="Vence el"
