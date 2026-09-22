@@ -30,15 +30,23 @@ describe("parseMontoArs", () => {
     expect(parseMontoArs("12,")).toBe(12);
   });
 
-  it("un punto solitario con una o dos cifras atrás es decimal", () => {
-    // El teclado numérico escribe punto; nadie que teclea "12.5" quiere 125.
-    expect(parseMontoArs("12.5")).toBe(12.5);
-    expect(parseMontoArs("12.50")).toBe(12.5);
-  });
-
-  it("pero tres cifras atrás son miles, que es lo que escribe el campo", () => {
+  it("el punto SIEMPRE es separador de miles, nunca decimal", () => {
+    // Este es el caso que hacia imposible cargar un importe: el salon escribe
+    // "462.400" como lo lee. Si el punto fuera decimal, al llegar a "462.40"
+    // el monto pasaba a ser $462,40 y el tercer digito se descartaba por el
+    // tope de dos decimales.
+    expect(parseMontoArs("462.4")).toBe(4624);
+    expect(parseMontoArs("462.40")).toBe(46240);
+    expect(parseMontoArs("462.400")).toBe(462400);
     expect(parseMontoArs("1.234")).toBe(1234);
     expect(parseMontoArs("12.345")).toBe(12345);
+  });
+
+  it("tipear un importe largo con puntos no pierde ningun digito", () => {
+    // Tecla por tecla, como lo escribe una persona.
+    const tecleado = ["4", "46", "462", "462.", "462.4", "462.40", "462.400"];
+    const esperado = [4, 46, 462, 462, 4624, 46240, 462400];
+    expect(tecleado.map(parseMontoArs)).toEqual(esperado);
   });
 
   it("vuelve a leer exactamente lo que el campo muestra", () => {

@@ -1,13 +1,19 @@
 const MILES = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 });
 
 /**
- * Separa un importe tipeado en parte entera y centavos, con la convención de
- * acá: la coma decide los decimales y el punto separa los miles.
+ * Separa un importe tipeado en parte entera y centavos: SOLO la coma marca los
+ * decimales, el punto siempre separa miles.
  *
- * El punto es ambiguo, porque el propio campo escribe "1.234" mientras se
- * tipea. Por eso un punto solitario con una o dos cifras atrás se toma como
- * decimal ("12.5" es doce cincuenta, que es lo que espera quien escribe en el
- * teclado numérico) y en cualquier otro caso son separadores de miles.
+ * Antes un punto solitario con una o dos cifras atrás se tomaba como decimal,
+ * para que "12.5" del teclado numérico fuera doce cincuenta. Esa comodidad
+ * rompía el caso mucho más común: alguien escribiendo "462.400", el separador
+ * de miles tal como lo lee. Al llegar a "462.40" se convertía en $462,40 y de
+ * ahí en más los dígitos nuevos se descartaban por el tope de dos decimales —
+ * el campo se comía el tercer número y no había forma de cargar el importe.
+ *
+ * Entre las dos, gana la del punto como miles: es la convención de acá, es lo
+ * que el propio campo escribe al formatear, y perder un dígito en silencio es
+ * mucho peor que tener que usar la coma para los centavos.
  *
  * `decimales: null` significa que no se escribió ninguna coma todavía, que es
  * distinto de haber escrito una coma sin cifras atrás ("12,").
@@ -26,10 +32,6 @@ export function partirMonto(s: string): {
         .replace(/\D/g, "")
         .slice(0, 2),
     };
-  }
-  const trozos = limpio.split(".");
-  if (trozos.length === 2 && trozos[1].length > 0 && trozos[1].length <= 2) {
-    return { entero: trozos[0].replace(/\D/g, ""), decimales: trozos[1] };
   }
   return { entero: limpio.replace(/\D/g, ""), decimales: null };
 }
