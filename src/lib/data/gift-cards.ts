@@ -519,7 +519,11 @@ export async function canjearGiftCardTx(
         sql`${giftCardsTable.saldo} >= ${args.monto} - 0.005`,
       ),
     )
-    .returning({ saldo: giftCardsTable.saldo, codigo: giftCardsTable.codigo });
+    .returning({
+      saldo: giftCardsTable.saldo,
+      codigo: giftCardsTable.codigo,
+      venceEl: giftCardsTable.venceEl,
+    });
 
   const fila = filas[0];
   if (!fila) {
@@ -540,6 +544,14 @@ export async function canjearGiftCardTx(
     );
   }
 
+  // El salon toma tarjetas vencidas a proposito, para no perder a la clienta, y
+  // el sistema se lo permite. Pero la pantalla promete que "se va a registrar
+  // como canje fuera de termino", y hasta ahora no se registraba nada: la
+  // descripcion era la misma en los dos casos. Sin esto no hay forma de saber
+  // despues cuantas excepciones se hicieron ni por cuanta plata.
+  const venceEl = fila.venceEl ?? null;
+  const fueraDeTermino = !!venceEl && hoyAr(args.fecha) > venceEl;
+
   await tx.insert(giftCardMovimientosTable).values({
     id: createId(),
     giftCardId: args.giftCardId,
@@ -548,7 +560,9 @@ export async function canjearGiftCardTx(
     monto: -args.monto,
     saldoResultante: fila.saldo,
     ingresoId: args.ingresoId,
-    descripcion: `Canje de gift card ${fila.codigo}`,
+    descripcion: fueraDeTermino
+      ? `Canje de gift card ${fila.codigo} — FUERA DE TERMINO, vencia el ${venceEl}`
+      : `Canje de gift card ${fila.codigo}`,
     usuarioId: args.usuarioId,
   });
 
