@@ -1,0 +1,348 @@
+{
+  "ingresos": [
+    {
+      "id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "fecha": "2026-09-22T13:34:57.494Z",
+      "sucursal_id": "seed-000001",
+      "cliente_id": "b80f34b3-707f-490e-a558-8f8e70a92ac7",
+      "subtotal": 145000,
+      "descuento_pct": 0,
+      "descuento_monto": 0,
+      "total": 145000,
+      "mp1_id": "9b6093cf-fda9-437d-ad72-02e4a045e4de",
+      "valor1": 145000,
+      "mp2_id": null,
+      "valor2": 0,
+      "observacion": "Cliente cambiado a Agostina Marchiano · ANULADA: Venta de prueba de la capacitacion",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "anulado": true,
+      "descuento_motivo_id": null,
+      "mp1_cuenta_id": null,
+      "mp2_cuenta_id": null,
+      "revision": "ok",
+      "revision_nota": null,
+      "revisado_por": null,
+      "revisado_en": null
+    },
+    {
+      "id": "f2580142-8dac-4056-8248-58ca2a3ba6f6",
+      "fecha": "2026-09-22T17:51:18.130Z",
+      "sucursal_id": "seed-000001",
+      "cliente_id": "2245dcc1-80a9-44d2-956b-d9ad600fafe9",
+      "subtotal": 46250,
+      "descuento_pct": 0,
+      "descuento_monto": 0,
+      "total": 46250,
+      "mp1_id": "9b6093cf-fda9-437d-ad72-02e4a045e4de",
+      "valor1": 46250,
+      "mp2_id": null,
+      "valor2": 0,
+      "observacion": null,
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "anulado": false,
+      "descuento_motivo_id": null,
+      "mp1_cuenta_id": null,
+      "mp2_cuenta_id": null,
+      "revision": "ok",
+      "revision_nota": null,
+      "revisado_por": null,
+      "revisado_en": null
+    }
+  ],
+  "lineas": [
+    {
+      "id": "a3dde436-6243-4e74-9738-7dbc2efa7c70",
+      "ingreso_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "servicio_id": "5159dd91-25ef-4ea2-bd56-74c7b17b5721",
+      "empleado_id": "2713bcef-265e-41b9-88c8-7835f1a4807b",
+      "precio_efectivo": 75000,
+      "cantidad": 1,
+      "subtotal": 75000,
+      "comision_pct": 0,
+      "comision_monto": 0,
+      "insumo_id": null,
+      "promo_servicio_id": null
+    },
+    {
+      "id": "7d7859e3-3f33-4e76-a739-0f2d6a272923",
+      "ingreso_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "servicio_id": null,
+      "empleado_id": "e18dedc4-7a6d-4236-aa9f-3e9a7ed33775",
+      "precio_efectivo": 70000,
+      "cantidad": 1,
+      "subtotal": 70000,
+      "comision_pct": 10,
+      "comision_monto": 7000,
+      "insumo_id": "d447ba35-bbea-4f3b-b953-177e5b5e17a7",
+      "promo_servicio_id": null
+    },
+    {
+      "id": "7792b47c-f9a6-41d4-bdf0-ae036a8103e8",
+      "ingreso_id": "f2580142-8dac-4056-8248-58ca2a3ba6f6",
+      "servicio_id": "f58460b8-a943-44fd-b042-a67b7905c447",
+      "empleado_id": "0b356eb4-d8f5-4c39-ae37-fb182867d6a7",
+      "precio_efectivo": 46250,
+      "cantidad": 1,
+      "subtotal": 46250,
+      "comision_pct": 0,
+      "comision_monto": 0,
+      "insumo_id": null,
+      "promo_servicio_id": null
+    }
+  ],
+  "egresos": [
+    {
+      "id": "954cd3ce-dc9f-44ee-ad75-36b3fcad50c4",
+      "fecha": "2026-09-22T13:39:30.000Z",
+      "sucursal_id": "seed-000001",
+      "rubro_id": "fe6f60be-67c3-421a-a808-1e5cc4f2f0c8",
+      "insumo_id": null,
+      "proveedor_id": null,
+      "cantidad": null,
+      "valor": 8500.75,
+      "mp_id": "9b6093cf-fda9-437d-ad72-02e4a045e4de",
+      "observacion": "Gasto de prueba de la capacitacion · ANULADO: Prueba de la capacitacion",
+      "pagado": true,
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "mp1_cuenta_id": null,
+      "mp2_id": null,
+      "valor2": null,
+      "mp2_cuenta_id": null,
+      "cheque_emisor": null,
+      "cheque_fecha_cobro": null,
+      "cheque_interes_pct": null,
+      "anulado": true
+    }
+  ],
+  "aperturas": [
+    {
+      "id": "7bd64d85-e7d2-41a8-9836-04880c725705",
+      "sucursal_id": "seed-000001",
+      "fecha": "2026-09-22",
+      "abierto_por": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha_apertura": "2026-09-22T13:31:18.458Z",
+      "observacion": "Apertura de prueba - capacitacion"
+    }
+  ],
+  "apeCuentas": [
+    {
+      "id": "e3eab45e-27f8-49e8-9617-02700c9787cf",
+      "apertura_id": "7bd64d85-e7d2-41a8-9836-04880c725705",
+      "cuenta_id": "98897af7-d1ca-4e79-af51-0bd3d0da1b68",
+      "saldo_esperado": 0,
+      "saldo_declarado": 50000
+    },
+    {
+      "id": "90643ef7-dde1-4288-8bf5-b2773f8f0819",
+      "apertura_id": "7bd64d85-e7d2-41a8-9836-04880c725705",
+      "cuenta_id": "1546c8b2-87cf-4d80-ba8f-91f201ac1a39",
+      "saldo_esperado": 0,
+      "saldo_declarado": 0
+    },
+    {
+      "id": "57923893-04dc-4465-952c-199aaeb44cda",
+      "apertura_id": "7bd64d85-e7d2-41a8-9836-04880c725705",
+      "cuenta_id": "29e051c4-1f96-4397-a45b-06706a9cf95a",
+      "saldo_esperado": 0,
+      "saldo_declarado": 0
+    }
+  ],
+  "movBanc": [
+    {
+      "id": "bebd7d9b-3f4c-4ba8-8600-a587ff66d58e",
+      "cuenta_id": "98897af7-d1ca-4e79-af51-0bd3d0da1b68",
+      "fecha": "2026-09-22T13:31:18.458Z",
+      "tipo": "ajuste",
+      "monto": 50000,
+      "sucursal_id": "seed-000001",
+      "ref_tipo": "apertura",
+      "ref_id": "7bd64d85-e7d2-41a8-9836-04880c725705",
+      "descripcion": "Ajuste de apertura de caja",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88"
+    },
+    {
+      "id": "015f37a1-822e-40d0-8baf-86871fa757a0",
+      "cuenta_id": "98897af7-d1ca-4e79-af51-0bd3d0da1b68",
+      "fecha": "2026-09-22T17:51:18.130Z",
+      "tipo": "ingreso",
+      "monto": 46250,
+      "sucursal_id": "seed-000001",
+      "ref_tipo": "ingreso",
+      "ref_id": "f2580142-8dac-4056-8248-58ca2a3ba6f6",
+      "descripcion": "Cobro de venta",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88"
+    }
+  ],
+  "movStock": [
+    {
+      "id": "817ce704-4ff0-4457-bdc3-5c8bc5e431f0",
+      "insumo_id": "24cded76-fcc1-4b52-aa7c-ec68a6d63a32",
+      "sucursal_id": "seed-000001",
+      "tipo": "venta",
+      "cantidad": -45,
+      "motivo": null,
+      "ref_tipo": "ingreso",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:34:57.612Z"
+    },
+    {
+      "id": "6a0fa20e-4182-4e5f-b227-2f445d22e5e2",
+      "insumo_id": "34eae286-114f-497f-92d9-a94c706e4020",
+      "sucursal_id": "seed-000001",
+      "tipo": "venta",
+      "cantidad": -5,
+      "motivo": null,
+      "ref_tipo": "ingreso",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:34:57.640Z"
+    },
+    {
+      "id": "9aebbb87-6577-4394-9558-4395a8e5311d",
+      "insumo_id": "b65d64d6-a381-4c58-824c-30f776932238",
+      "sucursal_id": "seed-000001",
+      "tipo": "venta",
+      "cantidad": -5,
+      "motivo": null,
+      "ref_tipo": "ingreso",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:34:57.671Z"
+    },
+    {
+      "id": "bc1c0d87-2373-4ffa-97df-3cb7fee811bf",
+      "insumo_id": "cc1eaa65-7811-42e8-84a9-c4fe9d2d0746",
+      "sucursal_id": "seed-000001",
+      "tipo": "venta",
+      "cantidad": -30,
+      "motivo": null,
+      "ref_tipo": "ingreso",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:34:57.695Z"
+    },
+    {
+      "id": "c95f521d-7001-4557-9421-ce494a628ba2",
+      "insumo_id": "efd47c04-2bd4-4fff-b1e9-27f068aacd58",
+      "sucursal_id": "seed-000001",
+      "tipo": "venta",
+      "cantidad": -30,
+      "motivo": null,
+      "ref_tipo": "ingreso",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:34:57.719Z"
+    },
+    {
+      "id": "bd4c4518-9593-4a8d-8ba5-1701c3ce849a",
+      "insumo_id": "ff792e28-c25e-415f-8720-911230e5909d",
+      "sucursal_id": "seed-000001",
+      "tipo": "venta",
+      "cantidad": -30,
+      "motivo": null,
+      "ref_tipo": "ingreso",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:34:57.744Z"
+    },
+    {
+      "id": "096e31f5-ab85-4849-af97-9c7216ea0134",
+      "insumo_id": "d447ba35-bbea-4f3b-b953-177e5b5e17a7",
+      "sucursal_id": "seed-000001",
+      "tipo": "venta",
+      "cantidad": -1,
+      "motivo": null,
+      "ref_tipo": "ingreso",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:34:57.770Z"
+    }
+  ],
+  "devol": [
+    {
+      "id": "7d658248-ad56-463d-a6a8-c44f94b7b436",
+      "insumo_id": "24cded76-fcc1-4b52-aa7c-ec68a6d63a32",
+      "sucursal_id": "seed-000001",
+      "tipo": "ajuste_manual",
+      "cantidad": 45,
+      "motivo": "Devolución por venta anulada",
+      "ref_tipo": "ingreso_anulado",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:36:57.318Z"
+    },
+    {
+      "id": "eea2e9f0-ebdb-48c1-ae4f-eab9587b977c",
+      "insumo_id": "34eae286-114f-497f-92d9-a94c706e4020",
+      "sucursal_id": "seed-000001",
+      "tipo": "ajuste_manual",
+      "cantidad": 5,
+      "motivo": "Devolución por venta anulada",
+      "ref_tipo": "ingreso_anulado",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:36:57.339Z"
+    },
+    {
+      "id": "11dedf1d-e3a4-411b-a204-24c503f00893",
+      "insumo_id": "b65d64d6-a381-4c58-824c-30f776932238",
+      "sucursal_id": "seed-000001",
+      "tipo": "ajuste_manual",
+      "cantidad": 5,
+      "motivo": "Devolución por venta anulada",
+      "ref_tipo": "ingreso_anulado",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:36:57.361Z"
+    },
+    {
+      "id": "ee6cc43c-692f-4885-bf9c-bd51759e40ab",
+      "insumo_id": "cc1eaa65-7811-42e8-84a9-c4fe9d2d0746",
+      "sucursal_id": "seed-000001",
+      "tipo": "ajuste_manual",
+      "cantidad": 30,
+      "motivo": "Devolución por venta anulada",
+      "ref_tipo": "ingreso_anulado",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:36:57.381Z"
+    },
+    {
+      "id": "29376b4b-73da-4d16-9937-876ea404b658",
+      "insumo_id": "efd47c04-2bd4-4fff-b1e9-27f068aacd58",
+      "sucursal_id": "seed-000001",
+      "tipo": "ajuste_manual",
+      "cantidad": 30,
+      "motivo": "Devolución por venta anulada",
+      "ref_tipo": "ingreso_anulado",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:36:57.401Z"
+    },
+    {
+      "id": "55c6efbc-de93-478e-8a8f-2677f74ed81e",
+      "insumo_id": "ff792e28-c25e-415f-8720-911230e5909d",
+      "sucursal_id": "seed-000001",
+      "tipo": "ajuste_manual",
+      "cantidad": 30,
+      "motivo": "Devolución por venta anulada",
+      "ref_tipo": "ingreso_anulado",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:36:57.420Z"
+    },
+    {
+      "id": "eebe1d03-3911-435f-bdcb-17bd63a08908",
+      "insumo_id": "d447ba35-bbea-4f3b-b953-177e5b5e17a7",
+      "sucursal_id": "seed-000001",
+      "tipo": "ajuste_manual",
+      "cantidad": 1,
+      "motivo": "Devolución por venta anulada",
+      "ref_tipo": "ingreso_anulado",
+      "ref_id": "96f7edb1-4da1-44b9-ab68-6edd99a954ec",
+      "usuario_id": "6ac6c4e9-668c-4720-a3bc-f08356d98a88",
+      "fecha": "2026-09-22T13:36:57.440Z"
+    }
+  ]
+}
