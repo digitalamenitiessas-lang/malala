@@ -1,5 +1,285 @@
 [
   {
+    "codigo": "GC-004",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-05-02",
+    "compradora": "Juli Messina",
+    "observacion": "Planilla YB (vencida): semi manos + semi pies"
+  },
+  {
+    "codigo": "GC-009",
+    "importe": 20000,
+    "fechaVenta": null,
+    "venceEl": "2026-05-13",
+    "compradora": "Mariana de la rosa",
+    "observacion": "Planilla YB (vencida): semi de manos"
+  },
+  {
+    "codigo": "GC-012",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-05-17",
+    "compradora": "Patricia Scopel",
+    "observacion": "Planilla YB (vencida): semi manos + semi pies"
+  },
+  {
+    "codigo": "GC-014",
+    "importe": 20000,
+    "fechaVenta": null,
+    "venceEl": "2026-05-25",
+    "compradora": "Sonia Fordham",
+    "observacion": "Planilla YB (vencida): semi manos"
+  },
+  {
+    "codigo": "GC-016",
+    "importe": 22000,
+    "fechaVenta": null,
+    "venceEl": "2026-05-30",
+    "compradora": "Sonia Fordham",
+    "observacion": "Planilla YB (vencida): kapping manos"
+  },
+  {
+    "codigo": "GC-024",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-02",
+    "compradora": "Barbara Messina",
+    "observacion": "Planilla YB (vencida): semi manos + masajes 30 min"
+  },
+  {
+    "codigo": "GC-027",
+    "importe": 36000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-05",
+    "compradora": "milagros esper",
+    "observacion": "Planilla YB (vencida): lavado y brushing"
+  },
+  {
+    "codigo": "GC-029",
+    "importe": 20000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-05",
+    "compradora": "milagros esper",
+    "observacion": "Planilla YB (vencida): laminado en cejas"
+  },
+  {
+    "codigo": "GC-030",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-05",
+    "compradora": "milagros esper",
+    "observacion": "Planilla YB (vencida): masajes 1 hora"
+  },
+  {
+    "codigo": "GC-034",
+    "importe": 20000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-08",
+    "compradora": "melisa astorga",
+    "observacion": "Planilla YB (vencida): semi de manos"
+  },
+  {
+    "codigo": "GC-035",
+    "importe": 36000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-08",
+    "compradora": "melisa astorga",
+    "observacion": "Planilla YB (vencida): lavado y brushing"
+  },
+  {
+    "codigo": "GC-039",
+    "importe": 44000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-14",
+    "compradora": "maryam meuli",
+    "observacion": "Planilla YB (vencida): lifting tradicional + masajes 30 min"
+  },
+  {
+    "codigo": "GC-043",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-20",
+    "compradora": "lucia becerra",
+    "observacion": "Planilla YB (vencida): masajes 1 hora"
+  },
+  {
+    "codigo": "GC-052",
+    "importe": 76000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-28",
+    "compradora": "malala",
+    "observacion": "Planilla YB (vencida): lavado y brushing + 1 hora masajes"
+  },
+  {
+    "codigo": "GC-054",
+    "importe": 76000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-28",
+    "compradora": "malala",
+    "observacion": "Planilla YB (vencida): lavado y brushing + 1 hora masajes"
+  },
+  {
+    "codigo": "GC-060",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-06-30",
+    "compradora": "sofia lichmajer",
+    "observacion": "Planilla YB (vencida): masajes 1 hora"
+  },
+  {
+    "codigo": "GC-065",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-04",
+    "compradora": "belen bobba",
+    "observacion": "Planilla YB (vencida): masajes 1 hora"
+  },
+  {
+    "codigo": "GC-066",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-04",
+    "compradora": "belen bobba",
+    "observacion": "Planilla YB (vencida): masajes 1 hora"
+  },
+  {
+    "codigo": "GC-067",
+    "importe": 120000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-04",
+    "compradora": "belen bobba",
+    "observacion": "Planilla YB (vencida): pack x 4 masajes"
+  },
+  {
+    "codigo": "GC-068",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-05",
+    "compradora": "belen bobba",
+    "observacion": "Planilla YB (vencida): masajes 1 hora"
+  },
+  {
+    "codigo": "GC-079",
+    "importe": 88000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-20",
+    "compradora": "mariana de la rosa",
+    "observacion": "Planilla YB (vencida): masaje 1 hora + nutri colageno 1"
+  },
+  {
+    "codigo": "GC-083",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-26",
+    "compradora": "valeria laroz",
+    "observacion": "Planilla YB (vencida): masajes 1 hora"
+  },
+  {
+    "codigo": "GC-084",
+    "importe": 24000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-27",
+    "compradora": "we love",
+    "observacion": "Planilla YB (vencida): lifting tradicional"
+  },
+  {
+    "codigo": "GC-085",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-27",
+    "compradora": "we love",
+    "observacion": "Planilla YB (vencida): masaje relajante 1 hora"
+  },
+  {
+    "codigo": "GC-086",
+    "importe": 20000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-27",
+    "compradora": "we love",
+    "observacion": "Planilla YB (vencida): semi de manos"
+  },
+  {
+    "codigo": "GC-087",
+    "importe": 36000,
+    "fechaVenta": null,
+    "venceEl": "2026-07-27",
+    "compradora": "we love",
+    "observacion": "Planilla YB (vencida): lavado y brushing"
+  },
+  {
+    "codigo": "GC-098",
+    "importe": 20000,
+    "fechaVenta": null,
+    "venceEl": "2026-08-16",
+    "compradora": "florencia romano norri",
+    "observacion": "Planilla YB (vencida): semi de manos"
+  },
+  {
+    "codigo": "GC-099",
+    "importe": 22000,
+    "fechaVenta": null,
+    "venceEl": "2026-08-16",
+    "compradora": "Florencia Silvetti",
+    "observacion": "Planilla YB (vencida): semi pies"
+  },
+  {
+    "codigo": "GC-104",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": null,
+    "compradora": "s/d",
+    "observacion": "Planilla YB (vencida): masaje 1 hora (sin vencimiento en la planilla)"
+  },
+  {
+    "codigo": "GC-113",
+    "importe": 40000,
+    "fechaVenta": null,
+    "venceEl": "2026-08-23",
+    "compradora": "martina majul",
+    "observacion": "Planilla YB (vencida): masajes 1 hora"
+  },
+  {
+    "codigo": "GC-125",
+    "importe": 100000,
+    "fechaVenta": null,
+    "venceEl": "2026-09-01",
+    "compradora": "yoel andrada",
+    "observacion": "Planilla YB (vencida): servicios x $100.000"
+  },
+  {
+    "codigo": "GC-130",
+    "importe": 19000,
+    "fechaVenta": null,
+    "venceEl": "2026-09-05",
+    "compradora": "malala p/ beauty",
+    "observacion": "Planilla YB (vencida): manos tradicional"
+  },
+  {
+    "codigo": "GC-140",
+    "importe": 18000,
+    "fechaVenta": null,
+    "venceEl": "2026-09-07",
+    "compradora": "Mijal Rodrigo",
+    "observacion": "Planilla YB (vencida): saldo a favor $18.000"
+  },
+  {
+    "codigo": "GC-143",
+    "importe": 60000,
+    "fechaVenta": null,
+    "venceEl": "2026-09-11",
+    "compradora": "Lucia",
+    "observacion": "Planilla YB (vencida): masajes 1 hora + semi manos"
+  },
+  {
+    "codigo": "GC-146",
+    "importe": 4000,
+    "fechaVenta": null,
+    "venceEl": "2026-08-30",
+    "compradora": "Sonia Colombres",
+    "observacion": "Planilla YB (vencida): $4.000 a favor"
+  },
+  {
     "codigo": "GC-149",
     "importe": 40000,
     "fechaVenta": "2026-08-25",
