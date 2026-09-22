@@ -110,7 +110,10 @@ export default async function AperturaCajaPage() {
             >
               Volver a caja
             </Link>
-            {user.rol === "admin" && (
+            {/* La encargada también: es la que contó la plata y la que corrige
+                el mismo día. Y el literal "admin" dejaba afuera al superadmin,
+                que puede todo lo que puede un admin. */}
+            {["admin", "superadmin", "encargada"].includes(user.rol) && (
               <ReabrirAperturaButton aperturaId={existente.apertura.id} />
             )}
           </div>

@@ -265,10 +265,15 @@ export async function crearApertura(
 /**
  * Reabre (deshace) la apertura del día: borra la apertura, sus líneas y los
  * ajustes de saldo que generó, dejando los saldos como estaban antes de abrir.
- * Solo admin.
+ *
+ * Lo puede hacer la encargada, no solo admin: la apertura se corrige el mismo
+ * día y por quien contó la plata. El caso real es el vuelto que quedó del día
+ * anterior, que hace que en el cajón haya más de lo que dice el cierre; si
+ * corregirlo depende de que aparezca un admin, la plata queda sin registrar y
+ * el arqueo arrastra la diferencia.
  */
 export async function reabrirApertura(aperturaId: string): Promise<ActionResult> {
-  const user = await requireRole(["admin"]);
+  const user = await requireRole(["admin", "encargada"]);
   const scope = buildAccessScope(user);
 
   const db = getDb();
