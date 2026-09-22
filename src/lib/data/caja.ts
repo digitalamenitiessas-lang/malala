@@ -96,6 +96,15 @@ export interface GiftCardsDelDia {
   /** Tarjetas vendidas hoy: plata cobrada por adelantado, todavía no facturada. */
   vendidas: number;
   cantidadVendidas: number;
+  /**
+   * De lo vendido, cuánto entró en efectivo y cuánto en banco.
+   *
+   * Hace falta separado porque el arqueo cuenta billetes: vender una gift card
+   * en efectivo pone plata en el cajón que no está en ninguna venta, y sin esto
+   * el cierre la reportaba como sobrante.
+   */
+  vendidasEfectivo: number;
+  vendidasBanco: number;
   /** Canjeadas hoy: ya está contado en la facturación, pero no entró plata. */
   canjeadas: number;
   cantidadCanjeadas: number;
@@ -544,9 +553,36 @@ async function getGiftCardsDelDia(
       ),
     );
 
+  // Con qué se cobró cada gift card no está en gift_card_movimientos, pero sí
+  // en el movimiento bancario que deja la emisión: ahí está la cuenta. Se parte
+  // por tipo de cuenta, que es lo único que le importa al arqueo.
+  const efectivoCuentaIds = await getEfectivoCuentaIds(sucursalId);
+  const cobros = await db
+    .select({
+      cuentaId: movimientosBancariosTable.cuentaId,
+      monto: movimientosBancariosTable.monto,
+    })
+    .from(movimientosBancariosTable)
+    .where(
+      and(
+        eq(movimientosBancariosTable.sucursalId, sucursalId),
+        eq(movimientosBancariosTable.refTipo, "gift_card_venta"),
+        gte(movimientosBancariosTable.fecha, desde),
+        lte(movimientosBancariosTable.fecha, hasta),
+      ),
+    );
+  let vendidasEfectivo = 0;
+  let vendidasBanco = 0;
+  for (const c of cobros) {
+    if (efectivoCuentaIds.has(c.cuentaId)) vendidasEfectivo += c.monto;
+    else vendidasBanco += c.monto;
+  }
+
   return {
     vendidas: Number(row?.vendidas ?? 0),
     cantidadVendidas: Number(row?.cantidadVendidas ?? 0),
+    vendidasEfectivo,
+    vendidasBanco,
     canjeadas: Number(row?.canjeadas ?? 0),
     cantidadCanjeadas: Number(row?.cantidadCanjeadas ?? 0),
     pasivo: Number(pasivoRow?.total ?? 0),
@@ -1083,6 +1119,13 @@ export async function createCierre(
       egresosResto += row.egresos;
     }
   }
+
+  // La venta de una gift card no es una venta: no escribe en `ingresos` y por
+  // eso no está en porMp. Pero la plata entró igual, y el arqueo cuenta plata.
+  // Sin sumarla acá, vender una gift card en efectivo hacía que el cierre
+  // reportara ese monto como sobrante.
+  ingresosEf += resumen.giftCards.vendidasEfectivo;
+  ingresosResto += resumen.giftCards.vendidasBanco;
 
   // Si la caja se abrió ese día, el saldo inicial del cierre toma lo declarado
   // en la apertura (efectivo y bancos por separado). Si no, queda en lo enviado.

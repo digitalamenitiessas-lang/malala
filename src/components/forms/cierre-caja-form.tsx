@@ -64,8 +64,14 @@ export function CierreCajaForm({
       ),
     [billetes],
   );
+  // Las gift cards vendidas en efectivo suman al cajón aunque no sean una
+  // venta: la plata entró hoy, el servicio se presta después. Sin esto el
+  // arqueo las reportaba como sobrante.
   const efectivoEsperado =
-    saldoInicial + resumen.ef.ingresos - resumen.ef.egresos;
+    saldoInicial +
+    resumen.ef.ingresos +
+    resumen.giftCards.vendidasEfectivo -
+    resumen.ef.egresos;
   const diferencia = efectivoContado - efectivoEsperado;
   const cuadra = Math.abs(diferencia) < 0.005;
 
@@ -337,6 +343,13 @@ export function CierreCajaForm({
               </p>
               <p className="text-xs text-muted-foreground">
                 inicial + ingresos EF − egresos EF
+                {resumen.giftCards.vendidasEfectivo > 0 && (
+                  <>
+                    {" "}
+                    + {formatARS(resumen.giftCards.vendidasEfectivo)} de gift
+                    cards vendidas en efectivo
+                  </>
+                )}
               </p>
             </div>
           </div>
