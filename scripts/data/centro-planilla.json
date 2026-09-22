@@ -1,0 +1,4773 @@
+{
+  "recetas": [
+    {
+      "codigo": "PEL100",
+      "servicio": "Corte",
+      "rubro": "Peluqueria",
+      "subrubro": "Corte y peinado",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL100)"
+    },
+    {
+      "codigo": "PEL101",
+      "servicio": "Peinado ondas",
+      "rubro": "Peluqueria",
+      "subrubro": "Corte y peinado",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Mousse Emynent",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL105)"
+    },
+    {
+      "codigo": "PEL102",
+      "servicio": "Peinado",
+      "rubro": "Peluqueria",
+      "subrubro": "Corte y peinado",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (armada para Centro)"
+    },
+    {
+      "codigo": "PEL103",
+      "servicio": "Corte y lavado hombre",
+      "rubro": "Peluqueria",
+      "subrubro": "Corte y peinado",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (armada para Centro)"
+    },
+    {
+      "codigo": "PEL200",
+      "servicio": "Lavado + Brushing",
+      "rubro": "Peluqueria",
+      "subrubro": "Lavados",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL200)"
+    },
+    {
+      "codigo": "PEL201",
+      "servicio": "Lavado especial (Wella)",
+      "rubro": "Peluqueria",
+      "subrubro": "Lavados",
+      "items": [
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Shampoo Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL204)"
+    },
+    {
+      "codigo": "PEL300",
+      "servicio": "Nutricion Colageno 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL300)"
+    },
+    {
+      "codigo": "PEL301",
+      "servicio": "Nutricion Colágeno 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "ml",
+          "cantidad": 60
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL301)"
+    },
+    {
+      "codigo": "PEL302",
+      "servicio": "Nutricion Colageno 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "ml",
+          "cantidad": 90
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL345)"
+    },
+    {
+      "codigo": "PEL303",
+      "servicio": "Nutricion Wella ULTIMATE REPAIR (1)",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Acondicionador Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 15
+        },
+        {
+          "insumo": "Mascara Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 15
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL324, tipificacion alineada: Wella=Ultimate Repair)"
+    },
+    {
+      "codigo": "PEL304",
+      "servicio": "Nutricion Wella ULTIMATE REPAIR (2)",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Mascara Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 20
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL326, tipificacion alineada: Wella=Ultimate Repair)"
+    },
+    {
+      "codigo": "PEL305",
+      "servicio": "Nutricion Wella ULTIMATE REPAIR (3)",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Acondicionador Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Mascara Wella Ultimate Repair",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL327, tipificacion alineada: Wella=Ultimate Repair)"
+    },
+    {
+      "codigo": "PEL306",
+      "servicio": "Nutricion Intensa Olaplex 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Olaplex No.1 Bond Multiplier",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Olaplex No.2 Bond Perfector",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Shampoo Olaplex No.4P",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Olaplex No.7 Bonding Oil",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL306)"
+    },
+    {
+      "codigo": "PEL307",
+      "servicio": "Nutricion Intensa Olaplex 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Olaplex No.1 Bond Multiplier",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Olaplex No.2 Bond Perfector",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Shampoo Olaplex No.4P",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Olaplex No.7 Bonding Oil",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL307)"
+    },
+    {
+      "codigo": "PEL308",
+      "servicio": "Nutricion Intensa Olaplex 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Olaplex No.1 Bond Multiplier",
+          "um": "ml",
+          "cantidad": 60
+        },
+        {
+          "insumo": "Olaplex No.2 Bond Perfector",
+          "um": "ml",
+          "cantidad": 60
+        },
+        {
+          "insumo": "Shampoo Olaplex No.4P",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Olaplex No.7 Bonding Oil",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL351)"
+    },
+    {
+      "codigo": "PEL309",
+      "servicio": "Nutricion Intensa Olaplex 4",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Olaplex No.1 Bond Multiplier",
+          "um": "ml",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Olaplex No.2 Bond Perfector",
+          "um": "ml",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Shampoo Olaplex No.4P",
+          "um": "ml",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Olaplex No.7 Bonding Oil",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (extrapolada siguiendo la progresion de PEL306/307/351 Olaplex 1/2/3: incrementos constantes +20/+20/+10)"
+    },
+    {
+      "codigo": "PEL310",
+      "servicio": "Keraplex/Tratamiento antifrizz 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Keraplex",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL308) [verificado con Lucia]"
+    },
+    {
+      "codigo": "PEL311",
+      "servicio": "Keraplex/Tratamiento antifrizz 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Keraplex",
+          "um": "ml",
+          "cantidad": 60
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL309) [verificado con Lucia]"
+    },
+    {
+      "codigo": "PEL312",
+      "servicio": "Keraplex/Tratamiento antifrizz 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Keraplex",
+          "um": "ml",
+          "cantidad": 90
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL310) [verificado con Lucia]"
+    },
+    {
+      "codigo": "PEL313",
+      "servicio": "Keraplex/Tratamiento antifrizz 4",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Keraplex",
+          "um": "ml",
+          "cantidad": 120
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL344)"
+    },
+    {
+      "codigo": "PEL314",
+      "servicio": "Alisado sin formol 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Alisado Luminoliss",
+          "um": "grs",
+          "cantidad": 60
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL311)"
+    },
+    {
+      "codigo": "PEL315",
+      "servicio": "Alisado sin formol 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Alisado Luminoliss",
+          "um": "grs",
+          "cantidad": 83
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL312)"
+    },
+    {
+      "codigo": "PEL316",
+      "servicio": "Alisado sin formol 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Alisado Luminoliss",
+          "um": "grs",
+          "cantidad": 110
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL313)"
+    },
+    {
+      "codigo": "PEL317",
+      "servicio": "Alisado sin formol 4",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Alisado Luminoliss",
+          "um": "grs",
+          "cantidad": 137
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL346)"
+    },
+    {
+      "codigo": "PEL318",
+      "servicio": "Tratamiento Sow Vitamin Repair 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo SOW Vitamin Hair",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Acondicionador SOW Vitamin",
+          "um": "ml",
+          "cantidad": 15
+        },
+        {
+          "insumo": "Mascara SOW Vitamin",
+          "um": "ml",
+          "cantidad": 15
+        }
+      ],
+      "estado": "Completa (armada para Centro, cantidades tomadas del patron Wella Ultimate Repair)"
+    },
+    {
+      "codigo": "PEL319",
+      "servicio": "Tratamiento Sow Vitamin Repair 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo SOW Vitamin Hair",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador SOW Vitamin",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Mascara SOW Vitamin",
+          "um": "ml",
+          "cantidad": 20
+        }
+      ],
+      "estado": "Completa (armada para Centro, cantidades tomadas del patron Wella Ultimate Repair)"
+    },
+    {
+      "codigo": "PEL320",
+      "servicio": "Tratamiento Sow Vitamin Repair 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo SOW Vitamin Hair",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Acondicionador SOW Vitamin",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Mascara SOW Vitamin",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (armada para Centro, cantidades tomadas del patron Wella Ultimate Repair)"
+    },
+    {
+      "codigo": "PEL323",
+      "servicio": "Nutricion 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo Lumiere (Question)",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Mascara Lumiere (Question)",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (armada para Centro, cantidades tomadas del patron Nutricion Colageno 1/2)"
+    },
+    {
+      "codigo": "PEL324",
+      "servicio": "Nutricion 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo Lumiere (Question)",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Mascara Lumiere (Question)",
+          "um": "ml",
+          "cantidad": 60
+        }
+      ],
+      "estado": "Completa (armada para Centro, cantidades tomadas del patron Nutricion Colageno 1/2)"
+    },
+    {
+      "codigo": "PEL334",
+      "servicio": "Tratamiento molecular regen force 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo Molecular Balance (Hairssime)",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Molecular Elixir (Hairssime)",
+          "um": "disparos",
+          "cantidad": 3
+        }
+      ],
+      "estado": "Completa (armada para Centro, cantidad shampoo tomada del patron Nutricion Colageno 1/2/3, serum fijo en 3 disparos por indicacion de Lucia)"
+    },
+    {
+      "codigo": "PEL335",
+      "servicio": "Tratamiento molecular regen force 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo Molecular Balance (Hairssime)",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Molecular Elixir (Hairssime)",
+          "um": "disparos",
+          "cantidad": 3
+        }
+      ],
+      "estado": "Completa (armada para Centro, cantidad shampoo tomada del patron Nutricion Colageno 1/2/3, serum fijo en 3 disparos por indicacion de Lucia)"
+    },
+    {
+      "codigo": "PEL336",
+      "servicio": "Tratamiento molecular regen force 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Shampoo Molecular Balance (Hairssime)",
+          "um": "ml",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Molecular Elixir (Hairssime)",
+          "um": "disparos",
+          "cantidad": 3
+        }
+      ],
+      "estado": "Completa (armada para Centro, cantidad shampoo tomada del patron Nutricion Colageno 1/2/3, serum fijo en 3 disparos por indicacion de Lucia)"
+    },
+    {
+      "codigo": "PEL337",
+      "servicio": "Tratamiento Vitamino Color (bacha) Largo 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Vitamino Color Shampoo 1.5L (SE21)",
+          "um": "ml",
+          "cantidad": 10
+        },
+        {
+          "insumo": "Vitamino Color Conditioner 750ml (SE21)",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Vitamino Color Máscara 500ml (SE21)",
+          "um": "ml",
+          "cantidad": 20
+        }
+      ],
+      "estado": "Completa (armada para Centro. Tratamiento Vitamino Color bacha; Precio Lista $75.000 / Precio Efectivo $60.000)"
+    },
+    {
+      "codigo": "PEL338",
+      "servicio": "Tratamiento Vitamino Color (bacha) Largo 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Vitamino Color Shampoo 1.5L (SE21)",
+          "um": "ml",
+          "cantidad": 15
+        },
+        {
+          "insumo": "Vitamino Color Conditioner 750ml (SE21)",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Vitamino Color Máscara 500ml (SE21)",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (armada para Centro. Tratamiento Vitamino Color bacha; Precio Lista $87.500 / Precio Efectivo $70.000)"
+    },
+    {
+      "codigo": "PEL339",
+      "servicio": "Tratamiento Vitamino Color (bacha) Largo 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Tratamientos capilares",
+      "items": [
+        {
+          "insumo": "Vitamino Color Shampoo 1.5L (SE21)",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Vitamino Color Conditioner 750ml (SE21)",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Vitamino Color Máscara 500ml (SE21)",
+          "um": "ml",
+          "cantidad": 40
+        }
+      ],
+      "estado": "Completa (armada para Centro. Tratamiento Vitamino Color bacha; Precio Lista $100.000 / Precio Efectivo $80.000)"
+    },
+    {
+      "codigo": "PEL400",
+      "servicio": "Reflejo/Iluminacion (Precio 1)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 100
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 45
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL400 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL401",
+      "servicio": "Reflejo/Iluminacion (Precio 2)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 160
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 60
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 90
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL401 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL402",
+      "servicio": "Reflejo/Iluminacion (Precio 3)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 120
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 240
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 120
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL402 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL403",
+      "servicio": "Reflejo/Iluminacion (Precio 4)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 160
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 320
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 100
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 150
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL403 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL404",
+      "servicio": "Mechas contorno (solo linea del flequillo)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL408 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL405",
+      "servicio": "Mechas frontal (parte frotal de la cabeza)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL409 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL406",
+      "servicio": "Balayage/mechas con papel (Precio 1)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 100
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 45
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL412 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL407",
+      "servicio": "Balayage/mechas con papel (Precio 2)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 160
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 60
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 90
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL413 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL408",
+      "servicio": "Balayage/mechas con papel (Precio 3)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 120
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 240
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 120
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL414 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL409",
+      "servicio": "Balayage/mechas con papel (Precio 4)",
+      "rubro": "Peluqueria",
+      "subrubro": "Trabajos tecnicos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 160
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 320
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 100
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 150
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL415 (YB), decolorante cambiado a Issue Profesional)"
+    },
+    {
+      "codigo": "PEL500",
+      "servicio": "Aplicación de color 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL500) [verificado con Lucia]"
+    },
+    {
+      "codigo": "PEL501",
+      "servicio": "Aplicacion de color 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL500) [verificado con Lucia]"
+    },
+    {
+      "codigo": "PEL502",
+      "servicio": "Gloss (bano de luz) 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 45
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL501/502 Gloss Question, nivel 3 extrapolado por indicacion de Lucia)"
+    },
+    {
+      "codigo": "PEL503",
+      "servicio": "Gloss (bano de luz) 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 38
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 56
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL501/502 Gloss Question, nivel 3 extrapolado por indicacion de Lucia)"
+    },
+    {
+      "codigo": "PEL504",
+      "servicio": "Gloss (bano de luz) 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 46
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 68
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL501/502 Gloss Question, nivel 3 extrapolado por indicacion de Lucia)"
+    },
+    {
+      "codigo": "PEL505",
+      "servicio": "Color raiz",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 35
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 52.5
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL503 Color Raiz Question)"
+    },
+    {
+      "codigo": "PEL506",
+      "servicio": "Color global 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 60
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 90
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL504-506 Color global Question, nivel 4 extrapolado siguiendo la progresion existente)"
+    },
+    {
+      "codigo": "PEL507",
+      "servicio": "Color global 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 79
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 118
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL504-506 Color global Question, nivel 4 extrapolado siguiendo la progresion existente)"
+    },
+    {
+      "codigo": "PEL508",
+      "servicio": "Color global 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 104
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 156
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL504-506 Color global Question, nivel 4 extrapolado siguiendo la progresion existente)"
+    },
+    {
+      "codigo": "PEL509",
+      "servicio": "Color global 4",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 137
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 205
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL504-506 Color global Question, nivel 4 extrapolado siguiendo la progresion existente)"
+    },
+    {
+      "codigo": "PEL510",
+      "servicio": "Color vincha",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (corregida a Tintura con amoniaco Question; fila reescrita, tenia columnas corridas)"
+    },
+    {
+      "codigo": "PEL511",
+      "servicio": "Decoloracion raiz comun",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 120
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 45
+        }
+      ],
+      "estado": "Completa (Polvo Issue Profesional 50g + Oxidante 120ml + tintura de matizado Lumiplex sin amoniaco 30g/45ml)"
+    },
+    {
+      "codigo": "PEL516",
+      "servicio": "Decoloracion raiz SOW",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Polvo decolorante SOW",
+          "um": "grs",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 90
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 45
+        }
+      ],
+      "estado": "Completa (Polvo SOW Pro-Plex 40g + Oxidante 90ml + tintura de matizado Lumiplex sin amoniaco 30g/45ml). Insumo: bolsa 500gr $40.000"
+    },
+    {
+      "codigo": "PEL512",
+      "servicio": "Color global sin amoniaco 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 60
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL508 Color global question sin Amoniaco 1)"
+    },
+    {
+      "codigo": "PEL513",
+      "servicio": "Color global sin amoniaco 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 75
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL509 Color global question sin Amoniaco 2)"
+    },
+    {
+      "codigo": "PEL514",
+      "servicio": "Color global sin amoniaco 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 120
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL510 Color global question sin Amoniaco 3)"
+    },
+    {
+      "codigo": "PEL515",
+      "servicio": "Color vincha sin amoniaco",
+      "rubro": "Peluqueria",
+      "subrubro": "Coloracion",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL511 Color vincha Question, linea Lumiplex sin amoniaco)"
+    },
+    {
+      "codigo": "PEL600",
+      "servicio": "Corte + Nutri comun 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Mascara Lumiere (Question)",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (patron PEL600 YB (Colageno) con Mascara Lumiere)"
+    },
+    {
+      "codigo": "PEL601",
+      "servicio": "Corte + Nutri comun 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Mascara Lumiere (Question)",
+          "um": "ml",
+          "cantidad": 60
+        }
+      ],
+      "estado": "Completa (patron PEL617/620 YB (Colageno largo2) con Mascara Lumiere)"
+    },
+    {
+      "codigo": "PEL602",
+      "servicio": "Corte + Nutri Colageno",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL600 Nutricion + Corte)"
+    },
+    {
+      "codigo": "PEL603",
+      "servicio": "Color raiz + Corte + Nutri + Brushing + Planchita",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 45
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL601) [verificado con Lucia]"
+    },
+    {
+      "codigo": "PEL604",
+      "servicio": "Color raiz + corte + brushing + planchita",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 45
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL601) [combo sin Nutricion (se removio el insumo Colageno/Nutri de la receta copiada)] [verificado con Lucia]"
+    },
+    {
+      "codigo": "PEL605",
+      "servicio": "Keraplex + Corte 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Keraplex",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL602)"
+    },
+    {
+      "codigo": "PEL606",
+      "servicio": "Keraplex + Corte 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Keraplex",
+          "um": "ml",
+          "cantidad": 60
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL603)"
+    },
+    {
+      "codigo": "PEL607",
+      "servicio": "Keraplex + corte 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Keraplex",
+          "um": "ml",
+          "cantidad": 90
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL604)"
+    },
+    {
+      "codigo": "PEL608",
+      "servicio": "Balayage + gloss + Nutricion + Corte + Ondas 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Polvo decolorante Farmavita",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 100
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 45
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL608)"
+    },
+    {
+      "codigo": "PEL609",
+      "servicio": "Balayage + gloss + Nutricion + Corte + Ondas 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Polvo decolorante Farmavita",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 160
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 60
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 90
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL609)"
+    },
+    {
+      "codigo": "PEL610",
+      "servicio": "Balayage + gloss + Nutricion + Corte + Ondas 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Polvo decolorante Farmavita",
+          "um": "grs",
+          "cantidad": 120
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 240
+        },
+        {
+          "insumo": "Tintura Lumiplex sin amoniaco",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante Lumiplex",
+          "um": "ml",
+          "cantidad": 120
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL610)"
+    },
+    {
+      "codigo": "PEL611",
+      "servicio": "Balayage + Gloss + nutri + corte + ondas 4",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 170
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 340
+        }
+      ],
+      "estado": "Completa (extrapolada siguiendo YB PEL608/609/610: oxidante = 2x decolorante siempre, decolorante con incremento creciente 30/40/50)"
+    },
+    {
+      "codigo": "PEL612",
+      "servicio": "Color raiz + nutricion + brushing + planchita",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 45
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL611) [verificado con Lucia]"
+    },
+    {
+      "codigo": "PEL613",
+      "servicio": "Reflejos + Corte + Colageno + Brushing + Planchita 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 100
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL605, corregida - antes tenia mal el tramo 4 para los 3 niveles)"
+    },
+    {
+      "codigo": "PEL614",
+      "servicio": "Reflejos + Corte + Colageno + Brushing + Planchita 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 22
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 160
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL606, corregida - antes tenia mal el tramo 4 para los 3 niveles)"
+    },
+    {
+      "codigo": "PEL615",
+      "servicio": "Reflejos + Corte + Colageno + Brushing + Planchita 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 120
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 240
+        }
+      ],
+      "estado": "Completa (copiada de YB PEL607, corregida - antes tenia mal el tramo 4 para los 3 niveles)"
+    },
+    {
+      "codigo": "PEL616",
+      "servicio": "Color global 1 + nutricion colageno",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 60
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 90
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (armada para Centro: Color global 1 + Corte + Nutri Colageno (base color global tier1 + colageno combo))"
+    },
+    {
+      "codigo": "PEL617",
+      "servicio": "Color global 2 + nutricion colageno",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 79
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 118
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "ml",
+          "cantidad": 30
+        }
+      ],
+      "estado": "Completa (armada para Centro: Color global 2 + Corte + Nutri Colageno)"
+    },
+    {
+      "codigo": "PEL619",
+      "servicio": "Reflejos + color + nutri + brushing 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 100
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 35
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 52.5
+        }
+      ],
+      "estado": "Completa (armada para Centro: Reflejos+Color raiz+Nutri+Brushing nivel1 (patron PEL605 + color raiz))"
+    },
+    {
+      "codigo": "PEL620",
+      "servicio": "Reflejos + color + nutri + brushing 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 22
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 160
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 35
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 52.5
+        }
+      ],
+      "estado": "Completa (armada para Centro: Reflejos+Color raiz+Nutri+Brushing nivel2 (patron PEL606 + color raiz))"
+    },
+    {
+      "codigo": "PEL621",
+      "servicio": "Reflejos + color + nutri + brushing 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 120
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 240
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 35
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 52.5
+        }
+      ],
+      "estado": "Completa (armada para Centro: Reflejos+Color raiz+Nutri+Brushing nivel3 (patron PEL607 + color raiz))"
+    },
+    {
+      "codigo": "PEL622",
+      "servicio": "Balayage + color + Nutricion + Brushing 1",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 100
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 35
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 52.5
+        }
+      ],
+      "estado": "Completa (armada para Centro: Balayage+Color raiz+Nutri+Brushing nivel1)"
+    },
+    {
+      "codigo": "PEL623",
+      "servicio": "Balayage + color + Nutricion + Brushing 2",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 22
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 80
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 160
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 35
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 52.5
+        }
+      ],
+      "estado": "Completa (armada para Centro: Balayage+Color raiz+Nutri+Brushing nivel2)"
+    },
+    {
+      "codigo": "PEL624",
+      "servicio": "Balayage + color + Nutricion + Brushing 3",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 120
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 240
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 35
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 52.5
+        }
+      ],
+      "estado": "Completa (armada para Centro: Balayage+Color raiz+Nutri+Brushing nivel3)"
+    },
+    {
+      "codigo": "PEL625",
+      "servicio": "Reflejos + nutr + color + corte",
+      "rubro": "Peluqueria",
+      "subrubro": "Combos",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Colágeno Karseell",
+          "um": "grs",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Polvo decolorante Issue Profesional",
+          "um": "grs",
+          "cantidad": 50
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 100
+        },
+        {
+          "insumo": "Tintura con amoniaco Question",
+          "um": "grs",
+          "cantidad": 35
+        },
+        {
+          "insumo": "Oxidante",
+          "um": "ml",
+          "cantidad": 52.5
+        }
+      ],
+      "estado": "Completa (armada para Centro: Reflejos+Nutri+Color raiz+Corte (patron nivel1, sin numeracion))"
+    },
+    {
+      "codigo": "PEL700",
+      "servicio": "PLUMITAS",
+      "rubro": "Peluqueria",
+      "subrubro": "Adicionales",
+      "items": [],
+      "estado": "Completa (sin receta propia)"
+    },
+    {
+      "codigo": "PEL701",
+      "servicio": "Adicional corte flequillo",
+      "rubro": "Peluqueria",
+      "subrubro": "Adicionales",
+      "items": [],
+      "estado": "Completa (sin receta propia)"
+    },
+    {
+      "codigo": "NAI100",
+      "servicio": "Kapping",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Base meline",
+          "um": "ml",
+          "cantidad": 0.15
+        },
+        {
+          "insumo": "Esmalte meline",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Top meline",
+          "um": "ml",
+          "cantidad": 0.15
+        },
+        {
+          "insumo": "Kapping meline",
+          "um": "ml",
+          "cantidad": 1.2
+        },
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Primer ácido",
+          "um": "ml",
+          "cantidad": 0.04
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI102)"
+    },
+    {
+      "codigo": "NAI101",
+      "servicio": "Esculpidas - Soft Gel",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Base meline",
+          "um": "ml",
+          "cantidad": 0.4
+        },
+        {
+          "insumo": "Esmalte meline",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Top meline",
+          "um": "ml",
+          "cantidad": 0.15
+        },
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Primer ácido",
+          "um": "ml",
+          "cantidad": 0.04
+        },
+        {
+          "insumo": "Tips soft gel",
+          "um": "ud",
+          "cantidad": 10
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI103)"
+    },
+    {
+      "codigo": "NAI102",
+      "servicio": "Polygel",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Polygel",
+          "um": "grs",
+          "cantidad": 0.5
+        },
+        {
+          "insumo": "Primer ácido",
+          "um": "ml",
+          "cantidad": 0.04
+        },
+        {
+          "insumo": "Top meline",
+          "um": "ml",
+          "cantidad": 0.15
+        },
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Tips/moldes",
+          "um": "ud",
+          "cantidad": 10
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI104)"
+    },
+    {
+      "codigo": "NAI103",
+      "servicio": "Podo + Tradicional",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Lima de pie",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Crema exfoliante pies",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Crema hidratante pies",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Base coat tradicional",
+          "um": "ml",
+          "cantidad": 0.15
+        },
+        {
+          "insumo": "Esmalte tradicional",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Top coat tradicional",
+          "um": "ml",
+          "cantidad": 0.15
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI105 Podoestetica + esmaltado comun, renombrada)"
+    },
+    {
+      "codigo": "NAI121",
+      "servicio": "Podo + Semi",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Lima de pie",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Crema exfoliante pies",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Crema hidratante pies",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Primer ácido",
+          "um": "ml",
+          "cantidad": 0.04
+        },
+        {
+          "insumo": "Base coat semi",
+          "um": "ml",
+          "cantidad": 0.15
+        },
+        {
+          "insumo": "Esmalte color semi",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Top coat semi",
+          "um": "ml",
+          "cantidad": 0.15
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI106 Podoestetica + esmaltado semi, servicio nuevo mismo precio que Podo + Tradicional)"
+    },
+    {
+      "codigo": "NAI104",
+      "servicio": "Remoción semi",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Acetona",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Papel aluminio",
+          "um": "ud",
+          "cantidad": 10
+        },
+        {
+          "insumo": "Algodón",
+          "um": "ud",
+          "cantidad": 10
+        },
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 1
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI107)"
+    },
+    {
+      "codigo": "NAI105",
+      "servicio": "Remoción soft",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Acetona",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Algodón",
+          "um": "ud",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI108)"
+    },
+    {
+      "codigo": "NAI106",
+      "servicio": "Francesita - Polvo - Cat Eyes - Chrome -",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Esmalte diseño",
+          "um": "ml",
+          "cantidad": 0.1
+        },
+        {
+          "insumo": "Pigmento chrome/cat eye",
+          "um": "grs",
+          "cantidad": 0.1
+        },
+        {
+          "insumo": "Top coat semi",
+          "um": "ml",
+          "cantidad": 0.05
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI110 Francesita/Chrome/Cat Eyes)"
+    },
+    {
+      "codigo": "NAI107",
+      "servicio": "Baby boomer - aerografo",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Top coat semi",
+          "um": "ml",
+          "cantidad": 0.05
+        },
+        {
+          "insumo": "Esmalte diseño",
+          "um": "ml",
+          "cantidad": 0.2
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI111)"
+    },
+    {
+      "codigo": "NAI108",
+      "servicio": "Reconstrucción (por uña)",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Base coat semi",
+          "um": "ml",
+          "cantidad": 0.02
+        },
+        {
+          "insumo": "Gel constructor",
+          "um": "ml",
+          "cantidad": 0.1
+        },
+        {
+          "insumo": "Top coat semi",
+          "um": "ml",
+          "cantidad": 0.02
+        },
+        {
+          "insumo": "Tips/moldes",
+          "um": "ud",
+          "cantidad": 1
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI112)"
+    },
+    {
+      "codigo": "NAI109",
+      "servicio": "Reparación (por uña)",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Gel reparador",
+          "um": "ml",
+          "cantidad": 0.05
+        },
+        {
+          "insumo": "Top coat semi",
+          "um": "ml",
+          "cantidad": 0.02
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI113)"
+    },
+    {
+      "codigo": "NAI110",
+      "servicio": "Esmaltado semi (manos - pies)",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Primer ácido",
+          "um": "ml",
+          "cantidad": 0.08
+        },
+        {
+          "insumo": "Base coat semi",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Esmalte color semi",
+          "um": "ml",
+          "cantidad": 0.6
+        },
+        {
+          "insumo": "Top coat semi",
+          "um": "ml",
+          "cantidad": 0.3
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI114 Semi manos + pies)"
+    },
+    {
+      "codigo": "NAI111",
+      "servicio": "Pack semipermanente (manos + pies)",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Primer ácido",
+          "um": "ml",
+          "cantidad": 0.16
+        },
+        {
+          "insumo": "Base coat semi",
+          "um": "ml",
+          "cantidad": 0.6
+        },
+        {
+          "insumo": "Esmalte color semi",
+          "um": "ml",
+          "cantidad": 1.2
+        },
+        {
+          "insumo": "Top coat semi",
+          "um": "ml",
+          "cantidad": 0.6
+        }
+      ],
+      "estado": "Completa (pack manos+pies = 2x la receta de NAI110 Esmaltado semi, que es solo uno de los dos)"
+    },
+    {
+      "codigo": "NAI112",
+      "servicio": "Esmaltado común (manos - pies)",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Base coat tradicional",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Esmalte tradicional",
+          "um": "ml",
+          "cantidad": 0.6
+        },
+        {
+          "insumo": "Top coat tradicional",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 2
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI115)"
+    },
+    {
+      "codigo": "NAI113",
+      "servicio": "Pack esmalte comun (manos + pies)",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Base coat tradicional",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Esmalte tradicional",
+          "um": "ml",
+          "cantidad": 0.6
+        },
+        {
+          "insumo": "Top coat tradicional",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 2
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI115) [verificado con Lucia]"
+    },
+    {
+      "codigo": "NAI114",
+      "servicio": "Podoestética",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Lima de pie",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Crema exfoliante pies",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Crema hidratante pies",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (YB pattern (Podoestetica sin esmaltado))"
+    },
+    {
+      "codigo": "NAI115",
+      "servicio": "Deco por uña",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Esmalte diseño",
+          "um": "ml",
+          "cantidad": 0.05
+        },
+        {
+          "insumo": "Top coat semi",
+          "um": "ml",
+          "cantidad": 0.05
+        }
+      ],
+      "estado": "Completa (copiada de YB NAI109 Deco (el par))"
+    },
+    {
+      "codigo": "NAI116",
+      "servicio": "Belleza de manos o pies",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 1
+        }
+      ],
+      "estado": "Completa (armada para Centro (limado + cuticulas, sin insumo liquido))"
+    },
+    {
+      "codigo": "NAI117",
+      "servicio": "Belleza de Manos",
+      "rubro": "Nails",
+      "subrubro": "Nails",
+      "items": [
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 1
+        }
+      ],
+      "estado": "Completa (armada para Centro (limado + cuticulas, sin insumo liquido))"
+    },
+    {
+      "codigo": "NAI200",
+      "servicio": "Remoción kapping",
+      "rubro": "Nails",
+      "subrubro": "Adicionales",
+      "items": [
+        {
+          "insumo": "Acetona",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Papel aluminio",
+          "um": "ud",
+          "cantidad": 10
+        },
+        {
+          "insumo": "Algodón",
+          "um": "ud",
+          "cantidad": 10
+        },
+        {
+          "insumo": "Lima",
+          "um": "ud",
+          "cantidad": 1
+        }
+      ],
+      "estado": "Completa (mismos insumos que Remocion semi NAI104, solo cambia el tiempo de servicio)"
+    },
+    {
+      "codigo": "CEP100",
+      "servicio": "Laminado",
+      "rubro": "Cejas y pestañas",
+      "subrubro": "Cejas y pestañas",
+      "items": [
+        {
+          "insumo": "Espuma micelar Melania (Pro Mousse)",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Papel film",
+          "um": "m",
+          "cantidad": 0.1
+        },
+        {
+          "insumo": "Paso 1 Melania (Pro Perm 1)",
+          "um": "g",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Paso 2 Melania (Pro Setting 2)",
+          "um": "g",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Serum Melania (Pro Elixir)",
+          "um": "ml",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Pincel",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Algodón discos",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Microhisopos",
+          "um": "ud",
+          "cantidad": 2
+        }
+      ],
+      "estado": "Completa (copiada de YB CEP101)"
+    },
+    {
+      "codigo": "CEP101",
+      "servicio": "Diseño y perfilado de cejas",
+      "rubro": "Cejas y pestañas",
+      "subrubro": "Cejas y pestañas",
+      "items": [],
+      "estado": "Completa (copiada de YB CEP102)"
+    },
+    {
+      "codigo": "CEP102",
+      "servicio": "Lifting de pestañas",
+      "rubro": "Cejas y pestañas",
+      "subrubro": "Cejas y pestañas",
+      "items": [
+        {
+          "insumo": "Espuma micelar Melania (Pro Mousse)",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Papel film",
+          "um": "m",
+          "cantidad": 0.1
+        },
+        {
+          "insumo": "Paso 1 Melania (Pro Perm 1)",
+          "um": "g",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Paso 2 Melania (Pro Setting 2)",
+          "um": "g",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Serum Melania (Pro Elixir)",
+          "um": "ml",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Pincel",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Algodón discos",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Microhisopos",
+          "um": "ud",
+          "cantidad": 2
+        },
+        {
+          "insumo": "Tinte Lash Colour Negro",
+          "um": "g",
+          "cantidad": 0.08
+        },
+        {
+          "insumo": "Revelador Lash Colour",
+          "um": "ml",
+          "cantidad": 0.1
+        }
+      ],
+      "estado": "Completa (copiada de YB CEP103)"
+    },
+    {
+      "codigo": "CEP103",
+      "servicio": "Laminado + perfilado cejas",
+      "rubro": "Cejas y pestañas",
+      "subrubro": "Cejas y pestañas",
+      "items": [
+        {
+          "insumo": "Espuma micelar Melania (Pro Mousse)",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Papel film",
+          "um": "m",
+          "cantidad": 0.1
+        },
+        {
+          "insumo": "Paso 1 Melania (Pro Perm 1)",
+          "um": "g",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Paso 2 Melania (Pro Setting 2)",
+          "um": "g",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Serum Melania (Pro Elixir)",
+          "um": "ml",
+          "cantidad": 0.2
+        },
+        {
+          "insumo": "Pincel",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Algodón discos",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Microhisopos",
+          "um": "ud",
+          "cantidad": 2
+        }
+      ],
+      "estado": "Completa (copiada de YB CEP104) [verificado con Lucia]"
+    },
+    {
+      "codigo": "CEP104",
+      "servicio": "Lifting de pestañas coreano",
+      "rubro": "Cejas y pestañas",
+      "subrubro": "Cejas y pestañas",
+      "items": [
+        {
+          "insumo": "Adhesivo para pestañas",
+          "um": "grs",
+          "cantidad": 0.5
+        },
+        {
+          "insumo": "Parches",
+          "um": "ud",
+          "cantidad": 2
+        },
+        {
+          "insumo": "Pincel",
+          "um": "ud",
+          "cantidad": 1
+        },
+        {
+          "insumo": "Algodón discos",
+          "um": "ud",
+          "cantidad": 1
+        }
+      ],
+      "estado": "Completa (copiada de YB CEP106)"
+    },
+    {
+      "codigo": "CEP105",
+      "servicio": "Extensión de pestañas (clásicas)",
+      "rubro": "Cejas y pestañas",
+      "subrubro": "Cejas y pestañas",
+      "items": [
+        {
+          "insumo": "Pestañas individuales (caja)",
+          "um": "ud",
+          "cantidad": 0.04
+        },
+        {
+          "insumo": "Adhesivo para pestañas",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Primer/desengrasante",
+          "um": "ml",
+          "cantidad": 0.5
+        },
+        {
+          "insumo": "Sellador",
+          "um": "ml",
+          "cantidad": 0.2
+        }
+      ],
+      "estado": "Completa (ESTIMADA por rendimiento estandar de industria, sin factura real - Clasicas: 1 pestaña postiza x 1 natural, rendimiento estimado ~1/25 de una caja de bandejas. Ajustar cuando haya precio real de insumos.)"
+    },
+    {
+      "codigo": "CEP106",
+      "servicio": "Extensión de pestañas (híbridas)",
+      "rubro": "Cejas y pestañas",
+      "subrubro": "Cejas y pestañas",
+      "items": [
+        {
+          "insumo": "Pestañas individuales/abanicos mixtos (caja)",
+          "um": "ud",
+          "cantidad": 0.05
+        },
+        {
+          "insumo": "Adhesivo para pestañas",
+          "um": "ml",
+          "cantidad": 0.35
+        },
+        {
+          "insumo": "Primer/desengrasante",
+          "um": "ml",
+          "cantidad": 0.5
+        },
+        {
+          "insumo": "Sellador",
+          "um": "ml",
+          "cantidad": 0.2
+        }
+      ],
+      "estado": "Completa (ESTIMADA por rendimiento estandar de industria, sin factura real - Hibridas: mezcla clasicas+volumen, mayor consumo que clasicas. Ajustar cuando haya precio real de insumos.)"
+    },
+    {
+      "codigo": "CEP107",
+      "servicio": "Volumen Pestañas",
+      "rubro": "Cejas y pestañas",
+      "subrubro": "Cejas y pestañas",
+      "items": [
+        {
+          "insumo": "Pestañas en abanico (caja)",
+          "um": "ud",
+          "cantidad": 0.06
+        },
+        {
+          "insumo": "Adhesivo para pestañas",
+          "um": "ml",
+          "cantidad": 0.4
+        },
+        {
+          "insumo": "Primer/desengrasante",
+          "um": "ml",
+          "cantidad": 0.5
+        },
+        {
+          "insumo": "Sellador",
+          "um": "ml",
+          "cantidad": 0.2
+        }
+      ],
+      "estado": "Completa (ESTIMADA por rendimiento estandar de industria, sin factura real - Volumen: abanicos armados, mayor tiempo/adhesivo. Ajustar cuando haya precio real de insumos.)"
+    },
+    {
+      "codigo": "FAC100",
+      "servicio": "Dermaplaning",
+      "rubro": "Facial",
+      "subrubro": "Facial",
+      "items": [
+        {
+          "insumo": "Gel de limpieza",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Exfoliante",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Mascarilla algas",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Tonico glow",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Serum vitamina C",
+          "um": "ml",
+          "cantidad": 2
+        },
+        {
+          "insumo": "Carmex",
+          "um": "ml",
+          "cantidad": 0.3
+        },
+        {
+          "insumo": "Bisturíes",
+          "um": "ud",
+          "cantidad": 1
+        }
+      ],
+      "estado": "Completa (copiada de YB FAC100)"
+    },
+    {
+      "codigo": "FAC101",
+      "servicio": "Limpieza profunda (punta diamante)",
+      "rubro": "Facial",
+      "subrubro": "Facial",
+      "items": [
+        {
+          "insumo": "Gel de limpieza",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Exfoliante",
+          "um": "ml",
+          "cantidad": 3
+        },
+        {
+          "insumo": "Mascarilla algas",
+          "um": "ml",
+          "cantidad": 20
+        },
+        {
+          "insumo": "Tonico glow",
+          "um": "ml",
+          "cantidad": 3
+        }
+      ],
+      "estado": "Completa (copiada de YB FAC101 limpieza facial profunda)"
+    },
+    {
+      "codigo": "FAC102",
+      "servicio": "Full facial limpieza profunda + dermaplaning",
+      "rubro": "Facial",
+      "subrubro": "Facial",
+      "items": [
+        {
+          "insumo": "Gel de limpieza",
+          "um": "ml",
+          "cantidad": 6
+        },
+        {
+          "insumo": "Exfoliante",
+          "um": "ml",
+          "cantidad": 6
+        },
+        {
+          "insumo": "Mascarilla algas",
+          "um": "ml",
+          "cantidad": 40
+        },
+        {
+          "insumo": "Tonico glow",
+          "um": "ml",
+          "cantidad": 6
+        }
+      ],
+      "estado": "Completa (copiada de YB FAC102 Full Facial)"
+    },
+    {
+      "codigo": "FAC103",
+      "servicio": "Maquillaje social",
+      "rubro": "Facial",
+      "subrubro": "Facial",
+      "items": [],
+      "estado": "Completa (copiada de YB FAC103)"
+    },
+    {
+      "codigo": "FAC104",
+      "servicio": "Promo evento makeup+peinado",
+      "rubro": "Facial",
+      "subrubro": "Facial",
+      "items": [
+        {
+          "insumo": "Shampoo",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Acondicionador",
+          "um": "ml",
+          "cantidad": 30
+        },
+        {
+          "insumo": "Serum Hairssime Nutri Advance",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Twelve (desenredante)",
+          "um": "ml",
+          "cantidad": 5
+        },
+        {
+          "insumo": "Mousse Emynent",
+          "um": "ml",
+          "cantidad": 5
+        }
+      ],
+      "estado": "Completa (insumo de Peinado PEL101; maquillaje sin insumo propio)"
+    },
+    {
+      "codigo": "ALQ100",
+      "servicio": "Alquiler de Gabinete",
+      "rubro": "Otros Ingresos",
+      "subrubro": "Alquiler de Gabinete",
+      "items": [],
+      "estado": "No aplica"
+    },
+    {
+      "codigo": "GFC100",
+      "servicio": "GIFT CARD",
+      "rubro": "Gift Cards",
+      "subrubro": "Gift Cards",
+      "items": [],
+      "estado": "No aplica"
+    }
+  ],
+  "insumos": [
+    {
+      "codigo": "INS001",
+      "nombre": "Oxidante Lumiplex",
+      "um": "ml",
+      "proveedor": "Question Professional (lista julio 2026, s/IVA)",
+      "contenido": "900 ml",
+      "precioFrasco": 16324.95,
+      "precioUnitario": 18.14,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS002",
+      "nombre": "Tintura Lumiplex sin amoniaco",
+      "um": "grs",
+      "proveedor": "Question Professional (lista julio 2026, s/IVA)",
+      "contenido": "60 gr",
+      "precioFrasco": 8321.22,
+      "precioUnitario": 138.69,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS003",
+      "nombre": "Tintura con amoniaco Question",
+      "um": "grs",
+      "proveedor": "Question Professional (lista julio 2026, s/IVA)",
+      "contenido": "60 gr",
+      "precioFrasco": 7448.67,
+      "precioUnitario": 124.14,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS004",
+      "nombre": "Twelve (desenredante)",
+      "um": "ml",
+      "proveedor": "Question Professional (lista julio 2026, s/IVA)",
+      "contenido": "210 ml",
+      "precioFrasco": 18549.39,
+      "precioUnitario": 88.33,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS005",
+      "nombre": "Acondicionador Wella Ultimate Repair",
+      "um": "ml",
+      "proveedor": "Wella Professionals (lista mayo 2026, con 50% dto)",
+      "contenido": "500 ml",
+      "precioFrasco": 112533.8,
+      "precioUnitario": 225.07,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS006",
+      "nombre": "Mascara Wella Ultimate Repair",
+      "um": "ml",
+      "proveedor": "Wella Professionals (lista mayo 2026, con 50% dto)",
+      "contenido": "500 ml",
+      "precioFrasco": 112533.8,
+      "precioUnitario": 225.07,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS007",
+      "nombre": "Shampoo Wella Ultimate Repair",
+      "um": "ml",
+      "proveedor": "Wella Professionals (lista mayo 2026, con 50% dto)",
+      "contenido": "1000 ml",
+      "precioFrasco": 107620.57,
+      "precioUnitario": 107.62,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS008",
+      "nombre": "Olaplex No.1 Bond Multiplier",
+      "um": "ml",
+      "proveedor": "Olaplex Pro (tienda oficial)",
+      "contenido": "525 ml",
+      "precioFrasco": 330855,
+      "precioUnitario": 630.2,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS009",
+      "nombre": "Olaplex No.2 Bond Perfector",
+      "um": "ml",
+      "proveedor": "Olaplex Pro (tienda oficial)",
+      "contenido": "2000 ml",
+      "precioFrasco": 597025,
+      "precioUnitario": 298.51,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS010",
+      "nombre": "Olaplex No.7 Bonding Oil",
+      "um": "ml",
+      "proveedor": "Olaplex Pro (tienda oficial)",
+      "contenido": "30 ml",
+      "precioFrasco": 84900,
+      "precioUnitario": 2830,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS011",
+      "nombre": "Shampoo Olaplex No.4P",
+      "um": "ml",
+      "proveedor": "Olaplex Pro (tienda oficial)",
+      "contenido": "250 ml",
+      "precioFrasco": 84900,
+      "precioUnitario": 339.6,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS012",
+      "nombre": "Base meline",
+      "um": "ml",
+      "proveedor": "Distrilook (Meline)",
+      "contenido": "15 ml",
+      "precioFrasco": 4500,
+      "precioUnitario": 300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS013",
+      "nombre": "Colágeno Karseell",
+      "um": "ml",
+      "proveedor": "Karseell",
+      "contenido": "500 ml",
+      "precioFrasco": 13000,
+      "precioUnitario": 26,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS014",
+      "nombre": "Esmalte meline",
+      "um": "ml",
+      "proveedor": "Distrilook (Meline)",
+      "contenido": "15 ml",
+      "precioFrasco": 4500,
+      "precioUnitario": 300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS015",
+      "nombre": "Kapping meline",
+      "um": "ml",
+      "proveedor": "distri look",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 333.33,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS016",
+      "nombre": "Mousse Emynent",
+      "um": "ml",
+      "proveedor": "Emynent Professional Haircare",
+      "contenido": "210 ml",
+      "precioFrasco": 18000,
+      "precioUnitario": 85.71,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS017",
+      "nombre": "Polvo decolorante Farmavita",
+      "um": "grs",
+      "proveedor": "Compra online",
+      "contenido": "500 gr",
+      "precioFrasco": 36500,
+      "precioUnitario": 73,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS018",
+      "nombre": "Polvo decolorante SOW",
+      "um": "grs",
+      "proveedor": "Mercado Libre",
+      "contenido": "500 gr",
+      "precioFrasco": 40000,
+      "precioUnitario": 80,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS019",
+      "nombre": "Top meline",
+      "um": "ml",
+      "proveedor": "Distrilook (Meline)",
+      "contenido": "15 ml",
+      "precioFrasco": 4500,
+      "precioUnitario": 300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS020",
+      "nombre": "Acetona",
+      "um": "ml",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "1000 ml",
+      "precioFrasco": 15450,
+      "precioUnitario": 15.45,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS021",
+      "nombre": "Acondicionador",
+      "um": "ml",
+      "proveedor": "José (Distribuidora, bidón 5L)",
+      "contenido": "5000 ml",
+      "precioFrasco": 45000,
+      "precioUnitario": 9,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS022",
+      "nombre": "Adhesivo para pestañas",
+      "um": "grs",
+      "proveedor": "distri look",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 6000,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS023",
+      "nombre": "Algodón",
+      "um": "ud",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "100 ud",
+      "precioFrasco": 2100,
+      "precioUnitario": 21,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS024",
+      "nombre": "Algodón discos",
+      "um": "ud",
+      "proveedor": "distri look",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 31.25,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS025",
+      "nombre": "Alisado Luminoliss",
+      "um": "grs",
+      "proveedor": "hew keratin",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 70.5,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS026",
+      "nombre": "Base coat semi",
+      "um": "ml",
+      "proveedor": "Distrilook (Meline)",
+      "contenido": "15 ml",
+      "precioFrasco": 4500,
+      "precioUnitario": 300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS027",
+      "nombre": "Base coat tradicional",
+      "um": "ml",
+      "proveedor": "OPI (lista julio 2026, mayorista)",
+      "contenido": "15 ml",
+      "precioFrasco": 9615,
+      "precioUnitario": 641,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS028",
+      "nombre": "Bisturíes",
+      "um": "ud",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "100 ud",
+      "precioFrasco": 9150,
+      "precioUnitario": 91.5,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS029",
+      "nombre": "Carmex",
+      "um": "ml",
+      "proveedor": "mercado libre",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 650,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS030",
+      "nombre": "Crema exfoliante pies",
+      "um": "ml",
+      "proveedor": "Look Tucumán (Crembel)",
+      "contenido": "1000 ml",
+      "precioFrasco": 21000,
+      "precioUnitario": 21,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS031",
+      "nombre": "Crema hidratante pies",
+      "um": "ml",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "500 ml",
+      "precioFrasco": 23400,
+      "precioUnitario": 46.8,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS032",
+      "nombre": "Esmalte color semi",
+      "um": "ml",
+      "proveedor": "OPI (Distribuidora)",
+      "contenido": "15 ml",
+      "precioFrasco": 11660,
+      "precioUnitario": 777.33,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS033",
+      "nombre": "Esmalte tradicional",
+      "um": "ml",
+      "proveedor": "OPI (Distribuidora)",
+      "contenido": "15 ml",
+      "precioFrasco": 8910,
+      "precioUnitario": 594,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS034",
+      "nombre": "Exfoliante",
+      "um": "ml",
+      "proveedor": "prodermic",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 260,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS035",
+      "nombre": "Gel constructor",
+      "um": "ml",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "1000 g",
+      "precioFrasco": 5800,
+      "precioUnitario": 5.8,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS036",
+      "nombre": "Gel de limpieza",
+      "um": "ml",
+      "proveedor": "prodermic",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 118.67,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS037",
+      "nombre": "Gel reparador",
+      "um": "ml",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "1000 g (estimado, mismo que Gel constructor)",
+      "precioFrasco": 5800,
+      "precioUnitario": 5.8,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS038",
+      "nombre": "Keraplex",
+      "um": "ml",
+      "proveedor": "(compra directa)",
+      "contenido": "1000 ml",
+      "precioFrasco": 32000,
+      "precioUnitario": 32,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS039",
+      "nombre": "Lima",
+      "um": "ud",
+      "proveedor": "distri look",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 520,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS040",
+      "nombre": "Lima de pie",
+      "um": "ud",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "1 ud",
+      "precioFrasco": 2300,
+      "precioUnitario": 2300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS041",
+      "nombre": "Mascarilla algas",
+      "um": "ml",
+      "proveedor": "prodermic",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 94,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS042",
+      "nombre": "Oxidante",
+      "um": "ml",
+      "proveedor": "José (Distribuidora, bidón 5L)",
+      "contenido": "5000 ml",
+      "precioFrasco": 45000,
+      "precioUnitario": 9,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS043",
+      "nombre": "Papel aluminio",
+      "um": "ud",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "100 ud",
+      "precioFrasco": 2700,
+      "precioUnitario": 27,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS044",
+      "nombre": "Parches",
+      "um": "ud",
+      "proveedor": "distri look",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 200,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS045",
+      "nombre": "Pigmento chrome/cat eye",
+      "um": "grs",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "5 g (estimado)",
+      "precioFrasco": 2500,
+      "precioUnitario": 500,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS046",
+      "nombre": "Pincel",
+      "um": "ud",
+      "proveedor": "distri look",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 50,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS047",
+      "nombre": "Polygel",
+      "um": "grs",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "50 g",
+      "precioFrasco": 9900,
+      "precioUnitario": 198,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS048",
+      "nombre": "Primer ácido",
+      "um": "ml",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "8 ml",
+      "precioFrasco": 3800,
+      "precioUnitario": 475,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS049",
+      "nombre": "Serum vitamina C",
+      "um": "ml",
+      "proveedor": "prodermic",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 161.54,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS050",
+      "nombre": "Shampoo",
+      "um": "ml",
+      "proveedor": "José (Distribuidora, bidón 5L)",
+      "contenido": "5000 ml",
+      "precioFrasco": 45000,
+      "precioUnitario": 9,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS051",
+      "nombre": "Tips soft gel",
+      "um": "ud",
+      "proveedor": "distri look",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 16.6,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS052",
+      "nombre": "Tips/moldes",
+      "um": "ud",
+      "proveedor": "Distrilook (Look Tucuman)",
+      "contenido": "500 ud",
+      "precioFrasco": 9250,
+      "precioUnitario": 18.5,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS053",
+      "nombre": "Tonico glow",
+      "um": "ml",
+      "proveedor": "prodermic",
+      "contenido": "",
+      "precioFrasco": null,
+      "precioUnitario": 125,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS054",
+      "nombre": "Top coat semi",
+      "um": "ml",
+      "proveedor": "Distrilook (Meline)",
+      "contenido": "15 ml",
+      "precioFrasco": 4500,
+      "precioUnitario": 300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS055",
+      "nombre": "Top coat tradicional",
+      "um": "ml",
+      "proveedor": "OPI (lista julio 2026, mayorista)",
+      "contenido": "15 ml",
+      "precioFrasco": 9615,
+      "precioUnitario": 641,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS056",
+      "nombre": "Esmalte diseño",
+      "um": "ml",
+      "proveedor": "Distrilook (Meline)",
+      "contenido": "15 ml",
+      "precioFrasco": 4500,
+      "precioUnitario": 300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS057",
+      "nombre": "Espuma micelar Melania (Pro Mousse)",
+      "um": "ml",
+      "proveedor": "Melania Professional",
+      "contenido": "500 ml",
+      "precioFrasco": 29900,
+      "precioUnitario": 59.8,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS058",
+      "nombre": "Paso 1 Melania (Pro Perm 1)",
+      "um": "g",
+      "proveedor": "Melania Professional",
+      "contenido": "10 g",
+      "precioFrasco": 23000,
+      "precioUnitario": 2300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS059",
+      "nombre": "Paso 2 Melania (Pro Setting 2)",
+      "um": "g",
+      "proveedor": "Melania Professional",
+      "contenido": "10 g",
+      "precioFrasco": 23000,
+      "precioUnitario": 2300,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS060",
+      "nombre": "Serum Melania (Pro Elixir)",
+      "um": "ml",
+      "proveedor": "Melania Professional",
+      "contenido": "15 ml",
+      "precioFrasco": 19800,
+      "precioUnitario": 1320,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS061",
+      "nombre": "Tinte Lash Colour Negro",
+      "um": "g",
+      "proveedor": "Lash Colour / Original Colour (Distrilook Tucumán)",
+      "contenido": "8 g",
+      "precioFrasco": 2900,
+      "precioUnitario": 362.5,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS062",
+      "nombre": "Revelador Lash Colour",
+      "um": "ml",
+      "proveedor": "Lash Colour / Original Colour (Distrilook Tucumán)",
+      "contenido": "10 ml",
+      "precioFrasco": 2900,
+      "precioUnitario": 290,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS063",
+      "nombre": "Papel film",
+      "um": "m",
+      "proveedor": "Distrilook (Look Tucumán)",
+      "contenido": "30 m",
+      "precioFrasco": 1200,
+      "precioUnitario": 40,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS064",
+      "nombre": "Microhisopos",
+      "um": "ud",
+      "proveedor": "Distrilook (Look Tucumán)",
+      "contenido": "100 ud",
+      "precioFrasco": 1350,
+      "precioUnitario": 13.5,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS065",
+      "nombre": "Vitamino Color Máscara 500ml (SE21)",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "500 ml",
+      "precioFrasco": 86004.02,
+      "precioUnitario": 172.01,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS066",
+      "nombre": "Vitamino Color Shampoo 1.5L (SE21)",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "1500 ml",
+      "precioFrasco": 114855,
+      "precioUnitario": 76.57,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS067",
+      "nombre": "Vitamino Color Conditioner 750ml (SE21)",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "750 ml",
+      "precioFrasco": 77890.5,
+      "precioUnitario": 103.85,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS068",
+      "nombre": "Shampoo Lumiere (Question)",
+      "um": "ml",
+      "proveedor": "Question Professional (lista julio 2026, s/IVA)",
+      "contenido": "330 ml",
+      "precioFrasco": 15298.25,
+      "precioUnitario": 46.36,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS069",
+      "nombre": "Mascara Lumiere (Question)",
+      "um": "ml",
+      "proveedor": "Question Professional (lista julio 2026, s/IVA)",
+      "contenido": "330 ml",
+      "precioFrasco": 15298.25,
+      "precioUnitario": 46.36,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS070",
+      "nombre": "Shampoo SOW Vitamin Hair",
+      "um": "ml",
+      "proveedor": "SOW Natural Salon",
+      "contenido": "1000 ml",
+      "precioFrasco": 82938.24,
+      "precioUnitario": 82.94,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS071",
+      "nombre": "Acondicionador SOW Vitamin",
+      "um": "ml",
+      "proveedor": "SOW Natural Salon",
+      "contenido": "1000 ml",
+      "precioFrasco": 89602.92,
+      "precioUnitario": 89.6,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS072",
+      "nombre": "Mascara SOW Vitamin",
+      "um": "ml",
+      "proveedor": "SOW Natural Salon",
+      "contenido": "500 ml",
+      "precioFrasco": 99599.94,
+      "precioUnitario": 199.2,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS073",
+      "nombre": "Polvo decolorante Issue Profesional",
+      "um": "grs",
+      "proveedor": "Compra online (factura AK)",
+      "contenido": "200 gr",
+      "precioFrasco": 36305.47,
+      "precioUnitario": 181.53,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS074",
+      "nombre": "Serum Hairssime Nutri Advance",
+      "um": "ml",
+      "proveedor": "Hairssime (HairLogic Professional Series)",
+      "contenido": "63 ml",
+      "precioFrasco": 36000,
+      "precioUnitario": 571.43,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS075",
+      "nombre": "Shampoo Molecular Balance (Hairssime)",
+      "um": "ml",
+      "proveedor": "Hairssime (HairLogic Professional Series)",
+      "contenido": "350 ml",
+      "precioFrasco": 34000,
+      "precioUnitario": 97.14,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "INS076",
+      "nombre": "Molecular Elixir (Hairssime)",
+      "um": "ml",
+      "proveedor": "Hairssime (HairLogic Professional Series)",
+      "contenido": "25 ml",
+      "precioFrasco": 35000,
+      "precioUnitario": 1400,
+      "estado": "Completo"
+    }
+  ],
+  "reventa": [
+    {
+      "codigo": "REV001",
+      "nombre": "Metal Detox Máscara (SE)",
+      "um": "grs",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "250 g",
+      "precioFrasco": 55855.25,
+      "precioUnitario": 223.42,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV002",
+      "nombre": "Metal Detox Oil Mrvl (SE)",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "50 ml",
+      "precioFrasco": 42602.75,
+      "precioUnitario": 852.05,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV003",
+      "nombre": "Absolut Repair Shampoo (SE21)",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "300 ml",
+      "precioFrasco": 32371.25,
+      "precioUnitario": 107.9,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV004",
+      "nombre": "Absolut Repair Oil (SE21)",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "90 ml",
+      "precioFrasco": 48977.25,
+      "precioUnitario": 544.19,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV005",
+      "nombre": "Prolonger Máscara (SE21)",
+      "um": "grs",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "250 g",
+      "precioFrasco": 48355,
+      "precioUnitario": 193.42,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV006",
+      "nombre": "Prolonger Shampoo (SE21)",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "300 ml",
+      "precioFrasco": 32371.25,
+      "precioUnitario": 107.9,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV007",
+      "nombre": "Curls Expression Reviver Spray (SE)",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "190 ml",
+      "precioFrasco": 42189.5,
+      "precioUnitario": 222.05,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV008",
+      "nombre": "Absolut Repair Molecular (ARM) Shampoo",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "300 ml",
+      "precioFrasco": 35601.25,
+      "precioUnitario": 118.67,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV009",
+      "nombre": "Absolut Repair Molecular (ARM) Liq Treatment",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "250 ml",
+      "precioFrasco": 44507.5,
+      "precioUnitario": 178.03,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV010",
+      "nombre": "Absolut Repair Molecular (ARM) Máscara Rinse-off",
+      "um": "grs",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "250 g",
+      "precioFrasco": 53195.25,
+      "precioUnitario": 212.78,
+      "estado": "Completo"
+    },
+    {
+      "codigo": "REV011",
+      "nombre": "Absolut Repair Molecular (ARM) Dual Oil",
+      "um": "ml",
+      "proveedor": "L'Oreal Professionnel",
+      "contenido": "90 ml",
+      "precioFrasco": 53404.25,
+      "precioUnitario": 593.38,
+      "estado": "Completo"
+    }
+  ]
+}
