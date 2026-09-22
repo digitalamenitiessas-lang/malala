@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { UserPen } from "lucide-react";
+import { UserPen, UserPlus } from "lucide-react";
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { LoadingButton } from "./field";
-import { listClientes } from "@/lib/data/clientes";
+import { createClienteQuick, listClientes } from "@/lib/data/clientes";
 import { reasignarClienteVenta } from "@/lib/data/ingresos-actions";
 import type { Cliente } from "@/lib/types";
 
@@ -84,6 +84,37 @@ export function CambiarClienteVenta({
     );
   }
 
+  /**
+   * Crear la clienta acá mismo y dejarle la venta.
+   *
+   * El caso es el de siempre en el mostrador: la clienta está apurada, se cobra
+   * primero y el nombre se pone después. Si en ese momento hay que ir a
+   * Catálogos a darla de alta y volver, nadie lo hace y la venta queda en
+   * Consumidor Final para siempre.
+   */
+  function crearYAsignar() {
+    const nombre = q;
+    setError(null);
+    run(
+      async () => {
+        const nuevo = await createClienteQuick({ nombre });
+        if (!nuevo.ok) {
+          setError(Object.values(nuevo.errors).flat().join(" "));
+          return nuevo;
+        }
+        const res = await reasignarClienteVenta(ingresoId, nuevo.cliente.id);
+        if (!res.ok) {
+          setError(Object.values(res.errors).flat().join(" "));
+        } else {
+          setAbierto(false);
+          setQuery("");
+        }
+        return res;
+      },
+      { refreshOnSuccess: true, successMessage: `Venta asignada a ${nombre}` },
+    );
+  }
+
   if (!abierto) {
     return (
       <button
@@ -117,7 +148,7 @@ export function CambiarClienteVenta({
           )}
           {!buscando && resultados.rows.length === 0 && (
             <li className="px-1 py-1 text-xs text-muted-foreground">
-              Ninguno en esta sucursal.
+              Ninguna con ese nombre en esta sucursal.
             </li>
           )}
           {!buscando && resultados.rows.map((c) => (
@@ -138,6 +169,24 @@ export function CambiarClienteVenta({
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Crear con lo tipeado. Siempre visible mientras haya algo escrito, no
+          solo cuando la búsqueda no encuentra nada: puede haber una "Valentina"
+          y esta ser otra. */}
+      {q.length >= 2 && !buscando && (
+        <LoadingButton
+          type="button"
+          onClick={crearYAsignar}
+          pending={pending}
+          pendingLabel="Creando..."
+          className="flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 py-1.5 text-left text-xs transition-colors hover:bg-cream"
+        >
+          <UserPlus className="h-3.5 w-3.5 shrink-0 stroke-[1.5]" />
+          <span>
+            Crear <strong>{q}</strong> y asignarle la venta
+          </span>
+        </LoadingButton>
       )}
 
       {clienteActualNombre && (
