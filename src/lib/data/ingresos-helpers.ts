@@ -99,25 +99,30 @@ export function computeRecargos(args: {
 }
 
 /**
- * Comisión de una línea de servicio:
- * - soporta_descuento = true  → sobre el precio final pagado (descuento prorrateado)
- * - soporta_descuento = false → sobre el precio de lista (regular)
+ * Comisión de una línea de servicio. La única variable es si el descuento del
+ * ticket baja o no la comisión:
+ * - soporta_descuento = true  → sobre el precio de la línea menos su parte del descuento
+ * - soporta_descuento = false → sobre el precio de la línea, sin el descuento
+ *
+ * Los dos casos parten del precio al que se cargó el servicio. Antes el segundo
+ * caso iba a buscar servicios.precio_lista, y eso estaba mal: en este salón
+ * precio_lista no es "el precio antes del descuento", es la OTRA columna de
+ * precio, la de tarjeta. Cambiar el criterio cambiaba de columna. Se vio en una
+ * venta de $215.000 SIN descuento donde la comisión salió $60.000 en vez de
+ * $64.500, porque el servicio tenía precio_lista $200.000.
  */
 export function comisionMontoServicio(args: {
   precioEfectivo: number;
   comisionPct: number;
   soportaDescuento: boolean;
-  precioLista?: number;
   subtotal: number;
   descuentoMonto: number;
 }): number {
-  const { precioEfectivo, comisionPct, soportaDescuento, precioLista, subtotal, descuentoMonto } =
+  const { precioEfectivo, comisionPct, soportaDescuento, subtotal, descuentoMonto } =
     args;
   const descProrrateado =
     subtotal > 0 ? descuentoMonto * (precioEfectivo / subtotal) : 0;
-  const base = soportaDescuento
-    ? precioEfectivo - descProrrateado
-    : (precioLista ?? precioEfectivo);
+  const base = soportaDescuento ? precioEfectivo - descProrrateado : precioEfectivo;
   return base * (comisionPct / 100);
 }
 

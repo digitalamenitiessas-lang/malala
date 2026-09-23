@@ -11,7 +11,6 @@ import {
   ingresoLineas as ingresoLineasTable,
   ingresos as ingresosTable,
   liquidacionLineas as liquidacionLineasTable,
-  servicios as serviciosTable,
   movimientosCc as movimientosCcTable,
   movimientosStock as movimientosStockTable,
 } from "@/lib/db/schema";
@@ -116,14 +115,9 @@ export async function cambiarBaseComisionVenta(
       subtotal: ingresoLineasTable.subtotal,
       comisionPct: ingresoLineasTable.comisionPct,
       soportaDescuento: ingresoLineasTable.soportaDescuento,
-      precioLista: serviciosTable.precioLista,
       yaLiquidada: liquidacionLineasTable.id,
     })
     .from(ingresoLineasTable)
-    .leftJoin(
-      serviciosTable,
-      eq(ingresoLineasTable.servicioId, serviciosTable.id),
-    )
     .leftJoin(
       liquidacionLineasTable,
       eq(liquidacionLineasTable.ingresoLineaId, ingresoLineasTable.id),
@@ -146,7 +140,6 @@ export async function cambiarBaseComisionVenta(
         precioEfectivo: l.subtotal,
         comisionPct: l.comisionPct,
         soportaDescuento: sobreLoCobrado,
-        precioLista: l.precioLista ?? undefined,
         subtotal: venta.subtotal,
         descuentoMonto: venta.descuentoMonto,
       });

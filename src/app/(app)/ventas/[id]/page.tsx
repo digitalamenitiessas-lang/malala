@@ -59,7 +59,6 @@ export default async function VentaDetallePage({
           precioEfectivo: l.subtotal,
           comisionPct: l.comision_pct,
           soportaDescuento: sobreLoCobrado,
-          precioLista: l.servicio?.precio_lista,
           subtotal: ingreso.subtotal,
           descuentoMonto: ingreso.descuento_monto,
         }),
@@ -328,7 +327,7 @@ export default async function VentaDetallePage({
           <BaseComisionVenta
             ingresoId={ingreso.id}
             totalSobreCobrado={totalComisionCon(true)}
-            totalSobreLista={totalComisionCon(false)}
+            totalSinDescuento={totalComisionCon(false)}
             sobreLoCobrado={lineasServicio.every((l) => l.soporta_descuento)}
             anulado={ingreso.anulado}
           />

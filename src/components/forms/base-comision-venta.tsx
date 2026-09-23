@@ -11,8 +11,8 @@ interface Props {
   ingresoId: string;
   /** Comisión total del equipo si sale de lo que realmente se cobró. */
   totalSobreCobrado: number;
-  /** Comisión total del equipo si sale del precio de lista, sin el descuento. */
-  totalSobreLista: number;
+  /** Comisión total del equipo si el descuento del ticket no le pega. */
+  totalSinDescuento: number;
   /** Cómo está calculada hoy esta venta. */
   sobreLoCobrado: boolean;
   anulado: boolean;
@@ -36,7 +36,7 @@ interface Props {
 export function BaseComisionVenta({
   ingresoId,
   totalSobreCobrado,
-  totalSobreLista,
+  totalSinDescuento,
   sobreLoCobrado,
   anulado,
 }: Props) {
@@ -46,7 +46,7 @@ export function BaseComisionVenta({
 
   if (anulado) return null;
 
-  const diferencia = totalSobreLista - totalSobreCobrado;
+  const diferencia = totalSinDescuento - totalSobreCobrado;
 
   function cambiar(aSobreLoCobrado: boolean) {
     setError(null);
@@ -67,7 +67,7 @@ export function BaseComisionVenta({
           <p className="text-xs text-muted-foreground">
             {sobreLoCobrado
               ? "Las comisiones de esta venta salen de lo que se cobró, como siempre."
-              : "Ojo: las comisiones de esta venta se calcularon sobre el precio de lista, sin el descuento."}
+              : "Ojo: en esta venta el descuento no les baja la comisión a las chicas."}
           </p>
           <button
             type="button"
@@ -100,9 +100,9 @@ export function BaseComisionVenta({
               onSelect={() => cambiar(true)}
             />
             <OpcionBase
-              titulo="Sobre el precio de lista"
-              detalle="El descuento lo pone el local: la empleada cobra como si no hubiera habido descuento."
-              monto={totalSobreLista}
+              titulo="Sin descontarles el descuento"
+              detalle="El descuento lo pone el local: la empleada cobra sobre el precio del servicio, como si no hubiera habido descuento."
+              monto={totalSinDescuento}
               activa={!sobreLoCobrado}
               pending={pending}
               onSelect={() => cambiar(false)}

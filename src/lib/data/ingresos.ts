@@ -609,31 +609,6 @@ export async function createIngreso(
       recargoPctById,
     });
 
-  // Precio de lista por servicio: base de la comisión cuando la empleada NO absorbe el descuento.
-  const servicioIdsComision = Array.from(
-    new Set(
-      data.lineas
-        .filter(
-          (l): l is Extract<typeof l, { tipo: "servicio" }> =>
-            l.tipo === "servicio",
-        )
-        .map((l) => l.servicio_id),
-    ),
-  );
-  const serviciosComisionRows =
-    servicioIdsComision.length > 0
-      ? await db
-          .select({
-            id: serviciosTable.id,
-            precioLista: serviciosTable.precioLista,
-          })
-          .from(serviciosTable)
-          .where(inArray(serviciosTable.id, servicioIdsComision))
-      : [];
-  const precioListaById = new Map(
-    serviciosComisionRows.map((s) => [s.id, s.precioLista]),
-  );
-
   const comisionMontoDeLinea = (
     linea: Extract<(typeof data.lineas)[number], { tipo: "servicio" }>,
   ): number =>
@@ -641,7 +616,6 @@ export async function createIngreso(
       precioEfectivo: linea.precio_efectivo,
       comisionPct: linea.comision_pct,
       soportaDescuento: linea.soporta_descuento,
-      precioLista: precioListaById.get(linea.servicio_id),
       subtotal,
       descuentoMonto,
     });

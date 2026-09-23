@@ -86,26 +86,23 @@ describe("computeRecargos", () => {
 describe("comisionMontoServicio", () => {
   const base = { subtotal: 1000, descuentoMonto: 100 }; // 10% de descuento global
 
-  it("soporta_descuento=false → comisión sobre precio de LISTA, ignora el descuento", () => {
+  it("soporta_descuento=false → sobre el precio de la línea, ignora el descuento", () => {
     const c = comisionMontoServicio({
       precioEfectivo: 800,
       comisionPct: 30,
       soportaDescuento: false,
-      precioLista: 1000,
       ...base,
     });
-    expect(c).toBe(300); // 30% de 1000
+    expect(c).toBe(240); // 30% de 800, el descuento del ticket no la toca
   });
 
-  it("soporta_descuento=false sin precio de lista → cae al precio efectivo", () => {
-    const c = comisionMontoServicio({
-      precioEfectivo: 800,
-      comisionPct: 30,
-      soportaDescuento: false,
-      precioLista: undefined,
-      ...base,
-    });
-    expect(c).toBe(240); // 30% de 800
+  // La regresión que motivó sacar precio_lista de acá: el servicio tiene una
+  // segunda columna de precio (la de tarjeta) que no tiene nada que ver con el
+  // descuento del ticket. Sin descuento, los dos criterios TIENEN que dar igual.
+  it("sin descuento en el ticket, los dos criterios dan lo mismo", () => {
+    const args = { precioEfectivo: 215000, comisionPct: 30, subtotal: 215000, descuentoMonto: 0 };
+    expect(comisionMontoServicio({ ...args, soportaDescuento: true })).toBe(64500);
+    expect(comisionMontoServicio({ ...args, soportaDescuento: false })).toBe(64500);
   });
 
   it("soporta_descuento=true → comisión sobre el precio final con descuento prorrateado", () => {
@@ -114,7 +111,6 @@ describe("comisionMontoServicio", () => {
       precioEfectivo: 1000,
       comisionPct: 30,
       soportaDescuento: true,
-      precioLista: 1000,
       subtotal: 1000,
       descuentoMonto: 100,
     });
@@ -127,7 +123,6 @@ describe("comisionMontoServicio", () => {
       precioEfectivo: 500,
       comisionPct: 30,
       soportaDescuento: true,
-      precioLista: 500,
       subtotal: 2000,
       descuentoMonto: 200,
     });
@@ -139,7 +134,6 @@ describe("comisionMontoServicio", () => {
       precioEfectivo: 0,
       comisionPct: 30,
       soportaDescuento: true,
-      precioLista: 0,
       subtotal: 0,
       descuentoMonto: 0,
     });
