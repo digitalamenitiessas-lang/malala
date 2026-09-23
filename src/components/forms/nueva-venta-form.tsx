@@ -1738,6 +1738,27 @@ function LineaServicioRow({
               </button>
             </div>
           </div>
+
+          {/* Con "No" la comisión sale del precio de lista, no de lo cobrado, y
+              la pantalla no lo decía: mostraba "30%" al lado de un precio de
+              $26.000 y de una comisión de $9.360, tres números que no
+              multiplican entre sí. El salón lo reportó como un error de
+              cálculo. Se explica acá, que es donde se toma la decisión. */}
+          {!linea.soporta_descuento &&
+            servicio &&
+            servicio.precio_lista > (Number(linea.precio) || 0) && (
+              <p className="col-span-12 text-[10px] text-muted-foreground sm:col-start-3 sm:col-span-10">
+                Con <strong>No</strong>, la comisión se calcula sobre el precio
+                de lista ({formatARS(servicio.precio_lista)}), no sobre los{" "}
+                {formatARS(Number(linea.precio) || 0)} que se cobran: el
+                descuento lo pone el local. Con <strong>Sí</strong> serían{" "}
+                {formatARS(
+                  (Number(linea.precio) || 0) *
+                    ((Number(linea.comision_pct) || 0) / 100),
+                )}
+                .
+              </p>
+            )}
         </div>
       )}
     </div>
