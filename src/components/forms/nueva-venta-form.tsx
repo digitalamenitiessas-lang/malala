@@ -35,6 +35,15 @@ type LineaServicioForm = {
   precio_tipo: "lista" | "efectivo";
   comision_pct: number;
   soporta_descuento: boolean;
+  /**
+   * Siempre true desde que el salón fijó el criterio: la comisión se calcula
+   * sobre lo que se cobró de verdad. El botón que lo cambiaba se saco porque
+   * alcanzaba con olvidarse de tocarlo en una linea para que esa comisión
+   * saliera distinta a todas las demas, y eso aparecia recien al liquidar.
+   *
+   * El campo queda porque hay ventas viejas guardadas con el otro criterio y su
+   * comisión tiene que poder explicarse igual.
+   */
   // Si la línea proviene de una promo: id del servicio-promo y su nombre (display).
   promo_servicio_id?: string;
   promo_nombre?: string;
@@ -830,7 +839,6 @@ export function NuevaVentaForm({
                   onEmpleado={(id) => handleEmpleadoChange(idx, id)}
                   onPrecio={(v) => updateLinea(idx, { precio: v })}
                   onPrecioTipo={(t) => handlePrecioTipoChange(idx, t)}
-                  onSoporta={(v) => updateLinea(idx, { soporta_descuento: v })}
                   onRemove={() => removeLinea(idx)}
                   removable={lineas.length > 1 || !!l.promo_servicio_id}
                 />
@@ -1553,7 +1561,6 @@ function LineaServicioRow({
   onEmpleado,
   onPrecio,
   onPrecioTipo,
-  onSoporta,
   onRemove,
   removable,
 }: {
@@ -1567,7 +1574,6 @@ function LineaServicioRow({
   onEmpleado: (id: string) => void;
   onPrecio: (v: number) => void;
   onPrecioTipo: (t: "lista" | "efectivo") => void;
-  onSoporta: (v: boolean) => void;
   onRemove: () => void;
   removable: boolean;
 }) {
@@ -1707,58 +1713,6 @@ function LineaServicioRow({
               </button>
             </div>
           </div>
-          <div className="col-span-12 sm:col-span-5 flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-              ¿Empleada absorbe el descuento?
-            </span>
-            <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
-              <button
-                type="button"
-                onClick={() => onSoporta(true)}
-                title="Comisión sobre el precio final pagado"
-                className={`px-2.5 py-1 transition-colors ${
-                  linea.soporta_descuento
-                    ? "bg-ink text-white"
-                    : "bg-card hover:bg-cream"
-                }`}
-              >
-                Sí
-              </button>
-              <button
-                type="button"
-                onClick={() => onSoporta(false)}
-                title="Comisión sobre el precio de lista (regular)"
-                className={`px-2.5 py-1 border-l border-border transition-colors ${
-                  !linea.soporta_descuento
-                    ? "bg-ink text-white"
-                    : "bg-card hover:bg-cream"
-                }`}
-              >
-                No
-              </button>
-            </div>
-          </div>
-
-          {/* Con "No" la comisión sale del precio de lista, no de lo cobrado, y
-              la pantalla no lo decía: mostraba "30%" al lado de un precio de
-              $26.000 y de una comisión de $9.360, tres números que no
-              multiplican entre sí. El salón lo reportó como un error de
-              cálculo. Se explica acá, que es donde se toma la decisión. */}
-          {!linea.soporta_descuento &&
-            servicio &&
-            servicio.precio_lista > (Number(linea.precio) || 0) && (
-              <p className="col-span-12 text-[10px] text-muted-foreground sm:col-start-3 sm:col-span-10">
-                Con <strong>No</strong>, la comisión se calcula sobre el precio
-                de lista ({formatARS(servicio.precio_lista)}), no sobre los{" "}
-                {formatARS(Number(linea.precio) || 0)} que se cobran: el
-                descuento lo pone el local. Con <strong>Sí</strong> serían{" "}
-                {formatARS(
-                  (Number(linea.precio) || 0) *
-                    ((Number(linea.comision_pct) || 0) / 100),
-                )}
-                .
-              </p>
-            )}
         </div>
       )}
     </div>
