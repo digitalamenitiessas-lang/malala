@@ -8,13 +8,17 @@ import {
   clientes as clientesTable,
   giftCardMovimientos as giftCardMovimientosTable,
   giftCards as giftCardsTable,
+  ingresoLineas as ingresoLineasTable,
   ingresos as ingresosTable,
+  liquidacionLineas as liquidacionLineasTable,
+  servicios as serviciosTable,
   movimientosCc as movimientosCcTable,
   movimientosStock as movimientosStockTable,
 } from "@/lib/db/schema";
 import { deleteMovimientosByRefTx } from "./movimientos-bancarios-helpers";
 import { getCierreQueBloqueaFecha } from "./caja";
 import { applyMovementTx } from "./stock";
+import { comisionMontoServicio } from "./ingresos-helpers";
 import type { CreateIngresoResult } from "./ingresos";
 import { createIngreso as createIngresoImpl } from "./ingresos";
 import { buildAccessScope } from "@/lib/auth/access";
@@ -65,6 +69,99 @@ export async function setSatisfaccionVenta(
 
   revalidatePath(`/ventas/${id}`);
   revalidatePath("/ventas");
+  return { ok: true };
+}
+
+/**
+ * Cambia la base sobre la que se calculó la comisión de una venta ya cargada.
+ *
+ * La regla del salón es una sola: la comisión sale de lo que se cobró. Por eso
+ * el formulario de venta ya no ofrece la alternativa — bastaba con olvidarse de
+ * tocar un botón en una línea para que esa comisión saliera distinta a todas
+ * las demás, y eso recién se veía al liquidar.
+ *
+ * Pero una o dos veces al año deciden lo contrario para una venta puntual. Eso
+ * se resuelve acá: sobre la venta ya guardada, a propósito, por alguien que
+ * mira el ticket entero y ve los dos montos antes de elegir. No en el
+ * mostrador, con la clienta esperando.
+ *
+ * FRENO: si alguna línea ya se liquidó, no se toca. La comisión ya se pagó con
+ * ese número; cambiarlo después dejaría la liquidación diciendo una cosa y la
+ * venta otra, sin que nadie se entere.
+ */
+export async function cambiarBaseComisionVenta(
+  ingresoId: string,
+  sobreLoCobrado: boolean,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+
+  const db = getDb();
+  const [venta] = await db
+    .select()
+    .from(ingresosTable)
+    .where(eq(ingresosTable.id, ingresoId))
+    .limit(1);
+  if (!venta) return failure("Venta no encontrada");
+  if (!scope.sucursalIdsPermitidas.includes(venta.sucursalId)) {
+    return failure("No tenés acceso a esa venta");
+  }
+  if (venta.anulado) return failure("Esta venta está anulada");
+
+  const lineas = await db
+    .select({
+      id: ingresoLineasTable.id,
+      servicioId: ingresoLineasTable.servicioId,
+      precioEfectivo: ingresoLineasTable.precioEfectivo,
+      subtotal: ingresoLineasTable.subtotal,
+      comisionPct: ingresoLineasTable.comisionPct,
+      soportaDescuento: ingresoLineasTable.soportaDescuento,
+      precioLista: serviciosTable.precioLista,
+      yaLiquidada: liquidacionLineasTable.id,
+    })
+    .from(ingresoLineasTable)
+    .leftJoin(
+      serviciosTable,
+      eq(ingresoLineasTable.servicioId, serviciosTable.id),
+    )
+    .leftJoin(
+      liquidacionLineasTable,
+      eq(liquidacionLineasTable.ingresoLineaId, ingresoLineasTable.id),
+    )
+    .where(eq(ingresoLineasTable.ingresoId, ingresoId));
+
+  const deServicio = lineas.filter((l) => l.servicioId && l.comisionPct > 0);
+  if (deServicio.length === 0) {
+    return failure("Esta venta no tiene comisiones de servicio para recalcular");
+  }
+  if (deServicio.some((l) => l.yaLiquidada)) {
+    return failure(
+      "Esta venta ya entró en una liquidación: su comisión está pagada y no se puede recalcular.",
+    );
+  }
+
+  await db.transaction(async (tx) => {
+    for (const l of deServicio) {
+      const monto = comisionMontoServicio({
+        precioEfectivo: l.subtotal,
+        comisionPct: l.comisionPct,
+        soportaDescuento: sobreLoCobrado,
+        precioLista: l.precioLista ?? undefined,
+        subtotal: venta.subtotal,
+        descuentoMonto: venta.descuentoMonto,
+      });
+      await tx
+        .update(ingresoLineasTable)
+        .set({ soportaDescuento: sobreLoCobrado, comisionMonto: monto })
+        .where(eq(ingresoLineasTable.id, l.id));
+    }
+  });
+
+  revalidatePath(`/ventas/${ingresoId}`);
+  revalidatePath("/ventas");
+  revalidatePath("/caja");
+  revalidatePath("/liquidaciones");
+  revalidatePath("/reportes/empleadas");
   return { ok: true };
 }
 

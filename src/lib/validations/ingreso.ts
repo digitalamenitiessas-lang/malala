@@ -8,7 +8,10 @@ export const lineaServicioSchema = z.object({
   comision_pct: z.coerce.number().min(0).max(100),
   // true  → la empleada absorbe el descuento: comisión sobre el precio final pagado.
   // false → la empleada NO lo absorbe: comisión sobre el precio de lista (regular).
-  soporta_descuento: z.coerce.boolean().default(false),
+  // El default es true porque es la regla del salón y el mostrador ya no ofrece
+  // la alternativa: si el campo no viene, la comisión sale de lo cobrado. La
+  // excepción se marca después, sobre la venta guardada.
+  soporta_descuento: z.coerce.boolean().default(true),
   // Si la línea proviene de una promo, id del servicio-promo (trazabilidad).
   promo_servicio_id: z
     .string()

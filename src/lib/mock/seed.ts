@@ -607,6 +607,7 @@ export function seed(): Store {
         subtotal: l.precio,
         comision_pct: pct,
         comision_monto: l.precio * (pct / 100),
+        soporta_descuento: true,
       });
     }
   }

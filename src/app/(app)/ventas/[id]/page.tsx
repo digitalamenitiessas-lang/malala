@@ -8,6 +8,8 @@ import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { SatisfaccionVentaForm } from "@/components/forms/satisfaccion-venta";
 import { AnularVenta } from "@/components/forms/anular-venta";
 import { CambiarClienteVenta } from "@/components/forms/cambiar-cliente-venta";
+import { BaseComisionVenta } from "@/components/forms/base-comision-venta";
+import { comisionMontoServicio } from "@/lib/data/ingresos-helpers";
 import { formatARS, formatDateTimeLong } from "@/lib/utils";
 
 export default async function VentaDetallePage({
@@ -40,6 +42,33 @@ export default async function VentaDetallePage({
     : null;
   const recargoCobrado =
     (ingreso.valor1 + (ingreso.valor2 ?? 0)) - ingreso.total;
+
+  // Las dos lecturas posibles de la misma venta, en pesos. Se calculan siempre
+  // porque el control sólo tiene sentido mostrando ambos números: "la empleada
+  // absorbe el descuento" se entiende al revés la mitad de las veces.
+  const lineasServicio = lineas.filter((l) => l.servicio_id && l.comision_pct > 0);
+  const comisionProductos = lineas
+    .filter((l) => !l.servicio_id)
+    .reduce((acc, l) => acc + l.comision_monto, 0);
+  const totalComisionCon = (sobreLoCobrado: boolean) =>
+    comisionProductos +
+    lineasServicio.reduce(
+      (acc, l) =>
+        acc +
+        comisionMontoServicio({
+          precioEfectivo: l.subtotal,
+          comisionPct: l.comision_pct,
+          soportaDescuento: sobreLoCobrado,
+          precioLista: l.servicio?.precio_lista,
+          subtotal: ingreso.subtotal,
+          descuentoMonto: ingreso.descuento_monto,
+        }),
+      0,
+    );
+  // Con descuento en cero los dos criterios dan lo mismo: ofrecer la opción
+  // sería pedir una decisión que no cambia nada.
+  const puedeElegirBaseComision =
+    puedeRevisar && ingreso.descuento_monto > 0 && lineasServicio.length > 0;
 
   async function marcarSatisfaccion(_prev: unknown, formData: FormData) {
     "use server";
@@ -295,6 +324,15 @@ export default async function VentaDetallePage({
             );
           })()}
         </div>
+        {puedeElegirBaseComision ? (
+          <BaseComisionVenta
+            ingresoId={ingreso.id}
+            totalSobreCobrado={totalComisionCon(true)}
+            totalSobreLista={totalComisionCon(false)}
+            sobreLoCobrado={lineasServicio.every((l) => l.soporta_descuento)}
+            anulado={ingreso.anulado}
+          />
+        ) : null}
         <p className="text-xs text-muted-foreground">
           La liquidación efectiva por mes se calcula al cierre de caja.
         </p>

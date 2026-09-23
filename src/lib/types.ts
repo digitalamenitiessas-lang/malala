@@ -474,6 +474,9 @@ export interface IngresoLinea {
   subtotal: number;
   comision_pct: number;
   comision_monto: number;
+  // Sobre qué precio se calculó comision_monto: true = sobre lo cobrado, false
+  // = sobre el precio de lista. Sin esto, el ticket no puede explicar el número.
+  soporta_descuento: boolean;
   promo_servicio_id?: ID;
 }
 

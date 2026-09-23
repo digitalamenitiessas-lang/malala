@@ -100,6 +100,7 @@ function mapIngresoLinea(row: typeof ingresoLineasTable.$inferSelect): IngresoLi
     subtotal: row.subtotal,
     comision_pct: row.comisionPct,
     comision_monto: row.comisionMonto,
+    soporta_descuento: row.soportaDescuento,
     promo_servicio_id: row.promoServicioId ?? undefined,
   };
 }
@@ -777,6 +778,7 @@ export async function createIngreso(
                 subtotal,
                 descuentoMonto,
               }),
+              soportaDescuento: true,
               promoServicioId: null,
             };
           }
@@ -791,6 +793,7 @@ export async function createIngreso(
             subtotal: linea.precio_efectivo,
             comisionPct: linea.comision_pct,
             comisionMonto: comisionMontoDeLinea(linea),
+            soportaDescuento: linea.soporta_descuento,
             promoServicioId: linea.promo_servicio_id ?? null,
           };
         }),

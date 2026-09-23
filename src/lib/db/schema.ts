@@ -691,6 +691,11 @@ export const ingresoLineas = pgTable("ingreso_lineas", {
   subtotal: doublePrecision("subtotal").notNull(),
   comisionPct: doublePrecision("comision_pct").notNull(),
   comisionMonto: doublePrecision("comision_monto").notNull(),
+  // Sobre qué precio se calculó la comisión de esta línea. true = sobre lo que
+  // se cobró (la empleada absorbe el descuento), false = sobre el precio de
+  // lista (lo absorbe el local). Se guarda porque si no, mirando el ticket no
+  // hay forma de saber por qué la comisión es la que es.
+  soportaDescuento: boolean("soporta_descuento").notNull().default(true),
   // Trazabilidad: si esta línea proviene de una promo, apunta al servicio-promo.
   promoServicioId: text("promo_servicio_id").references(() => servicios.id),
 });
