@@ -178,9 +178,11 @@ function comisionLineaServicio(
     l.promo_servicio_id || precioEfectivoServicio == null
       ? sub
       : precioEfectivoServicio;
-  const descProrrateado =
-    subtotalLineas > 0 ? descMonto * (sub / subtotalLineas) : 0;
-  const base = l.soporta_descuento ? baseCatalogo - descProrrateado : baseCatalogo;
+  // Tasa y no monto: ver el comentario de comisionMontoServicio.
+  const tasaDesc = subtotalLineas > 0 ? descMonto / subtotalLineas : 0;
+  const base = l.soporta_descuento
+    ? baseCatalogo * (1 - tasaDesc)
+    : baseCatalogo;
   return Math.max(0, base) * ((Number(l.comision_pct) || 0) / 100);
 }
 
@@ -198,10 +200,9 @@ function comisionLineaProducto(
     precioEfectivoUnitario != null
       ? precioEfectivoUnitario * (Number(l.cantidad) || 0)
       : sub;
-  const descProrrateado =
-    subtotalLineas > 0 ? descMonto * (sub / subtotalLineas) : 0;
+  const tasaDesc = subtotalLineas > 0 ? descMonto / subtotalLineas : 0;
   return (
-    Math.max(0, baseCatalogo - descProrrateado) *
+    Math.max(0, baseCatalogo * (1 - tasaDesc)) *
     ((Number(l.comision_pct) || 0) / 100)
   );
 }

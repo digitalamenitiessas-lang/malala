@@ -180,9 +180,26 @@ describe("comisionMontoServicio", () => {
       comisionPct: 30,
       soportaDescuento: true,
       subtotal: 1000,
-      descuentoMonto: 900,
+      descuentoMonto: 1200,
     });
     expect(c).toBe(0);
+  });
+
+  // Caso real de Anita: Nutrición intensa cargada a precio de lista ($190.000,
+  // efectivo $152.000) con 35% off. El descuento en pesos está calculado sobre
+  // el precio de tarjeta; restárselo tal cual al precio en efectivo le cobraría
+  // el recargo dos veces.
+  it("el descuento se aplica como tasa, no como monto, sobre la base", () => {
+    const c = comisionMontoServicio({
+      precioCobrado: 190000,
+      precioEfectivoServicio: 152000,
+      esDePromo: false,
+      comisionPct: 30,
+      soportaDescuento: true,
+      subtotal: 190000,
+      descuentoMonto: 66500, // 35%
+    });
+    expect(c).toBe(29640); // 30% de (152.000 − 35%) = 30% de 98.800
   });
 
   it("subtotal 0 no divide por cero", () => {

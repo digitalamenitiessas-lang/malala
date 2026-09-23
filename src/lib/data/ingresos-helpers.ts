@@ -143,9 +143,20 @@ export function comisionMontoServicio(args: {
     esDePromo || precioEfectivoServicio == null
       ? precioCobrado
       : precioEfectivoServicio;
-  const descProrrateado =
-    subtotal > 0 ? descuentoMonto * (precioCobrado / subtotal) : 0;
-  const base = soportaDescuento ? baseCatalogo - descProrrateado : baseCatalogo;
+  // El descuento se aplica como TASA sobre la base, no como monto absoluto.
+  //
+  // Importa cuando la línea se cobró a precio de lista: ahí el descuento en
+  // pesos está calculado sobre el precio de tarjeta, así que restárselo al
+  // precio en efectivo le descontaría a la empleada el recargo dos veces. Con
+  // un servicio de lista $190.000 / efectivo $152.000 y 35% off, la base
+  // correcta es $98.800 (152.000 menos su 35%), no $85.500.
+  //
+  // Cuando la línea se cobró al precio en efectivo las dos formas dan idéntico,
+  // que es el caso más común.
+  const tasaDescuento = subtotal > 0 ? descuentoMonto / subtotal : 0;
+  const base = soportaDescuento
+    ? baseCatalogo * (1 - tasaDescuento)
+    : baseCatalogo;
   // Un descuento grande sobre un ticket de varias líneas puede dejar la base en
   // negativo; la comisión es cero, no una deuda de la empleada.
   return Math.max(0, base) * (comisionPct / 100);
