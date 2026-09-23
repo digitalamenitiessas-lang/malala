@@ -507,6 +507,15 @@ export const motivosDescuento = pgTable("motivos_descuento", {
   id: text("id").primaryKey(),
   nombre: text("nombre").notNull(),
   activo: boolean("activo").notNull().default(true),
+  // Cuando es true, las ventas con este motivo no le bajan la comisión a la
+  // empleada: el descuento lo pone el local. Es para los motivos donde el
+  // servicio se regala por decisión del negocio (publicidad, canje con
+  // influencers) y la chica igual trabajó. Se define acá, una vez, y no ticket
+  // por ticket: si no, alcanza con que alguien se olvide para que esa comisión
+  // salga distinta a todas las demás y recién se note al liquidar.
+  comisionIgnoraDescuento: boolean("comision_ignora_descuento")
+    .notNull()
+    .default(false),
 });
 
 // Tablas puente de membresía por sucursal: la definición del catálogo es global,

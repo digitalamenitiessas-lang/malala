@@ -12,6 +12,7 @@ import {
   ingresos as ingresosTable,
   insumos as insumosTable,
   mediosPago as mediosPagoTable,
+  motivosDescuento as motivosDescuentoTable,
   movimientosCc as movimientosCcTable,
   recetas as recetasTable,
   servicios as serviciosTable,
@@ -609,13 +610,31 @@ export async function createIngreso(
       recargoPctById,
     });
 
+  // Hay motivos de descuento donde el servicio se regala por decisión del
+  // negocio -publicidad, canje con influencers- y la chica igual lo trabajó:
+  // ahí el descuento lo pone el local y no le baja la comisión. Está marcado en
+  // el motivo, una vez, y no se pregunta en el mostrador: el caso real que lo
+  // originó fue una venta de $22.000 al 100% de descuento donde la comisión
+  // quedó en cero sin que nadie lo notara hasta el día siguiente.
+  let motivoIgnoraDescuento = false;
+  if (descuentoMonto > 0 && data.descuento_motivo_id) {
+    const [motivo] = await db
+      .select({
+        comisionIgnoraDescuento: motivosDescuentoTable.comisionIgnoraDescuento,
+      })
+      .from(motivosDescuentoTable)
+      .where(eq(motivosDescuentoTable.id, data.descuento_motivo_id))
+      .limit(1);
+    motivoIgnoraDescuento = motivo?.comisionIgnoraDescuento ?? false;
+  }
+
   const comisionMontoDeLinea = (
     linea: Extract<(typeof data.lineas)[number], { tipo: "servicio" }>,
   ): number =>
     comisionMontoServicio({
       precioEfectivo: linea.precio_efectivo,
       comisionPct: linea.comision_pct,
-      soportaDescuento: linea.soporta_descuento,
+      soportaDescuento: linea.soporta_descuento && !motivoIgnoraDescuento,
       subtotal,
       descuentoMonto,
     });
@@ -767,7 +786,10 @@ export async function createIngreso(
             subtotal: linea.precio_efectivo,
             comisionPct: linea.comision_pct,
             comisionMonto: comisionMontoDeLinea(linea),
-            soportaDescuento: linea.soporta_descuento,
+            // El mismo criterio con el que se calculó el monto de arriba: si se
+            // guardara sólo linea.soporta_descuento, el ticket diría un criterio
+            // y el número mostraría otro.
+            soportaDescuento: linea.soporta_descuento && !motivoIgnoraDescuento,
             promoServicioId: linea.promo_servicio_id ?? null,
           };
         }),

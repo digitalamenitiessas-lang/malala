@@ -20,6 +20,7 @@ function mapMotivoDescuento(
     id: row.id,
     nombre: row.nombre,
     activo: row.activo,
+    comision_ignora_descuento: row.comisionIgnoraDescuento,
   };
 }
 
@@ -56,6 +57,7 @@ export async function createMotivoDescuento(
   const parsed = motivoDescuentoSchema.safeParse({
     nombre: formData.get("nombre"),
     activo: true,
+    comision_ignora_descuento: formData.get("comision_ignora_descuento") === "on",
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
 
@@ -65,6 +67,7 @@ export async function createMotivoDescuento(
     id: motivoId,
     nombre: parsed.data.nombre,
     activo: true,
+    comisionIgnoraDescuento: parsed.data.comision_ignora_descuento,
   });
 
   const sucursalActiva = await getActiveSucursalForUser(user);
@@ -75,6 +78,40 @@ export async function createMotivoDescuento(
       sucursalId: sucursalActiva.id,
     });
   }
+
+  revalidatePath("/catalogos/motivos-descuento");
+  revalidatePath("/ventas/nueva");
+  return { ok: true };
+}
+
+/**
+ * Cambia si este motivo le baja o no la comisión a la empleada.
+ *
+ * Sólo afecta a las ventas que se carguen de acá en adelante: las ya
+ * registradas conservan el criterio con el que se guardaron, y si hay que
+ * corregir una puntual se hace desde su ticket. Cambiar el motivo no puede
+ * mover comisiones de ventas viejas hacia atrás sin que nadie se entere.
+ */
+export async function toggleMotivoComisionIgnoraDescuento(
+  mdId: string,
+): Promise<ActionResult> {
+  await requireRole(["admin"]);
+  requireSupabaseRuntime(
+    "Los motivos de descuento requieren Supabase configurado.",
+  );
+
+  const db = getDb();
+  const [motivo] = await db
+    .select()
+    .from(motivosDescuentoTable)
+    .where(eq(motivosDescuentoTable.id, mdId))
+    .limit(1);
+  if (!motivo) return { ok: false, errors: { _: ["No encontrado"] } };
+
+  await db
+    .update(motivosDescuentoTable)
+    .set({ comisionIgnoraDescuento: !motivo.comisionIgnoraDescuento })
+    .where(eq(motivosDescuentoTable.id, mdId));
 
   revalidatePath("/catalogos/motivos-descuento");
   revalidatePath("/ventas/nueva");

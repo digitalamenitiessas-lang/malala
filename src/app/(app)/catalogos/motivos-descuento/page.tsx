@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import {
   createMotivoDescuento,
   listMotivosDescuento,
+  toggleMotivoComisionIgnoraDescuento,
   toggleMotivoDescuentoActivo,
 } from "@/lib/data/motivos-descuento";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
@@ -23,6 +24,11 @@ export default async function MotivosDescuentoPage() {
     const id = formData.get("id");
     if (typeof id === "string") await toggleMotivoDescuentoActivo(id);
   }
+  async function toggleComision(formData: FormData) {
+    "use server";
+    const id = formData.get("id");
+    if (typeof id === "string") await toggleMotivoComisionIgnoraDescuento(id);
+  }
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -39,24 +45,42 @@ export default async function MotivosDescuentoPage() {
         <h2 className="text-xs uppercase tracking-wider text-muted-foreground">
           Agregar motivo
         </h2>
-        <form action={create} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-          <div className="space-y-1.5 sm:col-span-2">
-            <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Nombre
-            </label>
-            <input
-              name="nombre"
-              required
-              placeholder="Ej: Publicidad, Autoconsumo socios"
-              className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+        <form action={create} className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Nombre
+              </label>
+              <input
+                name="nombre"
+                required
+                placeholder="Ej: Publicidad, Autoconsumo socios"
+                className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <SubmitButton
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium uppercase tracking-wider hover:bg-brown-700 transition-colors"
+              pendingLabel="Agregando..."
+            >
+              Agregar
+            </SubmitButton>
           </div>
-          <SubmitButton
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium uppercase tracking-wider hover:bg-brown-700 transition-colors"
-            pendingLabel="Agregando..."
-          >
-            Agregar
-          </SubmitButton>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="comision_ignora_descuento"
+              className="mt-0.5 h-4 w-4 rounded border-border accent-[var(--primary)]"
+            />
+            <span>
+              El descuento lo pone el local
+              <span className="block text-xs text-muted-foreground">
+                La comisión de la empleada se calcula como si no hubiera habido
+                descuento. Para los casos donde el servicio se regala por
+                decisión del negocio —publicidad, canje— y la chica igual lo
+                trabajó.
+              </span>
+            </span>
+          </label>
         </form>
       </section>
 
@@ -65,6 +89,9 @@ export default async function MotivosDescuentoPage() {
           <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left font-medium px-4 py-3">Motivo</th>
+              <th className="text-center font-medium px-4 py-3 w-56">
+                Comisión
+              </th>
               <th className="text-center font-medium px-4 py-3 w-28">Estado</th>
               <th className="px-4 py-3 w-32"></th>
             </tr>
@@ -73,6 +100,24 @@ export default async function MotivosDescuentoPage() {
             {motivos.map((m) => (
               <tr key={m.id} className="hover:bg-cream/30">
                 <td className="px-4 py-3 font-medium">{m.nombre}</td>
+                {/* Se muestra el efecto, no el nombre del campo: quien mira esta
+                    tabla quiere saber si la chica cobra o no cobra. */}
+                <td className="px-4 py-3 text-center">
+                  <form action={toggleComision}>
+                    <input type="hidden" name="id" value={m.id} />
+                    <SubmitButton className="text-xs">
+                      {m.comision_ignora_descuento ? (
+                        <span className="bg-sage-100 text-sage-900 px-2 py-0.5 rounded">
+                          Lo pone el local
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground hover:text-foreground">
+                          Lo absorbe la empleada
+                        </span>
+                      )}
+                    </SubmitButton>
+                  </form>
+                </td>
                 <td className="px-4 py-3 text-center">
                   {m.activo ? (
                     <span className="bg-sage-100 text-sage-900 px-2 py-0.5 rounded text-xs">

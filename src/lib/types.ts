@@ -416,6 +416,8 @@ export interface MotivoDescuento {
   id: ID;
   nombre: string;
   activo: boolean;
+  /** El descuento lo pone el local: no le baja la comisión a la empleada. */
+  comision_ignora_descuento: boolean;
 }
 
 export interface StockSucursal {
