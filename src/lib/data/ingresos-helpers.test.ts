@@ -142,6 +142,22 @@ describe("comisionMontoServicio", () => {
     expect(c).toBe(240); // 30% de 800, entero
   });
 
+  // Publicidad / canje: el servicio se regala por decisión del negocio, así que
+  // el 100% de descuento no puede dejar la comisión en cero. Caso real: Kapping
+  // de YB (lista $27.500, efectivo $22.000) a una influencer.
+  it("con el descuento a cargo del local, el 100% off no toca la comisión", () => {
+    const c = comisionMontoServicio({
+      precioCobrado: 22000,
+      precioEfectivoServicio: 22000,
+      esDePromo: false,
+      comisionPct: 30,
+      soportaDescuento: false,
+      subtotal: 22000,
+      descuentoMonto: 22000, // 100%
+    });
+    expect(c).toBe(6600);
+  });
+
   it("soporta_descuento=true descuenta la parte del ticket que le toca", () => {
     // línea de 1000 sobre subtotal 1000 → se lleva todo el descuento de 100
     const c = comisionMontoServicio({

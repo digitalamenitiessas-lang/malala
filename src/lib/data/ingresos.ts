@@ -805,11 +805,13 @@ export async function createIngreso(
                     : undefined,
                 esDePromo: false,
                 comisionPct: pctProd,
-                soportaDescuento: true,
+                // El motivo también rige acá: si el descuento lo pone el local,
+                // lo pone para todo el ticket, no sólo para los servicios.
+                soportaDescuento: !motivoIgnoraDescuento,
                 subtotal,
                 descuentoMonto,
               }),
-              soportaDescuento: true,
+              soportaDescuento: !motivoIgnoraDescuento,
               promoServicioId: null,
             };
           }
