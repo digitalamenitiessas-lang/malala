@@ -13,6 +13,7 @@ import {
   liquidacionLineas as liquidacionLineasTable,
   movimientosCc as movimientosCcTable,
   movimientosStock as movimientosStockTable,
+  servicios as serviciosTable,
 } from "@/lib/db/schema";
 import { deleteMovimientosByRefTx } from "./movimientos-bancarios-helpers";
 import { getCierreQueBloqueaFecha } from "./caja";
@@ -115,9 +116,15 @@ export async function cambiarBaseComisionVenta(
       subtotal: ingresoLineasTable.subtotal,
       comisionPct: ingresoLineasTable.comisionPct,
       soportaDescuento: ingresoLineasTable.soportaDescuento,
+      promoServicioId: ingresoLineasTable.promoServicioId,
+      precioEfectivoServicio: serviciosTable.precioEfectivo,
       yaLiquidada: liquidacionLineasTable.id,
     })
     .from(ingresoLineasTable)
+    .leftJoin(
+      serviciosTable,
+      eq(ingresoLineasTable.servicioId, serviciosTable.id),
+    )
     .leftJoin(
       liquidacionLineasTable,
       eq(liquidacionLineasTable.ingresoLineaId, ingresoLineasTable.id),
@@ -137,7 +144,9 @@ export async function cambiarBaseComisionVenta(
   await db.transaction(async (tx) => {
     for (const l of deServicio) {
       const monto = comisionMontoServicio({
-        precioEfectivo: l.subtotal,
+        precioCobrado: l.subtotal,
+        precioEfectivoServicio: l.precioEfectivoServicio ?? undefined,
+        esDePromo: !!l.promoServicioId,
         comisionPct: l.comisionPct,
         soportaDescuento: sobreLoCobrado,
         subtotal: venta.subtotal,

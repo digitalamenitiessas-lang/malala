@@ -84,31 +84,70 @@ describe("computeRecargos", () => {
 });
 
 describe("comisionMontoServicio", () => {
-  const base = { subtotal: 1000, descuentoMonto: 100 }; // 10% de descuento global
-
-  it("soporta_descuento=false → sobre el precio de la línea, ignora el descuento", () => {
+  // El caso que reportó Centro: Kapping con precio de lista $31.200 y precio en
+  // efectivo $26.000. La clienta paga con tarjeta, así que se cobra $31.200; la
+  // diferencia de $5.200 es el recargo de la tarjeta, que lo paga el local.
+  it("paga sobre el precio en efectivo aunque se haya cobrado el de lista", () => {
     const c = comisionMontoServicio({
-      precioEfectivo: 800,
+      precioCobrado: 31200,
+      precioEfectivoServicio: 26000,
+      esDePromo: false,
+      comisionPct: 30,
+      soportaDescuento: true,
+      subtotal: 31200,
+      descuentoMonto: 0,
+    });
+    expect(c).toBe(7800); // 30% de 26.000, no de 31.200
+  });
+
+  // Las líneas de una promo valen una fracción del precio de la promo: ahí el
+  // precio bajo es el acordado, no un recargo de menos. Con el precio de
+  // catálogo se pagaría comisión sobre plata que nadie cobró.
+  it("las líneas de promo comisionan sobre lo cobrado", () => {
+    const c = comisionMontoServicio({
+      precioCobrado: 12000,
+      precioEfectivoServicio: 26000,
+      esDePromo: true,
+      comisionPct: 30,
+      soportaDescuento: true,
+      subtotal: 12000,
+      descuentoMonto: 0,
+    });
+    expect(c).toBe(3600); // 30% de 12.000
+  });
+
+  it("sin precio de catálogo cae a lo cobrado", () => {
+    const c = comisionMontoServicio({
+      precioCobrado: 800,
+      precioEfectivoServicio: undefined,
+      esDePromo: false,
+      comisionPct: 30,
+      soportaDescuento: true,
+      subtotal: 800,
+      descuentoMonto: 0,
+    });
+    expect(c).toBe(240);
+  });
+
+  it("soporta_descuento=false → el descuento del ticket no le baja la comisión", () => {
+    const c = comisionMontoServicio({
+      precioCobrado: 1000,
+      precioEfectivoServicio: 800,
+      esDePromo: false,
       comisionPct: 30,
       soportaDescuento: false,
-      ...base,
+      subtotal: 1000,
+      descuentoMonto: 100,
     });
-    expect(c).toBe(240); // 30% de 800, el descuento del ticket no la toca
+    expect(c).toBe(240); // 30% de 800, entero
   });
 
-  // La regresión que motivó sacar precio_lista de acá: el servicio tiene una
-  // segunda columna de precio (la de tarjeta) que no tiene nada que ver con el
-  // descuento del ticket. Sin descuento, los dos criterios TIENEN que dar igual.
-  it("sin descuento en el ticket, los dos criterios dan lo mismo", () => {
-    const args = { precioEfectivo: 215000, comisionPct: 30, subtotal: 215000, descuentoMonto: 0 };
-    expect(comisionMontoServicio({ ...args, soportaDescuento: true })).toBe(64500);
-    expect(comisionMontoServicio({ ...args, soportaDescuento: false })).toBe(64500);
-  });
-
-  it("soporta_descuento=true → comisión sobre el precio final con descuento prorrateado", () => {
-    // línea de 1000 sobre subtotal 1000 → se lleva todo el descuento de 100 → base 900
+  it("soporta_descuento=true descuenta la parte del ticket que le toca", () => {
+    // línea de 1000 sobre subtotal 1000 → se lleva todo el descuento de 100
     const c = comisionMontoServicio({
-      precioEfectivo: 1000,
+      precioCobrado: 1000,
+      precioEfectivoServicio: 1000,
+      esDePromo: false,
       comisionPct: 30,
       soportaDescuento: true,
       subtotal: 1000,
@@ -117,10 +156,12 @@ describe("comisionMontoServicio", () => {
     expect(c).toBe(270); // 30% de 900
   });
 
-  it("soporta_descuento=true prorratea el descuento entre varias líneas", () => {
-    // subtotal 2000, descuento 200; esta línea aporta 500 → le toca 50 de descuento → base 450
+  it("prorratea el descuento entre varias líneas", () => {
+    // subtotal 2000, descuento 200; esta línea aporta 500 → le toca 50
     const c = comisionMontoServicio({
-      precioEfectivo: 500,
+      precioCobrado: 500,
+      precioEfectivoServicio: 500,
+      esDePromo: false,
       comisionPct: 30,
       soportaDescuento: true,
       subtotal: 2000,
@@ -129,9 +170,26 @@ describe("comisionMontoServicio", () => {
     expect(c).toBeCloseTo(135, 5); // 30% de 450
   });
 
+  // Un descuento grande sobre un ticket de varias líneas puede dejar la base
+  // por debajo de cero. La comisión es cero, no una deuda de la empleada.
+  it("nunca devuelve una comisión negativa", () => {
+    const c = comisionMontoServicio({
+      precioCobrado: 1000,
+      precioEfectivoServicio: 200,
+      esDePromo: false,
+      comisionPct: 30,
+      soportaDescuento: true,
+      subtotal: 1000,
+      descuentoMonto: 900,
+    });
+    expect(c).toBe(0);
+  });
+
   it("subtotal 0 no divide por cero", () => {
     const c = comisionMontoServicio({
-      precioEfectivo: 0,
+      precioCobrado: 0,
+      precioEfectivoServicio: 0,
+      esDePromo: false,
       comisionPct: 30,
       soportaDescuento: true,
       subtotal: 0,

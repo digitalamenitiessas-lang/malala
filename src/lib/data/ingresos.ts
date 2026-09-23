@@ -628,11 +628,39 @@ export async function createIngreso(
     motivoIgnoraDescuento = motivo?.comisionIgnoraDescuento ?? false;
   }
 
+  // Precio en efectivo del catálogo: es la base de la comisión (ver
+  // comisionMontoServicio). Se lee acá y no se confía en el precio que vino del
+  // formulario, que es el que se le cobró a la clienta.
+  const servicioIdsComision = Array.from(
+    new Set(
+      data.lineas
+        .filter(
+          (l): l is Extract<typeof l, { tipo: "servicio" }> =>
+            l.tipo === "servicio",
+        )
+        .map((l) => l.servicio_id),
+    ),
+  );
+  const precioEfectivoById = new Map(
+    (servicioIdsComision.length > 0
+      ? await db
+          .select({
+            id: serviciosTable.id,
+            precioEfectivo: serviciosTable.precioEfectivo,
+          })
+          .from(serviciosTable)
+          .where(inArray(serviciosTable.id, servicioIdsComision))
+      : []
+    ).map((s) => [s.id, s.precioEfectivo]),
+  );
+
   const comisionMontoDeLinea = (
     linea: Extract<(typeof data.lineas)[number], { tipo: "servicio" }>,
   ): number =>
     comisionMontoServicio({
-      precioEfectivo: linea.precio_efectivo,
+      precioCobrado: linea.precio_efectivo,
+      precioEfectivoServicio: precioEfectivoById.get(linea.servicio_id),
+      esDePromo: !!linea.promo_servicio_id,
       comisionPct: linea.comision_pct,
       soportaDescuento: linea.soporta_descuento && !motivoIgnoraDescuento,
       subtotal,
@@ -751,6 +779,13 @@ export async function createIngreso(
             // Sin vendedora asignada no hay comisión, aunque venga un % en el
             // payload: la comisión es de alguien o no es.
             const pctProd = linea.empleado_id ? linea.comision_pct : 0;
+            // Los productos tienen la misma doble columna que los servicios
+            // (precio_venta = tarjeta, precio_venta_efectivo = efectivo), así
+            // que corre el mismo criterio: la comisión sale del precio en
+            // efectivo y el recargo de tarjeta queda para el local.
+            const precioEfectivoProd =
+              insumosVendiblesById.get(linea.insumo_id)?.precioVentaEfectivo ??
+              undefined;
             return {
               id: createId(),
               ingresoId,
@@ -761,11 +796,14 @@ export async function createIngreso(
               cantidad: linea.cantidad,
               subtotal: subtotalProd,
               comisionPct: pctProd,
-              // Sobre lo efectivamente cobrado por la línea: el subtotal menos
-              // su parte del descuento del ticket. Mismo criterio que una línea
-              // de servicio con "la empleada absorbe el descuento".
               comisionMonto: comisionMontoServicio({
-                precioEfectivo: subtotalProd,
+                precioCobrado: subtotalProd,
+                // Por cantidad: el precio de catálogo es unitario.
+                precioEfectivoServicio:
+                  precioEfectivoProd != null
+                    ? precioEfectivoProd * linea.cantidad
+                    : undefined,
+                esDePromo: false,
                 comisionPct: pctProd,
                 soportaDescuento: true,
                 subtotal,

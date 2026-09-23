@@ -99,31 +99,56 @@ export function computeRecargos(args: {
 }
 
 /**
- * Comisión de una línea de servicio. La única variable es si el descuento del
- * ticket baja o no la comisión:
- * - soporta_descuento = true  → sobre el precio de la línea menos su parte del descuento
- * - soporta_descuento = false → sobre el precio de la línea, sin el descuento
+ * Comisión de una línea de servicio.
  *
- * Los dos casos parten del precio al que se cargó el servicio. Antes el segundo
- * caso iba a buscar servicios.precio_lista, y eso estaba mal: en este salón
- * precio_lista no es "el precio antes del descuento", es la OTRA columna de
- * precio, la de tarjeta. Cambiar el criterio cambiaba de columna. Se vio en una
- * venta de $215.000 SIN descuento donde la comisión salió $60.000 en vez de
- * $64.500, porque el servicio tenía precio_lista $200.000.
+ * La base es el PRECIO EN EFECTIVO del servicio en el catálogo, no lo que se
+ * cobró. Cada servicio tiene dos precios —efectivo y lista— y la diferencia
+ * entre ellos es el recargo por pagar con tarjeta, que es un costo del local:
+ * si la comisión saliera de lo cobrado, cuando la clienta paga con tarjeta la
+ * empleada se llevaría además el 30% de ese recargo. El salón lo dijo así:
+ * "siempre el 30% sobre precio de efectivo", y "precio efectivo" es la columna
+ * del catálogo, no "lo que efectivamente se cobró".
+ *
+ * Dos excepciones, las dos por el mismo motivo —ahí el precio más bajo no es un
+ * recargo de menos, es el precio acordado—:
+ * - Promos: la línea vale una fracción del precio de la promo. Con el precio de
+ *   catálogo se pagaría comisión sobre un precio que nadie cobró.
+ * - Servicios sin precio de catálogo disponible: se cae a lo cobrado.
+ *
+ * Y el descuento del ticket baja la base sólo si la empleada lo absorbe
+ * (soporta_descuento), que es la regla general del salón.
  */
 export function comisionMontoServicio(args: {
-  precioEfectivo: number;
+  /** Lo que se cobró por esta línea. Define cuánto del descuento le toca. */
+  precioCobrado: number;
+  /** Precio en efectivo del servicio en el catálogo: la base de la comisión. */
+  precioEfectivoServicio?: number;
+  /** Las líneas que vienen de una promo comisionan sobre lo cobrado. */
+  esDePromo: boolean;
   comisionPct: number;
   soportaDescuento: boolean;
   subtotal: number;
   descuentoMonto: number;
 }): number {
-  const { precioEfectivo, comisionPct, soportaDescuento, subtotal, descuentoMonto } =
-    args;
+  const {
+    precioCobrado,
+    precioEfectivoServicio,
+    esDePromo,
+    comisionPct,
+    soportaDescuento,
+    subtotal,
+    descuentoMonto,
+  } = args;
+  const baseCatalogo =
+    esDePromo || precioEfectivoServicio == null
+      ? precioCobrado
+      : precioEfectivoServicio;
   const descProrrateado =
-    subtotal > 0 ? descuentoMonto * (precioEfectivo / subtotal) : 0;
-  const base = soportaDescuento ? precioEfectivo - descProrrateado : precioEfectivo;
-  return base * (comisionPct / 100);
+    subtotal > 0 ? descuentoMonto * (precioCobrado / subtotal) : 0;
+  const base = soportaDescuento ? baseCatalogo - descProrrateado : baseCatalogo;
+  // Un descuento grande sobre un ticket de varias líneas puede dejar la base en
+  // negativo; la comisión es cero, no una deuda de la empleada.
+  return Math.max(0, base) * (comisionPct / 100);
 }
 
 export interface IngresoLineaConDetalle extends IngresoLinea {

@@ -56,7 +56,9 @@ export default async function VentaDetallePage({
       (acc, l) =>
         acc +
         comisionMontoServicio({
-          precioEfectivo: l.subtotal,
+          precioCobrado: l.subtotal,
+          precioEfectivoServicio: l.servicio?.precio_efectivo,
+          esDePromo: !!l.promo_servicio_id,
           comisionPct: l.comision_pct,
           soportaDescuento: sobreLoCobrado,
           subtotal: ingreso.subtotal,

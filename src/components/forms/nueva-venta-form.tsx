@@ -158,34 +158,52 @@ function subtotalLinea(l: LineaForm): number {
   return precio;
 }
 
-// Comisión de una línea de servicio, reflejando la regla del servidor:
-//   soporta_descuento = true  → comisión sobre el precio final pagado (desc. prorrateado)
-//   soporta_descuento = false → comisión sobre el precio de lista (regular)
+// Comisión de una línea de servicio. Tiene que dar EXACTAMENTE lo mismo que
+// comisionMontoServicio en el servidor: este número se ve en el mostrador
+// mientras se cobra, y si después el ticket guardado dice otra cosa, la que
+// queda pagando la diferencia de confianza es la empleada.
+//
+// La base es el precio EN EFECTIVO del servicio, no lo que se cobró: la
+// diferencia con el precio de lista es el recargo de tarjeta, que es del local.
+// Las líneas de promo son la excepción (ahí el precio bajo es el acordado, no
+// un recargo de menos).
 function comisionLineaServicio(
   l: LineaServicioForm,
-  precioLista: number,
+  precioEfectivoServicio: number | undefined,
   subtotalLineas: number,
   descMonto: number,
 ): number {
   const sub = Number(l.precio) || 0;
+  const baseCatalogo =
+    l.promo_servicio_id || precioEfectivoServicio == null
+      ? sub
+      : precioEfectivoServicio;
   const descProrrateado =
     subtotalLineas > 0 ? descMonto * (sub / subtotalLineas) : 0;
-  const base = l.soporta_descuento ? sub - descProrrateado : precioLista;
-  return base * ((Number(l.comision_pct) || 0) / 100);
+  const base = l.soporta_descuento ? baseCatalogo - descProrrateado : baseCatalogo;
+  return Math.max(0, base) * ((Number(l.comision_pct) || 0) / 100);
 }
 
-// Comisión de una línea de producto. Siempre sobre lo que realmente se cobró
-// por esa línea (subtotal menos su parte del descuento del ticket): no tiene
-// sentido pagarle comisión sobre plata que el local no cobró.
+// Comisión de una línea de producto. Mismo criterio que los servicios: los
+// productos también tienen precio de lista y precio en efectivo, y el recargo
+// de tarjeta es del local.
 function comisionLineaProducto(
   l: LineaProductoForm,
+  precioEfectivoUnitario: number | undefined,
   subtotalLineas: number,
   descMonto: number,
 ): number {
   const sub = subtotalLinea(l);
+  const baseCatalogo =
+    precioEfectivoUnitario != null
+      ? precioEfectivoUnitario * (Number(l.cantidad) || 0)
+      : sub;
   const descProrrateado =
     subtotalLineas > 0 ? descMonto * (sub / subtotalLineas) : 0;
-  return (sub - descProrrateado) * ((Number(l.comision_pct) || 0) / 100);
+  return (
+    Math.max(0, baseCatalogo - descProrrateado) *
+    ((Number(l.comision_pct) || 0) / 100)
+  );
 }
 
 export function NuevaVentaForm({
@@ -315,15 +333,16 @@ export function NuevaVentaForm({
 
   const comisionDe = (l: LineaForm) => {
     if (l.tipo === "producto") {
-      return comisionLineaProducto(l, subtotal, descMonto);
+      const p = productos.find((x) => x.id === l.insumo_id);
+      return comisionLineaProducto(
+        l,
+        p?.precio_venta_efectivo ?? undefined,
+        subtotal,
+        descMonto,
+      );
     }
     const s = servicios.find((x) => x.id === l.servicio_id);
-    return comisionLineaServicio(
-      l,
-      s?.precio_lista ?? (Number(l.precio) || 0),
-      subtotal,
-      descMonto,
-    );
+    return comisionLineaServicio(l, s?.precio_efectivo, subtotal, descMonto);
   };
   const totalComisiones = lineas.reduce((acc, l) => acc + comisionDe(l), 0);
   const paraElLocal = total - totalComisiones;
