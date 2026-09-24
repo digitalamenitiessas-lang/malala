@@ -327,13 +327,32 @@ export default async function EditarProveedorPage({
                     <td className="px-4 py-3 tabular-nums text-muted-foreground">
                       {formatDateShort(row.egreso.fecha)}
                     </td>
+                    {/* Insumo Y observación, no uno u otro: en una compra el
+                        insumo siempre está, así que mostrarlo en su lugar
+                        escondía la observación para siempre. Ahí es donde el
+                        salón anota el número de factura, que es con lo que
+                        cruzan contra el proveedor qué está pagado y qué se
+                        adeuda. */}
                     <td className="px-4 py-3">
-                      {row.insumo ? (
-                        <span className="font-medium">{row.insumo.nombre}</span>
-                      ) : row.egreso.observacion ? (
-                        <span className="text-muted-foreground">
-                          {row.egreso.observacion}
-                        </span>
+                      {row.insumo || row.egreso.observacion ? (
+                        <>
+                          {row.insumo && (
+                            <span className="font-medium">
+                              {row.insumo.nombre}
+                            </span>
+                          )}
+                          {row.egreso.observacion && (
+                            <span
+                              className={
+                                row.insumo
+                                  ? "block text-xs text-muted-foreground"
+                                  : "text-muted-foreground"
+                              }
+                            >
+                              {row.egreso.observacion}
+                            </span>
+                          )}
+                        </>
                       ) : (
                         <span className="italic text-muted-foreground">—</span>
                       )}

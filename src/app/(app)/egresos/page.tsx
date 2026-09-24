@@ -284,21 +284,38 @@ export default async function EgresosPage({
                         : row.rubro.rubro
                       : "—"}
                   </td>
+                  {/* Insumo Y observación, no uno u otro: en una compra el
+                      insumo siempre está, así que mostrarlo en su lugar
+                      escondía la observación para siempre. Ahí es donde el
+                      salón anota el número de factura. */}
                   <td className="px-4 py-3">
-                    {row.insumo ? (
+                    {row.insumo || row.egreso.observacion ? (
                       <>
-                        <span className="font-medium">{row.insumo.nombre}</span>
-                        {row.egreso.cantidad != null ? (
-                          <span className="text-xs text-muted-foreground">
-                            {" "}
-                            x {row.egreso.cantidad}
+                        {row.insumo && (
+                          <span>
+                            <span className="font-medium">
+                              {row.insumo.nombre}
+                            </span>
+                            {row.egreso.cantidad != null ? (
+                              <span className="text-xs text-muted-foreground">
+                                {" "}
+                                x {row.egreso.cantidad}
+                              </span>
+                            ) : null}
                           </span>
-                        ) : null}
+                        )}
+                        {row.egreso.observacion && (
+                          <span
+                            className={
+                              row.insumo
+                                ? "block text-xs text-muted-foreground"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            {row.egreso.observacion}
+                          </span>
+                        )}
                       </>
-                    ) : row.egreso.observacion ? (
-                      <span className="text-muted-foreground">
-                        {row.egreso.observacion}
-                      </span>
                     ) : (
                       <span className="italic text-muted-foreground">—</span>
                     )}
