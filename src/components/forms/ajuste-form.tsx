@@ -53,15 +53,28 @@ export function AjusteForm({
     ? UNIDAD_LABEL[insumo.unidad_medida] ?? insumo.unidad_medida
     : "";
 
+  // El stock se lleva en la unidad base (ml/g/ud), pero nadie cuenta en
+  // mililitros: se cuentan potes. Pedirlo en ml obligaba a multiplicar de
+  // cabeza —4 oxidantes de 900 son 3.600— y ese es justo el error que se
+  // cometió al cargar el stock inicial de una sucursal.
+  const porEnvase = insumo && insumo.tamano_envase !== 1;
+  const [enEnvases, setEnEnvases] = useState(true);
+  const usaEnvases = !!porEnvase && enEnvases;
+  const factor = usaEnvases ? (insumo?.tamano_envase ?? 1) : 1;
+  const unidadEntrada = usaEnvases ? "env." : unidad;
+
   const valorNum = valor === "" || valor === "-" ? null : Number(valor);
   const valido = valorNum != null && Number.isFinite(valorNum);
+  const valorBase = valido ? valorNum * factor : null;
 
-  // delta = cantidad que se aplica al stock (lo que espera la action).
-  const delta = !valido
-    ? null
-    : modo === "delta"
-      ? valorNum
-      : valorNum - stockActual;
+  // delta = cantidad que se aplica al stock (lo que espera la action), siempre
+  // en unidad base.
+  const delta =
+    valorBase == null
+      ? null
+      : modo === "delta"
+        ? valorBase
+        : valorBase - stockActual;
   const resultado = delta == null ? null : stockActual + delta;
 
   return (
@@ -148,8 +161,8 @@ export function AjusteForm({
               className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
             >
               {modo === "delta"
-                ? `Cantidad a sumar (o restar con -) ${unidad ? `en ${unidad}` : ""}`
-                : `Stock real contado ${unidad ? `en ${unidad}` : ""}`}
+                ? `Cantidad a sumar (o restar con -) ${unidadEntrada ? `en ${unidadEntrada}` : ""}`
+                : `Stock real contado ${unidadEntrada ? `en ${unidadEntrada}` : ""}`}
             </label>
             <input
               id="ajuste_valor"
@@ -157,10 +170,39 @@ export function AjusteForm({
               step="0.01"
               value={valor}
               onChange={(e) => setValor(e.currentTarget.value)}
-              placeholder={modo === "delta" ? "Ej: 100 ó -50" : "Ej: 920"}
+              placeholder={
+                usaEnvases
+                  ? modo === "delta"
+                    ? "Ej: 4 ó -1"
+                    : "Ej: 6"
+                  : modo === "delta"
+                    ? "Ej: 100 ó -50"
+                    : "Ej: 920"
+              }
               required
               className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm tabular-nums text-right focus:outline-none focus:ring-2 focus:ring-ring"
             />
+            {porEnvase && (
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {usaEnvases
+                    ? `Cada envase trae ${insumo.tamano_envase} ${unidad}${
+                        valorBase != null ? ` · son ${fmt(valorBase)} ${unidad}` : ""
+                      }`
+                    : `Se carga en ${unidad}`}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnEnvases((v) => !v);
+                    setValor("");
+                  }}
+                  className="shrink-0 text-xs uppercase tracking-wider text-brown-700 underline underline-offset-2 transition-colors hover:text-primary"
+                >
+                  {usaEnvases ? `Cargar en ${unidad}` : "Cargar en envases"}
+                </button>
+              </div>
+            )}
             {errors.cantidad && (
               <p className="text-xs text-destructive">
                 {errors.cantidad.join(", ")}
