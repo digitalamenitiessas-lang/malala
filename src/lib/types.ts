@@ -418,6 +418,8 @@ export interface MotivoDescuento {
   activo: boolean;
   /** El descuento lo pone el local: no le baja la comisión a la empleada. */
   comision_ignora_descuento: boolean;
+  /** Cómo se carga este descuento: en pesos o en porcentaje. */
+  descuento_tipo_default?: "pct" | "monto";
 }
 
 export interface StockSucursal {

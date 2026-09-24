@@ -386,6 +386,10 @@ export function NuevaVentaForm({
     (!!giftCard2 && (Number(valor2) || 0) > giftCard2.saldo + 0.005);
   const giftOk = !giftFalta && !giftSinSaldo;
 
+  // El servidor ya lo exige, pero descubrirlo recién al apretar Guardar obliga
+  // a volver a subir el formulario con la clienta esperando.
+  const motivoFalta = descMonto > 0 && !descMotivoId;
+
   // Aviso (no bloquea): descuento manual + línea a precio efectivo = 20% + otro descuento.
   const hayLineaEfectivo = lineas.some((l) => l.precio_tipo === "efectivo");
   const avisoDobleDescuento = descMonto > 0 && hayLineaEfectivo;
@@ -876,6 +880,54 @@ export function NuevaVentaForm({
           <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
             Descuento
           </h2>
+          {/* El motivo va PRIMERO y no último: es lo que la recepción sabe
+              antes de tocar nada ("es un pack", "es descuento de familia"), y
+              cada motivo define si el descuento se carga en pesos o en
+              porcentaje. Antes el motivo recién aparecía después de tipear el
+              valor, así que no podía ayudar: para cobrar una sesión de pack
+              había que traducir "$10.000 menos" a "25%" de cabeza. */}
+          {motivosDescuento.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No hay motivos cargados. Pedí a un administrador que los cree en
+              Catálogos → Motivos de descuento.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Motivo
+              </label>
+              <select
+                value={descMotivoId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setDescMotivoId(id);
+                  const preferido = motivosDescuento.find(
+                    (m) => m.id === id,
+                  )?.descuento_tipo_default;
+                  // Se limpia el valor al cambiar de tipo: 10000 escrito como
+                  // pesos no significa lo mismo leído como porcentaje.
+                  if (preferido && preferido !== descTipo) {
+                    setDescTipo(preferido);
+                    setDescValor(0);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">— Sin descuento —</option>
+                {motivosDescuento.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nombre}
+                  </option>
+                ))}
+              </select>
+              {errors.descuento_motivo_id && (
+                <p className="text-xs text-destructive">
+                  {errors.descuento_motivo_id.join(", ")}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -883,9 +935,10 @@ export function NuevaVentaForm({
               </label>
               <select
                 value={descTipo}
-                onChange={(e) =>
-                  setDescTipo(e.target.value as "pct" | "monto")
-                }
+                onChange={(e) => {
+                  setDescTipo(e.target.value as "pct" | "monto");
+                  setDescValor(0);
+                }}
                 className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm"
               >
                 <option value="pct">Porcentaje (%)</option>
@@ -922,38 +975,19 @@ export function NuevaVentaForm({
             </p>
           )}
           {descMonto > 0 && (
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Motivo del descuento *
-              </label>
-              {motivosDescuento.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No hay motivos cargados. Pedí a un administrador que los cree en
-                  Catálogos → Motivos de descuento.
-                </p>
-              ) : (
-                <select
-                  value={descMotivoId}
-                  onChange={(e) => setDescMotivoId(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">— Elegí un motivo —</option>
-                  {motivosDescuento.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nombre}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {errors.descuento_motivo_id && (
-                <p className="text-xs text-destructive">
-                  {errors.descuento_motivo_id.join(", ")}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground tabular-nums">
-                Descuento aplicado: {formatARS(descMonto)}
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              Descuento aplicado: {formatARS(descMonto)}
+              {descTipo === "monto" && subtotal > 0
+                ? ` · ${((descMonto / subtotal) * 100).toFixed(1)}% del ticket`
+                : ""}
+              {" · queda en "}
+              <strong className="text-foreground">{formatARS(total)}</strong>
+            </p>
+          )}
+          {descMonto > 0 && !descMotivoId && (
+            <p className="text-xs text-destructive">
+              Elegí el motivo del descuento arriba.
+            </p>
           )}
         </section>
 
@@ -1432,7 +1466,14 @@ export function NuevaVentaForm({
           type="submit"
           pending={pending}
           pendingLabel="Guardando..."
-          disabled={!pagosOk || !giftOk || !mp1Id || lineas.length === 0 || pending}
+          disabled={
+            !pagosOk ||
+            !giftOk ||
+            motivoFalta ||
+            !mp1Id ||
+            lineas.length === 0 ||
+            pending
+          }
           className="rounded-md bg-primary px-6 py-2.5 text-sm font-medium uppercase tracking-wider text-primary-foreground transition-colors hover:bg-brown-700 disabled:cursor-not-allowed"
         >
           Guardar venta

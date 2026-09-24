@@ -21,6 +21,7 @@ function mapMotivoDescuento(
     nombre: row.nombre,
     activo: row.activo,
     comision_ignora_descuento: row.comisionIgnoraDescuento,
+    descuento_tipo_default: row.descuentoTipoDefault ?? undefined,
   };
 }
 
@@ -58,6 +59,7 @@ export async function createMotivoDescuento(
     nombre: formData.get("nombre"),
     activo: true,
     comision_ignora_descuento: formData.get("comision_ignora_descuento") === "on",
+    descuento_tipo_default: formData.get("descuento_tipo_default") || null,
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
 
@@ -68,6 +70,7 @@ export async function createMotivoDescuento(
     nombre: parsed.data.nombre,
     activo: true,
     comisionIgnoraDescuento: parsed.data.comision_ignora_descuento,
+    descuentoTipoDefault: parsed.data.descuento_tipo_default ?? null,
   });
 
   const sucursalActiva = await getActiveSucursalForUser(user);
@@ -111,6 +114,36 @@ export async function toggleMotivoComisionIgnoraDescuento(
   await db
     .update(motivosDescuentoTable)
     .set({ comisionIgnoraDescuento: !motivo.comisionIgnoraDescuento })
+    .where(eq(motivosDescuentoTable.id, mdId));
+
+  revalidatePath("/catalogos/motivos-descuento");
+  revalidatePath("/ventas/nueva");
+  return { ok: true };
+}
+
+/** Alterna cómo se carga este descuento: en pesos o en porcentaje. */
+export async function toggleMotivoDescuentoTipo(
+  mdId: string,
+): Promise<ActionResult> {
+  await requireRole(["admin"]);
+  requireSupabaseRuntime(
+    "Los motivos de descuento requieren Supabase configurado.",
+  );
+
+  const db = getDb();
+  const [motivo] = await db
+    .select()
+    .from(motivosDescuentoTable)
+    .where(eq(motivosDescuentoTable.id, mdId))
+    .limit(1);
+  if (!motivo) return { ok: false, errors: { _: ["No encontrado"] } };
+
+  await db
+    .update(motivosDescuentoTable)
+    .set({
+      descuentoTipoDefault:
+        motivo.descuentoTipoDefault === "monto" ? "pct" : "monto",
+    })
     .where(eq(motivosDescuentoTable.id, mdId));
 
   revalidatePath("/catalogos/motivos-descuento");

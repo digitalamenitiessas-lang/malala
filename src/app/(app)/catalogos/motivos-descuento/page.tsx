@@ -4,6 +4,7 @@ import {
   listMotivosDescuento,
   toggleMotivoComisionIgnoraDescuento,
   toggleMotivoDescuentoActivo,
+  toggleMotivoDescuentoTipo,
 } from "@/lib/data/motivos-descuento";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { SubmitButton } from "@/components/forms/field";
@@ -28,6 +29,11 @@ export default async function MotivosDescuentoPage() {
     "use server";
     const id = formData.get("id");
     if (typeof id === "string") await toggleMotivoComisionIgnoraDescuento(id);
+  }
+  async function toggleTipo(formData: FormData) {
+    "use server";
+    const id = formData.get("id");
+    if (typeof id === "string") await toggleMotivoDescuentoTipo(id);
   }
 
   return (
@@ -89,6 +95,9 @@ export default async function MotivosDescuentoPage() {
           <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="text-left font-medium px-4 py-3">Motivo</th>
+              <th className="text-center font-medium px-4 py-3 w-40">
+                Se carga en
+              </th>
               <th className="text-center font-medium px-4 py-3 w-56">
                 Comisión
               </th>
@@ -100,6 +109,20 @@ export default async function MotivosDescuentoPage() {
             {motivos.map((m) => (
               <tr key={m.id} className="hover:bg-cream/30">
                 <td className="px-4 py-3 font-medium">{m.nombre}</td>
+                {/* Cómo se carga este descuento. Lo sabe el motivo: un pack es
+                    "$10.000 menos", un descuento de familia es "35% off". */}
+                <td className="px-4 py-3 text-center">
+                  <form action={toggleTipo}>
+                    <input type="hidden" name="id" value={m.id} />
+                    <SubmitButton className="text-xs text-muted-foreground hover:text-foreground">
+                      {m.descuento_tipo_default === "monto"
+                        ? "Pesos ($)"
+                        : m.descuento_tipo_default === "pct"
+                          ? "Porcentaje (%)"
+                          : "Sin preferencia"}
+                    </SubmitButton>
+                  </form>
+                </td>
                 {/* Se muestra el efecto, no el nombre del campo: quien mira esta
                     tabla quiere saber si la chica cobra o no cobra. */}
                 <td className="px-4 py-3 text-center">

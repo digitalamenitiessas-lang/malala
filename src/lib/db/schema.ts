@@ -516,6 +516,10 @@ export const motivosDescuento = pgTable("motivos_descuento", {
   comisionIgnoraDescuento: boolean("comision_ignora_descuento")
     .notNull()
     .default(false),
+  // Si este descuento se carga en pesos o en porcentaje. Lo sabe el motivo:
+  // un pack es "$10.000 menos", un descuento de familia es "35% off". Sin
+  // esto había que traducir de cabeza en el mostrador. null = sin preferencia.
+  descuentoTipoDefault: text("descuento_tipo_default").$type<"pct" | "monto">(),
 });
 
 // Tablas puente de membresía por sucursal: la definición del catálogo es global,
