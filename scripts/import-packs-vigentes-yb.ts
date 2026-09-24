@@ -53,9 +53,15 @@ const PACKS: PackVigente[] = [
     codigo: "PACK-002",
     beneficiaria: "Nathalia Herrera",
     packs: 1,
-    sesionesUsadas: 2, // 17/09 y 24/09
+    // El Excel marca dos sesiones usadas (17/09 y 24/09), pero la del 24/09 se
+    // estaba cargando en el sistema cuando se armó esto: si se descontara acá,
+    // al registrar la venta se descontaría de nuevo y la profesional perdería
+    // la comisión de hoy. Se descuenta sólo la del 17/09, que no se registró.
+    sesionesUsadas: 1,
     fechaPago: "2026-09-17",
-    detalle: "Pack del 17/09. Sesiones usadas: 17/09 y 24/09.",
+    detalle:
+      "Pack del 17/09. La sesión del 17/09 se hizo antes de llevar los packs " +
+      "en el sistema y no se registró como venta; la del 24/09 se carga normal.",
   },
 ];
 
