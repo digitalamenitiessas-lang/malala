@@ -382,6 +382,9 @@ export async function getResumenDelDia(
   }
 
   for (const row of egresosPagados) {
+    // Un egreso pagado siempre tiene medio (se exige al marcarlo pagado); el
+    // guard es para los que quedaron a pagar y todavia no lo tienen.
+    if (!row.egreso.mp_id) continue;
     const mp = acc.get(row.egreso.mp_id);
     if (mp) mp.egresos += row.egreso.valor;
   }

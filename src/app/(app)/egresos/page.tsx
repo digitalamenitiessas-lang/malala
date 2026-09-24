@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth/session";
 import { inicioDeDiaArISO } from "@/lib/fecha-ar";
 import { listEgresos } from "@/lib/data/egresos";
 import { aggregateEgresos } from "@/lib/data/egresos-helpers";
+import { listMediosPago } from "@/lib/data/medios-pago";
 import { listProveedores } from "@/lib/data/proveedores";
 import { listRubrosGasto } from "@/lib/data/rubros-gasto";
 import { listSucursales } from "@/lib/data/sucursales";
@@ -73,9 +74,12 @@ export default async function EgresosPage({
   // egreso los resuelve listEgresos, así que no se pierde info histórica).
   // Los dos dropdowns y la lista son independientes: van juntos en vez de uno
   // atrás del otro.
-  const [rubros, proveedores, egresos] = await Promise.all([
+  const [rubros, proveedores, mediosPago, egresos] = await Promise.all([
     listRubrosGasto({ sucursalId: sucursal.id }),
     listProveedores({ sucursalId: sucursal.id }),
+    // Sin CC: la cuenta corriente sirve para fiarle a una clienta, no para
+    // pagarle al proveedor.
+    listMediosPago({ sucursalId: sucursal.id, soloActivos: true }),
     listEgresos({
       sucursalId: sucursal.id,
       rubroId: sp.rubro,
@@ -334,6 +338,8 @@ export default async function EgresosPage({
                           <TogglePagadoButton
                             egresoId={row.egreso.id}
                             pagado={row.egreso.pagado}
+                            tieneMedio={!!row.egreso.mp_id}
+                            mediosPago={mediosPago}
                           />
                         )}
                         <AnularGastoButton

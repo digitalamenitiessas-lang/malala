@@ -722,9 +722,10 @@ export const egresos = pgTable("egresos", {
   proveedorId: text("proveedor_id").references(() => proveedores.id),
   cantidad: doublePrecision("cantidad"),
   valor: doublePrecision("valor").notNull(),
-  mpId: text("mp_id")
-    .notNull()
-    .references(() => mediosPago.id),
+  // Nullable: un gasto que queda a pagar (cuenta corriente del proveedor)
+  // todavía no tiene medio de pago. Se completa al marcarlo pagado, que es
+  // cuando la plata sale de verdad. Ver drizzle/0041.
+  mpId: text("mp_id").references(() => mediosPago.id),
   mp1CuentaId: text("mp1_cuenta_id").references(() => cuentasBancarias.id),
   mp2Id: text("mp2_id").references(() => mediosPago.id),
   valor2: doublePrecision("valor2"),

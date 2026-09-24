@@ -491,7 +491,8 @@ export interface Egreso {
   proveedor_id?: ID;
   cantidad?: number;
   valor: number;
-  mp_id: ID;
+  /** Vacío mientras el gasto está a pagar: se elige al marcarlo pagado. */
+  mp_id?: ID;
   mp1_cuenta_id?: ID;
   mp2_id?: ID;
   valor2?: number;

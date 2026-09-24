@@ -397,100 +397,107 @@ export function EgresoForm({
           required
         />
 
-        {/* Medio 1 + cuenta */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SelectField
-            label={mp2Id ? "Medio 1" : "Medio de pago"}
-            name="mp_id"
-            value={mp1Id}
-            onChange={(e) => setMp1Id(e.currentTarget.value)}
-            error={errors.mp_id}
-            options={mediosVisibles.map((m) => ({
-              value: m.id,
-              label: m.nombre,
-            }))}
-            placeholder={
-              mediosVisibles.length === 0
-                ? "Cargá un medio en esta sucursal"
-                : undefined
-            }
-            required
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="pagado"
+            checked={pagado}
+            onChange={(e) => setPagado(e.target.checked)}
+            className="h-4 w-4 rounded border-border accent-sage-500"
           />
-          {usaCuentaBanco(mp1) && (
-            <BancoSelector
-              name="mp1_cuenta_id"
-              label="Cuenta"
-              cuentas={cuentasBanco}
-              value={mp1CuentaId}
-              onChange={setMp1CuentaId}
-            />
-          )}
-        </div>
+          <span>Ya está pagado</span>
+          <span className="text-xs text-muted-foreground">
+            (sin tildar y con proveedor, queda en su cuenta)
+          </span>
+        </label>
 
-        {/* Medio 2 (opcional) + monto + cuenta */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <SelectField
-            label="Medio 2 (opcional)"
-            name="mp2_id"
-            value={mp2Id}
-            onChange={(e) => {
-              const v = e.currentTarget.value;
-              setMp2Id(v);
-              if (!v) {
-                setValor2(0);
-                setMp2CuentaId("");
+        {/* Con qué se pagó sólo se pregunta si la plata sale ahora. Si el gasto
+            queda a pagar todavía no se sabe, y elegir uno de relleno hacía que
+            después, al marcarlo pagado, la plata saliera de esa cuenta. */}
+        {pagado && (
+          <>
+          {/* Medio 1 + cuenta */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SelectField
+              label={mp2Id ? "Medio 1" : "Medio de pago"}
+              name="mp_id"
+              value={mp1Id}
+              onChange={(e) => setMp1Id(e.currentTarget.value)}
+              error={errors.mp_id}
+              options={mediosVisibles.map((m) => ({
+                value: m.id,
+                label: m.nombre,
+              }))}
+              placeholder={
+                mediosVisibles.length === 0
+                  ? "Cargá un medio en esta sucursal"
+                  : undefined
               }
-            }}
-            error={errors.mp2_id}
-            options={mediosVisibles
-              .filter((m) => m.id !== mp1Id)
-              .map((m) => ({ value: m.id, label: m.nombre }))}
-            placeholder="— Ninguno —"
-          />
-          {mp2Id && (
-            <CurrencyField
-              label="Monto del medio 2"
-              name="valor2"
-              value={valor2}
-              onChange={setValor2}
-              error={errors.valor2}
               required
             />
+            {usaCuentaBanco(mp1) && (
+              <BancoSelector
+                name="mp1_cuenta_id"
+                label="Cuenta"
+                cuentas={cuentasBanco}
+                value={mp1CuentaId}
+                onChange={setMp1CuentaId}
+              />
+            )}
+          </div>
+
+          {/* Medio 2 (opcional) + monto + cuenta */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SelectField
+              label="Medio 2 (opcional)"
+              name="mp2_id"
+              value={mp2Id}
+              onChange={(e) => {
+                const v = e.currentTarget.value;
+                setMp2Id(v);
+                if (!v) {
+                  setValor2(0);
+                  setMp2CuentaId("");
+                }
+              }}
+              error={errors.mp2_id}
+              options={mediosVisibles
+                .filter((m) => m.id !== mp1Id)
+                .map((m) => ({ value: m.id, label: m.nombre }))}
+              placeholder="— Ninguno —"
+            />
+            {mp2Id && (
+              <CurrencyField
+                label="Monto del medio 2"
+                name="valor2"
+                value={valor2}
+                onChange={setValor2}
+                error={errors.valor2}
+                required
+              />
+            )}
+          </div>
+
+          {mp2Id && usaCuentaBanco(mp2) && (
+            <BancoSelector
+              name="mp2_cuenta_id"
+              label="Cuenta (Medio 2)"
+              cuentas={cuentasBanco}
+              value={mp2CuentaId}
+              onChange={setMp2CuentaId}
+            />
           )}
-        </div>
 
-        {mp2Id && usaCuentaBanco(mp2) && (
-          <BancoSelector
-            name="mp2_cuenta_id"
-            label="Cuenta (Medio 2)"
-            cuentas={cuentasBanco}
-            value={mp2CuentaId}
-            onChange={setMp2CuentaId}
-          />
-        )}
-
-        {mp2Id && (
-          <p className="text-xs text-muted-foreground tabular-nums">
-            {mp1?.nombre ?? "Medio 1"} cubre {formatARS(valor1)} · {mp2?.nombre}{" "}
-            {formatARS(valor2)} ={" "}
-            <strong className="text-foreground">{formatARS(valorTotal)}</strong>
-          </p>
+          {mp2Id && (
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {mp1?.nombre ?? "Medio 1"} cubre {formatARS(valor1)} · {mp2?.nombre}{" "}
+              {formatARS(valor2)} ={" "}
+              <strong className="text-foreground">{formatARS(valorTotal)}</strong>
+            </p>
+          )}
+          </>
         )}
       </div>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          name="pagado"
-          checked={pagado}
-          onChange={(e) => setPagado(e.target.checked)}
-          className="h-4 w-4 rounded border-border accent-sage-500"
-        />
-        <span>Pagado</span>
-        <span className="text-xs text-muted-foreground">
-          (si está sin tildar y hay proveedor, suma a la deuda)
-        </span>
-      </label>
 
       <div className="space-y-1.5">
         <label

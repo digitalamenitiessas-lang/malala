@@ -111,7 +111,9 @@ async function main() {
       }
     }
     for (const r of egrs) {
-      if (esCC(r.mpId)) continue;
+      // Sin medio de pago el gasto quedó a pagar (cuenta corriente del
+      // proveedor): no movió la caja de ese día.
+      if (!r.mpId || esCC(r.mpId)) continue;
       if (esEfectivo(r.mpId)) egEf += r.valor;
       else egResto += r.valor;
     }

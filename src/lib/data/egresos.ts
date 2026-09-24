@@ -66,7 +66,7 @@ function mapEgreso(row: typeof egresosTable.$inferSelect): Egreso {
     proveedor_id: row.proveedorId ?? undefined,
     cantidad: row.cantidad ?? undefined,
     valor: row.valor,
-    mp_id: row.mpId,
+    mp_id: row.mpId ?? undefined,
     mp1_cuenta_id: row.mp1CuentaId ?? undefined,
     mp2_id: row.mp2Id ?? undefined,
     valor2: row.valor2 ?? undefined,
@@ -226,7 +226,7 @@ function detallar(
     proveedor: egreso.proveedor_id
       ? (lookups.proveedoresById.get(egreso.proveedor_id) ?? null)
       : null,
-    mp: lookups.mediosPagoById.get(egreso.mp_id) ?? null,
+    mp: egreso.mp_id ? (lookups.mediosPagoById.get(egreso.mp_id) ?? null) : null,
     mp2: egreso.mp2_id
       ? (lookups.mediosPagoById.get(egreso.mp2_id) ?? null)
       : null,
@@ -448,13 +448,15 @@ export async function createEgreso(
       if (data.pagado) {
         // Un movimiento bancario por cada medio usado. La cuenta es la elegida
         // (override) o, si no se eligió, la cuenta por defecto del medio.
+        // El schema ya exige el medio cuando pagado es true; este chequeo es
+        // para que el tipo lo sepa y no haya que forzarlo.
         const pagos: Array<{
           mpId: string;
           cuentaOverride?: string;
           monto: number;
-        }> = [
-          { mpId: data.mp_id, cuentaOverride: data.mp1_cuenta_id, monto: valor1 },
-        ];
+        }> = data.mp_id
+          ? [{ mpId: data.mp_id, cuentaOverride: data.mp1_cuenta_id, monto: valor1 }]
+          : [];
         if (data.mp2_id) {
           pagos.push({
             mpId: data.mp2_id,
@@ -531,8 +533,19 @@ export async function createEgreso(
   return { ok: true, egresoId };
 }
 
+/**
+ * Marca un gasto como pagado, o vuelve a dejarlo a pagar.
+ *
+ * `mpId` viene cuando el gasto se cargó a cuenta corriente del proveedor y
+ * todavía no tenía medio de pago: recién ahora, cuando el proveedor vino a
+ * cobrar, se sabe con qué se le pagó. Es el dato que decide de qué cuenta sale
+ * la plata, así que se pregunta en el momento en el que la plata sale y no una
+ * semana antes.
+ */
 export async function togglePagadoEgreso(
   egresoId: string,
+  mpId?: string,
+  mpCuentaId?: string,
 ): Promise<ActionResult> {
   const user = await requireRole(["admin", "encargada"]);
   const scope = buildAccessScope(user);
@@ -548,11 +561,25 @@ export async function togglePagadoEgreso(
     return { ok: false, errors: { _: ["No tienes acceso a ese egreso"] } };
   }
 
+  const vaAPagarse = !egreso.pagado;
+  const mpEfectivo = vaAPagarse ? (mpId ?? egreso.mpId) : egreso.mpId;
+  if (vaAPagarse && !mpEfectivo) {
+    return { ok: false, errors: { mp_id: ["Elegí con qué se pagó"] } };
+  }
+
   await db.transaction(async (tx) => {
-    const nuevoPagado = !egreso.pagado;
+    const nuevoPagado = vaAPagarse;
     await tx
       .update(egresosTable)
-      .set({ pagado: nuevoPagado })
+      .set({
+        pagado: nuevoPagado,
+        // Si el medio se eligió recién ahora, queda guardado en el gasto: si no,
+        // al desmarcarlo y volver a marcarlo habría que elegirlo de nuevo, y el
+        // historial no diría con qué se pagó.
+        ...(nuevoPagado && mpId
+          ? { mpId, mp1CuentaId: mpCuentaId ?? egreso.mp1CuentaId }
+          : {}),
+      })
       .where(eq(egresosTable.id, egresoId));
 
     if (nuevoPagado) {
@@ -563,9 +590,15 @@ export async function togglePagadoEgreso(
         mpId: string;
         cuentaOverride: string | null;
         monto: number;
-      }> = [
-        { mpId: egreso.mpId, cuentaOverride: egreso.mp1CuentaId, monto: valor1 },
-      ];
+      }> = mpEfectivo
+        ? [
+            {
+              mpId: mpEfectivo,
+              cuentaOverride: mpCuentaId ?? egreso.mp1CuentaId,
+              monto: valor1,
+            },
+          ]
+        : [];
       if (egreso.mp2Id) {
         pagos.push({
           mpId: egreso.mp2Id,

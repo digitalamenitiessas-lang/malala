@@ -214,28 +214,6 @@ export function RegistrarCompraInsumoModal({
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Medio de pago
-                </label>
-                <select
-                  name="mp_id"
-                  required
-                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
-                >
-                  <option value="">
-                    {mediosVisibles.length === 0
-                      ? "Carga un medio en esta sucursal"
-                      : "Selecciona"}
-                  </option>
-                  {mediosVisibles.map((medio) => (
-                    <option key={medio.id} value={medio.id}>
-                      {medio.codigo} - {medio.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -244,11 +222,39 @@ export function RegistrarCompraInsumoModal({
                   onChange={(e) => setPagado(e.target.checked)}
                   className="h-4 w-4 rounded border-border accent-sage-500"
                 />
-                <span>Pagado</span>
+                <span>Ya está pagado</span>
                 <span className="text-xs text-muted-foreground">
-                  (sin tildar, suma a la deuda del proveedor)
+                  (sin tildar, queda en la cuenta del proveedor)
                 </span>
               </label>
+
+              {/* Con qué se pagó sólo se pregunta si la plata sale ahora. Si la
+                  compra queda a pagar todavía no se sabe, y elegir uno de
+                  relleno hacía que después, al marcarla pagada, la plata
+                  saliera de esa cuenta. */}
+              {pagado && (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Medio de pago
+                  </label>
+                  <select
+                    name="mp_id"
+                    required
+                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+                  >
+                    <option value="">
+                      {mediosVisibles.length === 0
+                        ? "Carga un medio en esta sucursal"
+                        : "Selecciona"}
+                    </option>
+                    {mediosVisibles.map((medio) => (
+                      <option key={medio.id} value={medio.id}>
+                        {medio.codigo} - {medio.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
