@@ -1278,6 +1278,7 @@ export function NuevaVentaForm({
             giftCards={giftCards}
             value={giftCard1Id}
             error={errors.gift_card_1_id}
+            clienteNombre={clienteSel?.nombre}
             onChange={(id) => {
               setGiftCard1Id(id);
               // Se propone lo máximo que cubre la tarjeta: si no alcanza para
@@ -1361,6 +1362,7 @@ export function NuevaVentaForm({
           <GiftCardSelector
             label="Gift card (Medio 2)"
             giftCards={giftCards.filter((g) => g.id !== giftCard1Id)}
+            clienteNombre={clienteSel?.nombre}
             value={giftCard2Id}
             error={errors.gift_card_2_id}
             onChange={(id) => {
@@ -1871,17 +1873,46 @@ function GiftCardSelector({
   giftCards,
   value,
   error,
+  clienteNombre,
   onChange,
 }: {
   label: string;
   giftCards: GiftCard[];
   value: string;
   error?: string[];
+  /** Cliente del ticket: sus tarjetas van primero. */
+  clienteNombre?: string;
   onChange: (v: string) => void;
 }) {
   const hoy = hoyAr();
   const elegida = giftCards.find((g) => g.id === value);
   const chequeo = elegida ? esCanjeable(elegida, hoy) : undefined;
+
+  // Son sesenta tarjetas y la mayoría están vencidas desde mayo. Ordenadas por
+  // fecha de emisión, la del pack de una clienta queda sepultada en el medio de
+  // la lista y hay que cazarla a ojo, en el mostrador. Se ordena por lo que se
+  // busca: primero las de la clienta del ticket, después las que están en
+  // fecha, y al final las vencidas (que se siguen pudiendo elegir).
+  const normaliza = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .trim();
+  const cliente = clienteNombre ? normaliza(clienteNombre) : "";
+  const esDelCliente = (g: GiftCard) => {
+    if (!cliente) return false;
+    const quien = `${g.beneficiaria ?? ""} ${g.compradora ?? ""}`;
+    return normaliza(quien).includes(cliente);
+  };
+  const ordenadas = [...giftCards].sort((a, b) => {
+    const da = esDelCliente(a) ? 0 : 1;
+    const db = esDelCliente(b) ? 0 : 1;
+    if (da !== db) return da - db;
+    const va = estadoGiftCard(a, hoy) === "vencida" ? 1 : 0;
+    const vb = estadoGiftCard(b, hoy) === "vencida" ? 1 : 0;
+    return va - vb;
+  });
 
   return (
     <div className="space-y-1.5">
@@ -1900,7 +1931,7 @@ function GiftCardSelector({
           className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">— Elegí la tarjeta —</option>
-          {giftCards.map((g) => {
+          {ordenadas.map((g) => {
             const estado = estadoGiftCard(g, hoy);
             const usable = esCanjeable(g, hoy).canjeable;
             const quien = g.beneficiaria ? ` · ${g.beneficiaria}` : "";
