@@ -616,6 +616,40 @@ export function NuevaVentaForm({
     setErrors({});
     setWarnings([]);
 
+    // Los mismos controles que deshabilitan el botón Guardar, repetidos acá.
+    //
+    // No es redundante: un botón deshabilitado NO impide que el formulario se
+    // envíe con la tecla Enter, y este formulario tiene una docena de campos
+    // donde apretarla es natural. Por ese agujero la venta llegaba al servidor
+    // sin gift card elegida, sin motivo de descuento o con la diferencia sin
+    // cerrar, y la respuesta era un error escueto después de haber cargado
+    // todo — que es como se perdió media tarde en el mostrador.
+    if (!mp1Id) {
+      setErrors({ mp1_id: ["Elegí con qué se cobra"] });
+      notifyError("Elegí con qué se cobra");
+      return;
+    }
+    if (giftFalta) {
+      setErrors({ gift_card_1_id: ["Elegí qué gift card se está canjeando"] });
+      notifyError("Elegí qué gift card se está canjeando");
+      return;
+    }
+    if (giftSinSaldo) {
+      notifyError("La gift card no tiene saldo suficiente");
+      return;
+    }
+    if (motivoFalta) {
+      setErrors({ descuento_motivo_id: ["Elegí un motivo para el descuento"] });
+      notifyError("Elegí el motivo del descuento");
+      return;
+    }
+    if (!pagosOk) {
+      notifyError(
+        `Lo cobrado no coincide con el total: ${formatARS(Math.abs(diff))} de diferencia`,
+      );
+      return;
+    }
+
     // Validación cliente-side mínima
     const lineaInvalida = lineas.some((l) => {
       if (l.tipo === "servicio") return !l.servicio_id || !l.empleado_id;
@@ -723,7 +757,25 @@ export function NuevaVentaForm({
 
   return (
     <>
-    <form action={handleSubmit} className="space-y-8">
+    <form
+      action={handleSubmit}
+      // Enter no guarda la venta. En un formulario de una sola línea es cómodo;
+      // acá, con una docena de campos donde se tabula y se tipean números, es
+      // un disparo accidental que registra una venta a medio cargar. Guardar es
+      // una decisión y se toma apretando el botón.
+      //
+      // Sólo se frena el Enter que viene de un <input>: los <textarea>, los
+      // botones y los combos que ya lo manejaron (defaultPrevented) siguen
+      // funcionando igual.
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" || e.defaultPrevented) return;
+        const el = e.target as HTMLElement;
+        if (el.tagName === "INPUT" && (el as HTMLInputElement).type !== "submit") {
+          e.preventDefault();
+        }
+      }}
+      className="space-y-8"
+    >
       {/* Header: cliente + sucursal info */}
       <section className="bg-card border border-border rounded-md p-5 space-y-4">
         <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
