@@ -32,6 +32,9 @@ export function EmpleadoForm({
   submitLabel,
 }: Props) {
   const [crearAcceso, setCrearAcceso] = useState(false);
+  const [horasPorDia, setHorasPorDia] = useState(
+    String(empleado?.horas_por_dia ?? 0),
+  );
   const ofreceAcceso = !empleado && (rolesDisponibles?.length ?? 0) > 0;
 
   return (
@@ -92,16 +95,31 @@ export function EmpleadoForm({
                 semanal de "Disponibilidad pública", que se carga una vez y
                 queda. Se conserva como respaldo porque hoy casi nadie tiene el
                 semanal cargado, y sin él la liquidación daría cero horas. */}
-            <Field
-              label="Horas por día (respaldo)"
-              name="horas_por_dia"
-              type="number"
-              step="0.5"
-              min="0"
-              defaultValue={empleado?.horas_por_dia ?? 0}
-              error={errors.horas_por_dia}
-              hint="Sólo se usa mientras no tenga cargado el horario semanal en Disponibilidad pública, que es lo que manda."
-            />
+            <div className="space-y-1.5">
+              <Field
+                label="Horas por día (respaldo)"
+                name="horas_por_dia"
+                type="number"
+                step="0.5"
+                min="0"
+                value={horasPorDia}
+                onChange={(e) => setHorasPorDia(e.currentTarget.value)}
+                error={errors.horas_por_dia}
+                hint="Sólo se usa mientras no tenga cargado el horario semanal en Disponibilidad pública, que es lo que manda."
+              />
+              {/* Pasó de verdad con cuatro empleadas: cargaron las horas de la
+                  SEMANA acá (34, 52, 48, 47) y coincidían exacto con su horario
+                  semanal. Quedó inerte porque las cuatro tenían el horario
+                  cargado, pero si alguna vez se lo borran, la liquidación
+                  sugeriría 34 horas por día. El aviso corta el error donde se
+                  comete. */}
+              {Number(horasPorDia) > 12 && (
+                <p className="text-xs text-warning">
+                  Son más de 12 horas en un solo día. ¿No estarás poniendo las
+                  horas de toda la semana? Acá va lo que trabaja por día.
+                </p>
+              )}
+            </div>
           </div>
           <DiasTrabajoField dias={empleado?.dias_trabajo ?? []} />
           <Field
