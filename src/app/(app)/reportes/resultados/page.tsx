@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
 import { listIngresos } from "@/lib/data/ingresos";
 import { listEgresos } from "@/lib/data/egresos";
+import { getComisionesPagadasEnPeriodo } from "@/lib/data/liquidaciones";
 import { listSucursales } from "@/lib/data/sucursales";
 import { formatARS } from "@/lib/utils";
 import { GRUPO_NOMBRE } from "@/lib/grupos-gasto";
@@ -43,7 +44,7 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
   const sp = await searchParams;
   const filtros = parseReporteFiltros(sp, scope);
 
-  const [sucursalesAll, ingresos, egresos] = await Promise.all([
+  const [sucursalesAll, ingresos, egresos, comisionesPagadas] = await Promise.all([
     listSucursales({ soloActivas: true }),
     listIngresos({
       sucursalId: filtros.sucursalId,
@@ -51,6 +52,11 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
       hasta: filtros.hastaIso,
     }),
     listEgresos({
+      sucursalId: filtros.sucursalId,
+      desde: filtros.desdeIso,
+      hasta: filtros.hastaIso,
+    }),
+    getComisionesPagadasEnPeriodo({
       sucursalId: filtros.sucursalId,
       desde: filtros.desdeIso,
       hasta: filtros.hastaIso,
@@ -64,11 +70,14 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
   const facturacion = ingresos.reduce((a, r) => a + r.breakdown.total, 0);
   const comisiones = ingresos.reduce((a, r) => a + r.breakdown.comisiones, 0);
 
-  // Los egresos se agrupan por grupo y, dentro, por rubro.
+  // Los egresos se agrupan por grupo y, dentro, por rubro. De cada renglón se
+  // lleva el devengado y cuánto de eso ya se pagó: es lo que permite leer el
+  // mismo cuadro en clave económica (qué costó el mes) y financiera (qué salió
+  // de caja y qué se sigue debiendo).
   interface Renglon {
     nombre: string;
     monto: number;
-    pendiente: number;
+    pagado: number;
   }
   const porGrupo = new Map<number | null, Map<string, Renglon>>();
   for (const row of egresos) {
@@ -79,15 +88,19 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
         : row.rubro.rubro
       : "Sin rubro";
     const dentro = porGrupo.get(grupo) ?? new Map<string, Renglon>();
-    const cur = dentro.get(nombre) ?? { nombre, monto: 0, pendiente: 0 };
+    const cur = dentro.get(nombre) ?? { nombre, monto: 0, pagado: 0 };
     cur.monto += row.egreso.valor;
-    if (!row.egreso.pagado) cur.pendiente += row.egreso.valor;
+    if (row.egreso.pagado) cur.pagado += row.egreso.valor;
     dentro.set(nombre, cur);
     porGrupo.set(grupo, dentro);
   }
 
+  const renglonesDe = (g: number | null) =>
+    [...(porGrupo.get(g)?.values() ?? [])].sort((a, b) => b.monto - a.monto);
   const totalDeGrupo = (g: number | null) =>
-    [...(porGrupo.get(g)?.values() ?? [])].reduce((a, r) => a + r.monto, 0);
+    renglonesDe(g).reduce((a, r) => a + r.monto, 0);
+  const pagadoDeGrupo = (g: number | null) =>
+    renglonesDe(g).reduce((a, r) => a + r.pagado, 0);
 
   const gruposOperativos = [1, 2, 3, 4, 5].filter((g) => porGrupo.has(g));
   const egresosOperativos = gruposOperativos.reduce(
@@ -99,6 +112,19 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
 
   const resultadoOperativo = facturacion - comisiones - egresosOperativos;
   const resultadoFinal = resultadoOperativo - noOperativo;
+
+  // Lo mismo, pero mirando sólo lo que salió de caja. La diferencia entre las
+  // dos lecturas es lo que el salón todavía debe: a los proveedores por las
+  // compras sin pagar, y al equipo por las comisiones sin liquidar.
+  const egresosOperativosPagados = gruposOperativos.reduce(
+    (a, g) => a + pagadoDeGrupo(g),
+    0,
+  );
+  const deuda =
+    comisiones -
+    comisionesPagadas +
+    (egresosOperativos - egresosOperativosPagados) +
+    (noOperativo - pagadoDeGrupo(6));
 
   const pct = (n: number) =>
     facturacion > 0 ? `${((n / facturacion) * 100).toFixed(1)}%` : "—";
@@ -130,8 +156,21 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
         </p>
       )}
 
-      <div className="overflow-hidden rounded-md border border-border bg-card">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-md border border-border bg-card">
+        <table className="w-full min-w-[42rem] text-sm">
+          <thead className="bg-cream/50 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-4 py-2.5 text-left font-medium"></th>
+              <th className="px-4 py-2.5 text-right font-medium w-16">%</th>
+              <th className="px-4 py-2.5 text-right font-medium w-36">
+                Devengado
+              </th>
+              <th className="px-4 py-2.5 text-right font-medium w-32">Pagado</th>
+              <th className="px-4 py-2.5 text-right font-medium w-32">
+                Pendiente
+              </th>
+            </tr>
+          </thead>
           <tbody className="divide-y divide-border">
             <Fila
               concepto="Facturación"
@@ -142,8 +181,9 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
 
             <Fila
               concepto="Comisiones del equipo"
-              detalle="Calculadas sobre las ventas del período, no se cargan como gasto"
+              detalle="Nacen con cada venta; se pagan al liquidar"
               monto={-comisiones}
+              pagado={-comisionesPagadas}
               pct={pct(comisiones)}
             />
 
@@ -151,16 +191,16 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
               <GrupoFilas
                 key={g}
                 titulo={`${g} · ${GRUPO_NOMBRE[g]}`}
-                renglones={[...(porGrupo.get(g)?.values() ?? [])].sort(
-                  (a, b) => b.monto - a.monto,
-                )}
+                renglones={renglonesDe(g)}
                 total={totalDeGrupo(g)}
+                pagado={pagadoDeGrupo(g)}
                 pct={pct}
               />
             ))}
 
             <Fila
               concepto="Resultado operativo"
+              detalle="Lo que deja el salón operando"
               monto={resultadoOperativo}
               pct={pct(resultadoOperativo)}
               tono="resultado"
@@ -171,10 +211,9 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
                 <GrupoFilas
                   titulo="6 · No operativo — bajo la línea"
                   detalle="Retiros, aportes, deuda e inversión. No son costo del salón."
-                  renglones={[...(porGrupo.get(6)?.values() ?? [])].sort(
-                    (a, b) => b.monto - a.monto,
-                  )}
+                  renglones={renglonesDe(6)}
                   total={noOperativo}
+                  pagado={pagadoDeGrupo(6)}
                   pct={pct}
                 />
                 <Fila
@@ -189,6 +228,22 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
           </tbody>
         </table>
       </div>
+
+      {deuda > 0.5 && (
+        <div className="rounded-md border border-border bg-cream/40 p-4">
+          <p className="text-sm">
+            De todo lo de arriba,{" "}
+            <strong className="tabular-nums">{formatARS(deuda)}</strong> todavía
+            no salió de caja.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Es lo que el salón debe hoy: a los proveedores por las compras sin
+            pagar, y al equipo por las comisiones sin liquidar. El resultado ya
+            lo tiene descontado —el costo existe aunque no se haya pagado—, pero
+            la plata todavía está en la caja.
+          </p>
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground">
         Los gastos cuentan en el mes en que se hicieron, estén pagados o no. Si
@@ -205,27 +260,32 @@ function GrupoFilas({
   detalle,
   renglones,
   total,
+  pagado,
   pct,
 }: {
   titulo: string;
   detalle?: string;
-  renglones: { nombre: string; monto: number; pendiente: number }[];
+  renglones: { nombre: string; monto: number; pagado: number }[];
   total: number;
+  pagado: number;
   pct: (n: number) => string;
 }) {
   return (
     <>
-      <Fila concepto={titulo} detalle={detalle} monto={-total} pct={pct(total)} tono="grupo" />
+      <Fila
+        concepto={titulo}
+        detalle={detalle}
+        monto={-total}
+        pagado={-pagado}
+        pct={pct(total)}
+        tono="grupo"
+      />
       {renglones.map((r) => (
         <Fila
           key={r.nombre}
           concepto={r.nombre}
-          detalle={
-            r.pendiente > 0
-              ? `${formatARS(r.pendiente)} todavía sin pagar`
-              : undefined
-          }
           monto={-r.monto}
+          pagado={-r.pagado}
           pct={pct(r.monto)}
           tono="detalle"
         />
@@ -238,12 +298,17 @@ function Fila({
   concepto,
   detalle,
   monto,
+  pagado,
   pct,
   tono = "normal",
 }: {
   concepto: string;
   detalle?: string;
   monto: number;
+  /** Cuánto de `monto` ya salió de caja. Sin esto, las dos últimas columnas
+   *  quedan vacías: es el caso de la facturación y los resultados, donde
+   *  pagado/pendiente no significa nada. */
+  pagado?: number;
   pct: string;
   tono?: "titulo" | "grupo" | "detalle" | "resultado" | "normal";
 }) {
@@ -278,11 +343,11 @@ function Fila({
           <p className="text-[11px] text-muted-foreground">{detalle}</p>
         )}
       </td>
-      <td className="px-4 py-2.5 text-right tabular-nums text-xs text-muted-foreground w-20">
+      <td className="px-4 py-2.5 text-right tabular-nums text-xs text-muted-foreground w-16">
         {pct}
       </td>
       <td
-        className={`px-4 py-2.5 text-right tabular-nums w-40 ${textoMonto}`}
+        className={`px-4 py-2.5 text-right tabular-nums w-36 ${textoMonto}`}
         style={
           tono === "resultado"
             ? { color: monto >= 0 ? "var(--sage-700)" : "var(--danger)" }
@@ -290,6 +355,20 @@ function Fila({
         }
       >
         {formatARS(monto)}
+      </td>
+      <td className="px-4 py-2.5 text-right tabular-nums text-sm text-muted-foreground w-32">
+        {pagado != null ? formatARS(pagado) : ""}
+      </td>
+      <td className="px-4 py-2.5 text-right tabular-nums text-sm w-32">
+        {pagado != null ? (
+          Math.abs(monto - pagado) > 0.5 ? (
+            <span className="text-warning">{formatARS(monto - pagado)}</span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )
+        ) : (
+          ""
+        )}
       </td>
     </tr>
   );

@@ -1135,3 +1135,53 @@ export async function getEfectivoEsperadoPeriodo(args: {
     neto_ef: ingresosEf - egresosEf,
   };
 }
+
+/**
+ * Cuánto de las comisiones devengadas en un período ya se pagó.
+ *
+ * La comisión no es un egreso que alguien carga: nace con la venta y se paga
+ * cuando esa línea entra en una liquidación. Para el estado de resultados hace
+ * falta separar las dos cosas — lo devengado es el costo del mes, lo pagado es
+ * lo que salió de caja, y la diferencia es plata que el salón le debe al
+ * equipo. Sin esto, las comisiones aparecían todas como si estuvieran saldadas.
+ *
+ * Sólo cuentan las liquidaciones en estado "pagada": una pendiente es una
+ * intención, no un pago.
+ */
+export async function getComisionesPagadasEnPeriodo(args: {
+  sucursalId?: string;
+  desde: string;
+  hasta: string;
+}): Promise<number> {
+  const user = await requireUser();
+  const scope = buildAccessScope(user);
+  const db = getDb();
+
+  const filtros = [
+    eq(liquidacionesTable.estado, "pagada"),
+    gte(ingresosTable.fecha, new Date(args.desde)),
+    lte(ingresosTable.fecha, new Date(args.hasta)),
+    inArray(ingresosTable.sucursalId, scope.sucursalIdsPermitidas),
+    eq(ingresosTable.anulado, false),
+  ];
+  if (args.sucursalId) {
+    if (!isSucursalAllowed(scope, args.sucursalId)) return 0;
+    filtros.push(eq(ingresosTable.sucursalId, args.sucursalId));
+  }
+
+  const filas = await db
+    .select({ monto: ingresoLineasTable.comisionMonto })
+    .from(liquidacionLineasTable)
+    .innerJoin(
+      liquidacionesTable,
+      eq(liquidacionesTable.id, liquidacionLineasTable.liquidacionId),
+    )
+    .innerJoin(
+      ingresoLineasTable,
+      eq(ingresoLineasTable.id, liquidacionLineasTable.ingresoLineaId),
+    )
+    .innerJoin(ingresosTable, eq(ingresosTable.id, ingresoLineasTable.ingresoId))
+    .where(and(...filtros));
+
+  return filas.reduce((acc, f) => acc + f.monto, 0);
+}
