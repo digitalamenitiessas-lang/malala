@@ -253,7 +253,7 @@ async function fetchValorHoraYAnticipos(args: {
     .select({
       valorHora: empleadosTable.valorHora,
       viaticoPorDia: empleadosTable.viaticoPorDia,
-      horasPorDia: empleadosTable.horasPorDia,
+      horasPorSemana: empleadosTable.horasPorSemana,
       diasTrabajo: empleadosTable.diasTrabajo,
     })
     .from(empleadosTable)
@@ -281,8 +281,8 @@ async function fetchValorHoraYAnticipos(args: {
   // FALLBACK A LA FICHA, y no es cosmético: sin franjas cargadas la reserva
   // entiende "disponible todo el día", así que interpretar la ausencia como
   // "cero horas a pagar" convertiría un dato que hoy significa lo contrario en
-  // un sueldo en cero. Mientras no haya horario semanal se sigue usando
-  // horas_por_dia × días de trabajo, como hasta ahora.
+  // un sueldo en cero. Mientras no haya franjas cargadas se usa la jornada
+  // semanal de la ficha, prorrateada al período.
   const franjas = await db
     .select()
     .from(profesionalesHorariosTable)
@@ -293,14 +293,23 @@ async function fetchValorHoraYAnticipos(args: {
       ),
     );
 
+  // La jornada de la ficha está en horas por SEMANA, que es como la lleva el
+  // salón. Para un período cualquiera hay que prorratearla: los días laborables
+  // que caen en el rango, sobre los que trabaja por semana. Así un período de
+  // diez días no paga lo mismo que uno de un mes, y una semana justa da la
+  // jornada exacta sin arrastrar el redondeo de dividirla en un valor diario.
+  const diasPorSemana = empleado?.diasTrabajo?.length ?? 0;
+  const diasEnRango = contarDiasLaborables(
+    args.desde,
+    args.hasta,
+    empleado?.diasTrabajo ?? [],
+  );
   const horasSugeridas =
     franjas.length > 0
       ? horasDeFranjasEnRango(args.desde, args.hasta, franjas)
-      : contarDiasLaborables(
-          args.desde,
-          args.hasta,
-          empleado?.diasTrabajo ?? [],
-        ) * (empleado?.horasPorDia ?? 0);
+      : diasPorSemana > 0
+        ? (diasEnRango / diasPorSemana) * (empleado?.horasPorSemana ?? 0)
+        : 0;
 
   return {
     valorHora: empleado?.valorHora ?? 0,
@@ -747,7 +756,7 @@ function mapEmpleadoRow(row: typeof empleadosTable.$inferSelect): Empleado {
     sueldo_asegurado: row.sueldoAsegurado,
     valor_hora: row.valorHora,
     viatico_por_dia: row.viaticoPorDia,
-    horas_por_dia: row.horasPorDia,
+    horas_por_semana: row.horasPorSemana,
     dias_trabajo: row.diasTrabajo ?? [],
     observacion: row.observacion ?? undefined,
   };

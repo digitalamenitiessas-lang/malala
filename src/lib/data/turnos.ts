@@ -109,7 +109,7 @@ export function mapEmpleado(
     sueldo_asegurado: row.sueldoAsegurado,
     valor_hora: row.valorHora,
     viatico_por_dia: row.viaticoPorDia,
-    horas_por_dia: row.horasPorDia,
+    horas_por_semana: row.horasPorSemana,
     dias_trabajo: row.diasTrabajo ?? [],
     observacion: row.observacion ?? undefined,
   };

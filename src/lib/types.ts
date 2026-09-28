@@ -63,7 +63,7 @@ export interface Empleado {
   sueldo_asegurado: number; // legacy, ya no se usa en el cálculo
   valor_hora: number;
   viatico_por_dia: number;
-  horas_por_dia: number;
+  horas_por_semana: number;
   dias_trabajo: number[]; // 0=domingo … 6=sábado
   observacion?: string;
 }

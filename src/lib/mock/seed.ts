@@ -162,7 +162,7 @@ export function seed(): Store {
     sueldo_asegurado: 800000,
     valor_hora: 5000,
     viatico_por_dia: 4500,
-    horas_por_dia: 8,
+    horas_por_semana: 8,
     dias_trabajo: [2, 3, 4, 5, 6],
     observacion: "Color y brushing",
   };
@@ -176,7 +176,7 @@ export function seed(): Store {
     sueldo_asegurado: 500000,
     valor_hora: 4000,
     viatico_por_dia: 0,
-    horas_por_dia: 8,
+    horas_por_semana: 8,
     dias_trabajo: [1, 2, 3, 4, 5],
     observacion: "Nails artist",
   };
@@ -190,7 +190,7 @@ export function seed(): Store {
     sueldo_asegurado: 500000,
     valor_hora: 4000,
     viatico_por_dia: 3000,
-    horas_por_dia: 6,
+    horas_por_semana: 6,
     dias_trabajo: [3, 4, 5, 6],
     observacion: "Nails y pedicuria",
   };
@@ -204,7 +204,7 @@ export function seed(): Store {
     sueldo_asegurado: 1150000,
     valor_hora: 6000,
     viatico_por_dia: 5000,
-    horas_por_dia: 9,
+    horas_por_semana: 9,
     dias_trabajo: [1, 2, 3, 4, 5, 6],
     observacion: "Encargada y cejas",
   };

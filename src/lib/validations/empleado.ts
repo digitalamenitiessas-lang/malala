@@ -7,7 +7,7 @@ export const empleadoSchema = z.object({
   porcentaje_default: z.coerce.number().min(0).max(100),
   valor_hora: z.coerce.number().nonnegative(),
   viatico_por_dia: z.coerce.number().nonnegative().default(0),
-  horas_por_dia: z.coerce.number().nonnegative(),
+  horas_por_semana: z.coerce.number().nonnegative(),
   dias_trabajo: z
     .array(z.coerce.number().int().min(0).max(6))
     .default([])

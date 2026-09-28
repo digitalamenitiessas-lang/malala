@@ -32,8 +32,8 @@ export function EmpleadoForm({
   submitLabel,
 }: Props) {
   const [crearAcceso, setCrearAcceso] = useState(false);
-  const [horasPorDia, setHorasPorDia] = useState(
-    String(empleado?.horas_por_dia ?? 0),
+  const [horasPorSemana, setHorasPorSemana] = useState(
+    String(empleado?.horas_por_semana ?? 0),
   );
   const ofreceAcceso = !empleado && (rolesDisponibles?.length ?? 0) > 0;
 
@@ -95,28 +95,26 @@ export function EmpleadoForm({
                 semanal de "Disponibilidad pública", que se carga una vez y
                 queda. Se conserva como respaldo porque hoy casi nadie tiene el
                 semanal cargado, y sin él la liquidación daría cero horas. */}
+            {/* El campo pedía horas por DÍA y el salón cargaba la semana: 34,
+                52, 48, 47, que coincidían exacto con el horario semanal de cada
+                una. El dato estaba bien, la etiqueta estaba mal. Ahora pide lo
+                que el salón tiene escrito y no hay que traducir de cabeza. */}
             <div className="space-y-1.5">
               <Field
-                label="Horas por día (respaldo)"
-                name="horas_por_dia"
+                label="Horas por semana (respaldo)"
+                name="horas_por_semana"
                 type="number"
                 step="0.5"
                 min="0"
-                value={horasPorDia}
-                onChange={(e) => setHorasPorDia(e.currentTarget.value)}
-                error={errors.horas_por_dia}
-                hint="Sólo se usa mientras no tenga cargado el horario semanal en Disponibilidad pública, que es lo que manda."
+                value={horasPorSemana}
+                onChange={(e) => setHorasPorSemana(e.currentTarget.value)}
+                error={errors.horas_por_semana}
+                hint="La jornada semanal completa. Sólo se usa mientras no tenga cargado el horario en Disponibilidad pública, que es lo que manda."
               />
-              {/* Pasó de verdad con cuatro empleadas: cargaron las horas de la
-                  SEMANA acá (34, 52, 48, 47) y coincidían exacto con su horario
-                  semanal. Quedó inerte porque las cuatro tenían el horario
-                  cargado, pero si alguna vez se lo borran, la liquidación
-                  sugeriría 34 horas por día. El aviso corta el error donde se
-                  comete. */}
-              {Number(horasPorDia) > 12 && (
+              {Number(horasPorSemana) > 0 && Number(horasPorSemana) <= 12 && (
                 <p className="text-xs text-warning">
-                  Son más de 12 horas en un solo día. ¿No estarás poniendo las
-                  horas de toda la semana? Acá va lo que trabaja por día.
+                  {horasPorSemana} horas en toda la semana es muy poco. ¿No
+                  estarás poniendo las de un día? Acá va la semana completa.
                 </p>
               )}
             </div>

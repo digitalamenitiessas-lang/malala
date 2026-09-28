@@ -128,7 +128,7 @@ export const empleados = pgTable("empleados", {
   valorHora: doublePrecision("valor_hora").notNull().default(0),
   viaticoPorDia: doublePrecision("viatico_por_dia").notNull().default(0),
   // Jornada: horas por día y días de la semana que trabaja (0=domingo … 6=sábado).
-  horasPorDia: doublePrecision("horas_por_dia").notNull().default(0),
+  horasPorSemana: doublePrecision("horas_por_semana").notNull().default(0),
   diasTrabajo: jsonb("dias_trabajo").$type<number[]>().notNull().default([]),
   observacion: text("observacion"),
 });

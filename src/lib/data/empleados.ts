@@ -154,7 +154,7 @@ function mapEmpleado(row: typeof empleadosTable.$inferSelect): Empleado {
     sueldo_asegurado: row.sueldoAsegurado,
     valor_hora: row.valorHora,
     viatico_por_dia: row.viaticoPorDia,
-    horas_por_dia: row.horasPorDia,
+    horas_por_semana: row.horasPorSemana,
     dias_trabajo: row.diasTrabajo ?? [],
     observacion: row.observacion ?? undefined,
   };
@@ -230,7 +230,7 @@ function parse(formData: FormData) {
     porcentaje_default: formData.get("porcentaje_default"),
     valor_hora: formData.get("valor_hora"),
     viatico_por_dia: formData.get("viatico_por_dia"),
-    horas_por_dia: formData.get("horas_por_dia"),
+    horas_por_semana: formData.get("horas_por_semana"),
     dias_trabajo: formData.getAll("dias_trabajo"),
     observacion: formData.get("observacion"),
     activo: formData.get("activo") === "on" || formData.get("activo") === "true",
@@ -286,7 +286,7 @@ export async function createEmpleado(
     porcentajeDefault: parsed.data.porcentaje_default,
     valorHora: parsed.data.valor_hora,
     viaticoPorDia: parsed.data.viatico_por_dia,
-    horasPorDia: parsed.data.horas_por_dia,
+    horasPorSemana: parsed.data.horas_por_semana,
     diasTrabajo: parsed.data.dias_trabajo,
     observacion: parsed.data.observacion ?? null,
   });
@@ -658,7 +658,7 @@ export async function updateEmpleado(
       porcentajeDefault: parsed.data.porcentaje_default,
       valorHora: parsed.data.valor_hora,
       viaticoPorDia: parsed.data.viatico_por_dia,
-      horasPorDia: parsed.data.horas_por_dia,
+      horasPorSemana: parsed.data.horas_por_semana,
       diasTrabajo: parsed.data.dias_trabajo,
       observacion: parsed.data.observacion ?? null,
     })
