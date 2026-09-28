@@ -501,6 +501,11 @@ export const rubrosGasto = pgTable("rubros_gasto", {
   rubro: text("rubro").notNull(),
   subrubro: text("subrubro"),
   activo: boolean("activo").notNull().default(true),
+  // Grupo 1 a 6 (ver src/lib/grupos-gasto.ts). Del 1 al 5 son costos de operar
+  // el salón; el 6 va bajo la línea (retiros, aportes, deuda, inversión). El
+  // tipo operativo/no operativo NO se guarda: se deriva del grupo, para que no
+  // puedan quedar contradiciéndose. Ver drizzle/0043.
+  grupo: integer("grupo"),
 });
 
 export const motivosDescuento = pgTable("motivos_descuento", {

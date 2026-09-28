@@ -406,6 +406,8 @@ export interface MovimientoBancario {
 }
 
 export interface RubroGasto {
+  /** Grupo 1 a 6. Del 1 al 5 es operativo; el 6 va bajo la línea. */
+  grupo?: number;
   id: ID;
   rubro: string;
   subrubro?: string;

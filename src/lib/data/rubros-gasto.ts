@@ -19,6 +19,7 @@ function mapRubroGasto(row: typeof rubrosGastoTable.$inferSelect): RubroGasto {
     rubro: row.rubro,
     subrubro: row.subrubro ?? undefined,
     activo: row.activo,
+    grupo: row.grupo ?? undefined,
   };
 }
 
@@ -43,6 +44,34 @@ export async function listRubrosGasto(opts?: {
     return rows.filter((r) => habilitados.has(r.id)).map(mapRubroGasto);
   }
   return rows.map(mapRubroGasto);
+}
+
+/**
+ * Asigna el grupo de un rubro (1 a 6).
+ *
+ * De esto depende que el gasto entre o no en el resultado operativo, así que
+ * lo toca sólo un admin y queda a la vista en la tabla de rubros.
+ */
+export async function setRubroGastoGrupo(
+  rubroId: string,
+  grupo: number | null,
+): Promise<ActionResult> {
+  await requireRole(["admin"]);
+  requireSupabaseRuntime("Los rubros de gasto requieren Supabase configurado.");
+  if (grupo != null && (grupo < 1 || grupo > 6)) {
+    return { ok: false, errors: { grupo: ["Grupo invalido"] } };
+  }
+
+  const db = getDb();
+  await db
+    .update(rubrosGastoTable)
+    .set({ grupo })
+    .where(eq(rubrosGastoTable.id, rubroId));
+
+  revalidatePath("/catalogos/rubros-gasto");
+  revalidatePath("/reportes/resultados");
+  revalidatePath("/reportes/flujo-caja");
+  return { ok: true };
 }
 
 export async function createRubroGasto(

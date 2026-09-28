@@ -6,6 +6,7 @@ import {
 } from "@/lib/data/rubros-gasto";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { SubmitButton } from "@/components/forms/field";
+import { GrupoSelector } from "./grupo-selector";
 
 export default async function RubrosGastoPage() {
   const user = await requireUser();
@@ -13,6 +14,7 @@ export default async function RubrosGastoPage() {
 
   const sucursal = await getActiveSucursal();
   const rubros = await listRubrosGasto({ sucursalId: sucursal?.id });
+  const sinClasificar = rubros.filter((r) => r.grupo == null).length;
 
   async function create(formData: FormData) {
     "use server";
@@ -33,6 +35,15 @@ export default async function RubrosGastoPage() {
         <p className="text-sm text-muted-foreground">
           {rubros.length} rubros · usados al cargar egresos
         </p>
+        {/* El grupo decide si el gasto resta al resultado del salón, así que un
+            rubro sin clasificar no es un detalle: queda afuera del estado de
+            resultados y nadie se entera. */}
+        {sinClasificar > 0 && (
+          <p className="text-sm text-destructive">
+            {sinClasificar} sin grupo asignado: sus gastos no entran en el estado
+            de resultados.
+          </p>
+        )}
       </header>
 
       <section className="bg-card border border-border rounded-md p-5 space-y-4">
@@ -76,6 +87,7 @@ export default async function RubrosGastoPage() {
             <tr>
               <th className="text-left font-medium px-4 py-3">Rubro</th>
               <th className="text-left font-medium px-4 py-3">Subrubro</th>
+              <th className="text-center font-medium px-4 py-3 w-80">Grupo</th>
               <th className="text-center font-medium px-4 py-3 w-28">Estado</th>
               <th className="px-4 py-3 w-32"></th>
             </tr>
@@ -86,6 +98,9 @@ export default async function RubrosGastoPage() {
                 <td className="px-4 py-3 font-medium">{r.rubro}</td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {r.subrubro ?? "—"}
+                </td>
+                <td className="px-4 py-3">
+                  <GrupoSelector rubroId={r.id} grupo={r.grupo} />
                 </td>
                 <td className="px-4 py-3 text-center">
                   {r.activo ? (
