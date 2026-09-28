@@ -337,3 +337,95 @@ export async function borrarViatico(viaticoId: string): Promise<ActionResult> {
   revalidatePath("/liquidaciones");
   return { ok: true };
 }
+
+/**
+ * Carga el viático de varios días de una vez, uno por cada día que trabaja.
+ *
+ * El salón preguntó si el viático queda fijo o hay que cargarlo todas las
+ * semanas. Queda uno por día a propósito: el viático se debe por día
+ * efectivamente trabajado, y un monto fijo en la ficha obligaba al sistema a
+ * adivinar quién vino cada día. Pero cargarlo de a uno para diez personas es
+ * media hora por semana, así que se carga el rango de una.
+ *
+ * Sigue siendo un registro por día —se ve, se borra y se liquida uno por uno—;
+ * lo único que cambia es cuántos clics cuesta.
+ *
+ * Los días que ya tienen viático cargado se saltean en vez de fallar: si la
+ * encargada extiende el rango de una semana que cargó a medias, tiene que poder
+ * completarla sin borrar nada.
+ */
+export async function registrarViaticosEnRango(
+  formData: FormData,
+): Promise<ActionResult & { creados?: number; salteados?: number }> {
+  const empleadoId = String(formData.get("empleado_id") ?? "");
+  const desde = String(formData.get("desde") ?? "");
+  const hasta = String(formData.get("hasta") ?? "");
+  const YMD = /^\d{4}-\d{2}-\d{2}$/;
+  if (!YMD.test(desde) || !YMD.test(hasta)) {
+    return { ok: false, errors: { desde: ["Elegí desde y hasta"] } };
+  }
+  if (hasta < desde) {
+    return { ok: false, errors: { hasta: ["El hasta no puede ser anterior"] } };
+  }
+
+  const db = getDb();
+  const [empleado] = await db
+    .select({ diasTrabajo: empleadosTable.diasTrabajo })
+    .from(empleadosTable)
+    .where(eq(empleadosTable.id, empleadoId))
+    .limit(1);
+  if (!empleado) {
+    return { ok: false, errors: { empleado_id: ["Empleada no encontrada"] } };
+  }
+  const diasQueTrabaja = new Set(empleado.diasTrabajo ?? []);
+  if (diasQueTrabaja.size === 0) {
+    return {
+      ok: false,
+      errors: {
+        _: ["Esta empleada no tiene días de trabajo cargados en su ficha."],
+      },
+    };
+  }
+
+  // Mediodía UTC para que el corrimiento de zona no mueva el día de la semana.
+  const fechas: string[] = [];
+  const cur = new Date(`${desde}T12:00:00Z`);
+  const fin = new Date(`${hasta}T12:00:00Z`);
+  while (cur <= fin) {
+    if (diasQueTrabaja.has(cur.getUTCDay())) {
+      fechas.push(cur.toISOString().slice(0, 10));
+    }
+    cur.setUTCDate(cur.getUTCDate() + 1);
+    if (fechas.length > 200) break; // cota de seguridad contra un rango absurdo
+  }
+  if (fechas.length === 0) {
+    return {
+      ok: false,
+      errors: { _: ["En ese rango no cae ningún día que ella trabaje."] },
+    };
+  }
+
+  let creados = 0;
+  let salteados = 0;
+  for (const fecha of fechas) {
+    const fd = new FormData();
+    fd.set("empleado_id", empleadoId);
+    fd.set("fecha", fecha);
+    fd.set("monto", String(formData.get("monto") ?? ""));
+    if (formData.get("pagado")) fd.set("pagado", "on");
+    if (formData.get("mp_id")) fd.set("mp_id", String(formData.get("mp_id")));
+    fd.set("observacion", String(formData.get("observacion") ?? ""));
+
+    const res = await registrarViatico(fd);
+    if (res.ok) {
+      creados += 1;
+    } else if (res.errors.fecha) {
+      // Ya tenía viático ese día: se saltea, no es un error.
+      salteados += 1;
+    } else {
+      return { ...res, creados, salteados };
+    }
+  }
+
+  return { ok: true, creados, salteados };
+}

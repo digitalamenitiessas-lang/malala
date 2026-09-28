@@ -6,7 +6,12 @@ import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyInput } from "@/components/forms/currency-input";
 import { LoadingButton } from "@/components/forms/field";
 import { formatARS } from "@/lib/utils";
-import { borrarViatico, registrarViatico, type Viatico } from "@/lib/data/viaticos";
+import {
+  borrarViatico,
+  registrarViatico,
+  registrarViaticosEnRango,
+  type Viatico,
+} from "@/lib/data/viaticos";
 import { hoyAr } from "@/lib/fecha-ar";
 import type { MedioPago } from "@/lib/types";
 
@@ -32,6 +37,11 @@ export function ViaticosPanel({
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [fecha, setFecha] = useState(hoyAr());
+  // El viático es uno por día y eso no cambia: se debe por día trabajado, y un
+  // monto fijo en la ficha obligaba al sistema a adivinar quién vino cada día.
+  // Lo que cambia es cuántos clics cuesta cargar una semana entera.
+  const [modo, setModo] = useState<"dia" | "rango">("dia");
+  const [hastaFecha, setHastaFecha] = useState(hoyAr());
   const [monto, setMonto] = useState(0);
   const [pagado, setPagado] = useState(true);
   const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
@@ -45,7 +55,9 @@ export function ViaticosPanel({
 
   function reset() {
     setAbierto(false);
+    setModo("dia");
     setFecha(hoyAr());
+    setHastaFecha(hoyAr());
     setMonto(0);
     setPagado(true);
     setObservacion("");
@@ -73,15 +85,24 @@ export function ViaticosPanel({
     }
     fd.set("observacion", observacion);
 
+    if (modo === "rango") {
+      fd.set("desde", fecha);
+      fd.set("hasta", hastaFecha);
+    }
+
     run(
       async () => {
-        const res = await registrarViatico(fd);
+        const res =
+          modo === "rango"
+            ? await registrarViaticosEnRango(fd)
+            : await registrarViatico(fd);
         if (!res.ok) setError(Object.values(res.errors).flat().join(", "));
         return res;
       },
       {
         refreshOnSuccess: true,
-        successMessage: "Viático cargado",
+        successMessage:
+          modo === "rango" ? "Viáticos cargados" : "Viático cargado",
         onSuccess: () => reset(),
       },
     );
@@ -164,13 +185,41 @@ export function ViaticosPanel({
 
       {abierto && (
         <div className="space-y-4 rounded-md border border-border bg-card p-5">
+          {/* Un día o varios. El registro sigue siendo uno por día: lo que
+              cambia es que no hay que abrir el formulario seis veces para
+              cargar una semana. */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setModo("dia")}
+              className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                modo === "dia"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border hover:bg-cream"
+              }`}
+            >
+              Un día
+            </button>
+            <button
+              type="button"
+              onClick={() => setModo("rango")}
+              className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                modo === "rango"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border hover:bg-cream"
+              }`}
+            >
+              Varios días
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label
                 htmlFor="viatico-fecha"
                 className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
               >
-                Día
+                {modo === "rango" ? "Desde" : "Día"}
               </label>
               {/* Sin tope superior a propósito: las encargadas arman la
                   liquidación desde el principio de la semana y necesitan dejar
@@ -183,13 +232,35 @@ export function ViaticosPanel({
                 className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <p className="text-xs text-muted-foreground">
-                El día que le toca. Podés dejar cargada toda la semana por
-                adelantado.
+                {modo === "rango"
+                  ? "Se carga uno por cada día que ella trabaja según su ficha."
+                  : "El día que le toca. Podés dejarlo cargado por adelantado."}
               </p>
             </div>
+            {modo === "rango" && (
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="viatico-hasta"
+                  className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
+                  Hasta
+                </label>
+                <input
+                  id="viatico-hasta"
+                  type="date"
+                  value={hastaFecha}
+                  min={fecha}
+                  onChange={(e) => setHastaFecha(e.target.value)}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Los días que ya tengan viático cargado se saltean.
+                </p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Monto
+                {modo === "rango" ? "Monto por día" : "Monto"}
               </label>
               <CurrencyInput
                 value={monto}
