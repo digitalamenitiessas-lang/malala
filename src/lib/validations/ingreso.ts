@@ -5,6 +5,11 @@ export const lineaServicioSchema = z.object({
   servicio_id: z.string().min(1, "Servicio requerido"),
   empleado_id: z.string().min(1, "Empleado requerido"),
   precio_efectivo: z.coerce.number().nonnegative(),
+  // Cuántas veces se hizo el mismo servicio en el ticket. Viene una madre con
+  // cinco hijas y son cinco cortes: cargarlos como cinco líneas iguales es
+  // perder tiempo en el mostrador. El precio de la línea es unitario; el
+  // subtotal, la comisión y el consumo de insumos se multiplican por esto.
+  cantidad: z.coerce.number().int().positive().default(1),
   comision_pct: z.coerce.number().min(0).max(100),
   // true  → la empleada absorbe el descuento: comisión sobre el precio final pagado.
   // false → la empleada NO lo absorbe: comisión sobre el precio de lista (regular).

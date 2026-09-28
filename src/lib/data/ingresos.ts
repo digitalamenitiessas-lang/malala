@@ -539,10 +539,10 @@ export async function createIngreso(
     satisfechoRaw === "false" || satisfechoRaw === "no" || satisfechoRaw === "0";
   const satisfaccionNota = String(formData.get("satisfaccion_nota") ?? "").trim();
 
+  // El precio de la línea es unitario en los dos casos: un servicio también
+  // puede venir por cantidad (cinco cortes en el mismo ticket).
   const subtotalLinea = (linea: (typeof data.lineas)[number]) =>
-    linea.tipo === "producto"
-      ? linea.precio_efectivo * linea.cantidad
-      : linea.precio_efectivo;
+    linea.precio_efectivo * linea.cantidad;
   const subtotal = data.lineas.reduce((acc, linea) => acc + subtotalLinea(linea), 0);
   const { descuentoMonto, descuentoPct, totalNeto } = computeDescuento({
     subtotal,
@@ -658,8 +658,14 @@ export async function createIngreso(
     linea: Extract<(typeof data.lineas)[number], { tipo: "servicio" }>,
   ): number =>
     comisionMontoServicio({
-      precioCobrado: linea.precio_efectivo,
-      precioEfectivoServicio: precioEfectivoById.get(linea.servicio_id),
+      // Por cantidad: si se cargaron cinco cortes en una línea, la comisión es
+      // por los cinco. Los dos precios se multiplican igual para que la base
+      // siga siendo comparable con lo cobrado.
+      precioCobrado: linea.precio_efectivo * linea.cantidad,
+      precioEfectivoServicio: (() => {
+        const unitario = precioEfectivoById.get(linea.servicio_id);
+        return unitario != null ? unitario * linea.cantidad : undefined;
+      })(),
       esDePromo: !!linea.promo_servicio_id,
       comisionPct: linea.comision_pct,
       soportaDescuento: linea.soporta_descuento && !motivoIgnoraDescuento,
@@ -822,8 +828,8 @@ export async function createIngreso(
             insumoId: null,
             empleadoId: linea.empleado_id,
             precioEfectivo: linea.precio_efectivo,
-            cantidad: 1,
-            subtotal: linea.precio_efectivo,
+            cantidad: linea.cantidad,
+            subtotal: linea.precio_efectivo * linea.cantidad,
             comisionPct: linea.comision_pct,
             comisionMonto: comisionMontoDeLinea(linea),
             // El mismo criterio con el que se calculó el monto de arriba: si se
@@ -863,9 +869,13 @@ export async function createIngreso(
       for (const linea of lineasServicio) {
         const recetasDeServicio = recetaMap.get(linea.servicio_id) ?? [];
         for (const receta of recetasDeServicio) {
+          // Por la cantidad de la línea: cinco cortes gastan cinco veces la
+          // receta. Sin esto el stock se descontaría una sola vez y el faltante
+          // aparecería recién en el próximo recuento, sin explicación.
           deltasPorInsumo.set(
             receta.insumoId,
-            (deltasPorInsumo.get(receta.insumoId) ?? 0) - receta.cantidad,
+            (deltasPorInsumo.get(receta.insumoId) ?? 0) -
+              receta.cantidad * linea.cantidad,
           );
         }
       }

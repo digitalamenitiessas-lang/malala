@@ -34,6 +34,8 @@ type LineaServicioForm = {
   empleado_id: string;
   precio: number;
   precio_tipo: "lista" | "efectivo";
+  /** Cuántas veces el mismo servicio en el ticket (5 cortes de una familia). */
+  cantidad: number;
   comision_pct: number;
   soporta_descuento: boolean;
   /**
@@ -91,6 +93,7 @@ const newLineaServicio = (): LineaServicioForm => ({
   empleado_id: "",
   precio: 0,
   precio_tipo: "lista",
+  cantidad: 1,
   comision_pct: 30,
   soporta_descuento: true,
 });
@@ -153,10 +156,10 @@ function precioProducto(p: Insumo, tipo: "lista" | "efectivo"): number {
   return p.precio_venta ?? 0;
 }
 
+// El precio es unitario en los dos casos: un servicio también puede ir por
+// cantidad.
 function subtotalLinea(l: LineaForm): number {
-  const precio = Number(l.precio) || 0;
-  if (l.tipo === "producto") return precio * (Number(l.cantidad) || 0);
-  return precio;
+  return (Number(l.precio) || 0) * (Number(l.cantidad) || 0);
 }
 
 // Las comisiones del mostrador salen de comisionMontoServicio, la MISMA
@@ -320,10 +323,12 @@ export function NuevaVentaForm({
       });
     }
     const s = servicios.find((x) => x.id === l.servicio_id);
+    const cant = Number(l.cantidad) || 0;
     return comisionMontoServicio({
       ...comun,
-      precioCobrado: Number(l.precio) || 0,
-      precioEfectivoServicio: s?.precio_efectivo,
+      precioCobrado: (Number(l.precio) || 0) * cant,
+      precioEfectivoServicio:
+        s?.precio_efectivo != null ? s.precio_efectivo * cant : undefined,
       esDePromo: !!l.promo_servicio_id,
       soportaDescuento: l.soporta_descuento,
     });
@@ -556,6 +561,7 @@ export function NuevaVentaForm({
         empleado_id: "",
         precio,
         precio_tipo: "efectivo",
+        cantidad: 1,
         comision_pct: 0, // la define el % del empleado al asignarlo a la línea
         soporta_descuento: true,
         promo_servicio_id: promo.id,
@@ -686,6 +692,7 @@ export function NuevaVentaForm({
             servicio_id: l.servicio_id,
             empleado_id: l.empleado_id,
             precio_efectivo: Number(l.precio) || 0,
+            cantidad: Number(l.cantidad) || 1,
             comision_pct: Number(l.comision_pct) || 0,
             soporta_descuento: l.soporta_descuento,
             promo_servicio_id: l.promo_servicio_id,
@@ -897,6 +904,7 @@ export function NuevaVentaForm({
                   onServicio={(id) => handleServicioChange(idx, id)}
                   onEmpleado={(id) => handleEmpleadoChange(idx, id)}
                   onPrecio={(v) => updateLinea(idx, { precio: v })}
+                  onCantidad={(v) => updateLinea(idx, { cantidad: v })}
                   onPrecioTipo={(t) => handlePrecioTipoChange(idx, t)}
                   onRemove={() => removeLinea(idx)}
                   removable={lineas.length > 1 || !!l.promo_servicio_id}
@@ -1658,6 +1666,7 @@ function LineaServicioRow({
   onServicio,
   onEmpleado,
   onPrecio,
+  onCantidad,
   onPrecioTipo,
   onRemove,
   removable,
@@ -1671,6 +1680,7 @@ function LineaServicioRow({
   onServicio: (id: string) => void;
   onEmpleado: (id: string) => void;
   onPrecio: (v: number) => void;
+  onCantidad: (v: number) => void;
   onPrecioTipo: (t: "lista" | "efectivo") => void;
   onRemove: () => void;
   removable: boolean;
@@ -1711,7 +1721,7 @@ function LineaServicioRow({
             </select>
           )}
         </div>
-        <div className="col-span-12 sm:col-span-3">
+        <div className="col-span-12 sm:col-span-2">
           <select
             value={linea.empleado_id}
             onChange={(e) => onEmpleado(e.target.value)}
@@ -1725,6 +1735,27 @@ function LineaServicioRow({
             ))}
           </select>
         </div>
+        {/* Cantidad: una madre con cinco hijas son cinco cortes iguales, y
+            cargarlos como cinco líneas es perder tiempo en el mostrador. En las
+            líneas de promo no se toca: la promo define qué incluye. */}
+        <div className="col-span-3 sm:col-span-1">
+          {locked ? (
+            <div className="w-full px-2 py-1.5 text-center tabular-nums border border-border rounded-md bg-cream/40 text-sm">
+              1
+            </div>
+          ) : (
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={linea.cantidad}
+              onChange={(e) => onCantidad(Math.max(1, Number(e.target.value) || 1))}
+              aria-label="Cantidad"
+              title="Cuántas veces este mismo servicio"
+              className="w-full px-2 py-1.5 text-center tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          )}
+        </div>
         <div className="col-span-6 sm:col-span-2">
           {locked ? (
             <div
@@ -1734,12 +1765,21 @@ function LineaServicioRow({
               {formatARS(linea.precio)}
             </div>
           ) : (
-            <CurrencyInput
-              value={linea.precio}
-              onChange={onPrecio}
-              min={0}
-              className="w-full px-2 py-1.5 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
+            <>
+              <CurrencyInput
+                value={linea.precio}
+                onChange={onPrecio}
+                min={0}
+                className="w-full px-2 py-1.5 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              {/* Con cantidad 1 el precio ES el subtotal y repetirlo es ruido;
+                  con más de uno hay que ver cuánto suma la línea. */}
+              {linea.cantidad > 1 && (
+                <p className="mt-0.5 text-right text-[10px] text-muted-foreground tabular-nums">
+                  × {linea.cantidad} = {formatARS(linea.precio * linea.cantidad)}
+                </p>
+              )}
+            </>
           )}
         </div>
         <div className="col-span-5 sm:col-span-1 text-right tabular-nums text-sm self-center">
