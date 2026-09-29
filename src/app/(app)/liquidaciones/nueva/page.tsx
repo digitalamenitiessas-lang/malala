@@ -30,8 +30,15 @@ export default async function NuevaLiquidacionPage({
   // Todas las activas: la comisión se calcula por la sucursal del servicio,
   // no por la sucursal principal del empleado, así que una empleada de otra
   // sucursal igual puede tener comisiones pendientes acá.
+  //
+  // INACTIVAS INCLUIDAS: a alguien que se fue hay que liquidarle lo que hizo
+  // antes de irse, y ese es justamente el momento en que se la da de baja. Si
+  // desaparece de esta pantalla al desactivarla, su comision queda sin forma de
+  // pagarse. Paso de verdad: pidieron dar de baja a una empleada que tenia
+  // $21.000 sin liquidar.
   const empleados = await listEmpleados({
     sucursalIds: scope.sucursalIdsPermitidas,
+    incluirInactivos: true,
   });
 
   return (

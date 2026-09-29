@@ -154,11 +154,14 @@ export function NuevaLiquidacionForm({
     );
   }
 
-  const empleadosActivos = useMemo(
+  // Las inactivas van al final y marcadas: siguen siendo elegibles porque a
+  // quien se fue hay que pagarle lo ultimo, pero no tienen que estorbar en el
+  // uso normal.
+  const empleadosElegibles = useMemo(
     () =>
-      empleados.filter(
-        (e) => e.activo && e.sucursal_principal_id === sucursalId,
-      ),
+      empleados
+        .filter((e) => e.sucursal_principal_id === sucursalId)
+        .sort((a, b) => Number(b.activo) - Number(a.activo)),
     [empleados, sucursalId],
   );
 
@@ -215,9 +218,10 @@ export function NuevaLiquidacionForm({
               required
             >
               <option value="">— Elegí —</option>
-              {empleadosActivos.map((e) => (
+              {empleadosElegibles.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.nombre} · {e.porcentaje_default}%
+                  {e.activo ? "" : " · dada de baja"}
                 </option>
               ))}
             </select>
