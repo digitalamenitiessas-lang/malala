@@ -60,32 +60,38 @@ export default async function GiftCardsPage({
         </Link>
       </header>
 
+      {/* Los dos números son de signo opuesto y eso tiene que verse.
+          Lo vigente es deuda: plata cobrada por un servicio que todavía hay que
+          prestar. Lo vencido es lo contrario — se cobró y ya no hay nada que
+          prestar, así que es ganancia del salón. Llamar "saldo sin canjear" a
+          las dos cosas hacía leer la pantalla como si debieran la suma. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-md border border-border bg-card p-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
-            Saldo sin canjear · en fecha
+            Lo que el salón debe
           </p>
           <p className="mt-2 font-display text-2xl tabular-nums">
             {formatARS(pasivo.vigente)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Plata ya cobrada por servicios que todavía no se prestaron. Es lo
-            que el salón debe de verdad: estas tarjetas se pueden usar hoy.
+            Plata ya cobrada por servicios que todavía no se prestaron. Estas
+            tarjetas se pueden usar hoy, así que es deuda de verdad.
           </p>
         </div>
-        {/* Las vencidas van aparte: se toman sólo si alguien decide hacer la
-            excepción, así que meterlas en el mismo total hacía que el número
-            dejara de significar lo que el salón debe. */}
-        <div className="rounded-md border border-border bg-cream/40 p-5">
+        <div className="rounded-md border border-sage-700/30 bg-sage-100/40 p-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
-            Saldo sin canjear · vencidas
+            Vencidas · ya es del salón
           </p>
-          <p className="mt-2 font-display text-2xl tabular-nums text-muted-foreground">
+          <p
+            className="mt-2 font-display text-2xl tabular-nums"
+            style={{ color: "var(--sage-700)" }}
+          >
             {formatARS(pasivo.vencido)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Ya pasó la fecha. Se pueden canjear igual si deciden hacer la
-            excepción, y ahí queda registrado como fuera de término.
+            Se cobraron y el servicio nunca se prestó: el salón se quedó con esa
+            plata. Si deciden tomar alguna igual como excepción, ahí vuelve a
+            costarles y queda registrada como fuera de término.
           </p>
         </div>
       </div>
