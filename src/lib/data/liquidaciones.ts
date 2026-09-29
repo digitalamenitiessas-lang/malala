@@ -1194,3 +1194,51 @@ export async function getComisionesPagadasEnPeriodo(args: {
 
   return filas.reduce((acc, f) => acc + f.monto, 0);
 }
+
+/**
+ * Empleadas dadas de baja a las que todavía se les debe comisión.
+ *
+ * Sirve para no tener que elegir entre dos cosas malas. El salón no quiere ver
+ * en las pantallas de todos los días a gente que ya no trabaja ahí, pero a
+ * quien se fue hay que pagarle lo último que hizo — y si desaparece de la
+ * pantalla de liquidaciones, esa plata queda sin forma de pagarse.
+ *
+ * La regla que sale de ahí: una empleada de baja se sigue viendo mientras se le
+ * deba algo, y se va sola en cuanto se le liquida.
+ */
+export async function getEmpleadosInactivosConDeuda(
+  sucursalIds: string[],
+): Promise<string[]> {
+  const user = await requireUser();
+  const scope = buildAccessScope(user);
+  const permitidas = sucursalIds.filter((id) =>
+    scope.sucursalIdsPermitidas.includes(id),
+  );
+  if (permitidas.length === 0) return [];
+
+  const db = getDb();
+  const filas = await db
+    .selectDistinct({ empleadoId: ingresoLineasTable.empleadoId })
+    .from(ingresoLineasTable)
+    .innerJoin(ingresosTable, eq(ingresosTable.id, ingresoLineasTable.ingresoId))
+    .innerJoin(
+      empleadosTable,
+      eq(empleadosTable.id, ingresoLineasTable.empleadoId),
+    )
+    .leftJoin(
+      liquidacionLineasTable,
+      eq(liquidacionLineasTable.ingresoLineaId, ingresoLineasTable.id),
+    )
+    .where(
+      and(
+        eq(empleadosTable.activo, false),
+        eq(ingresosTable.anulado, false),
+        inArray(ingresosTable.sucursalId, permitidas),
+        isNull(liquidacionLineasTable.id),
+      ),
+    );
+
+  return filas
+    .map((f) => f.empleadoId)
+    .filter((id): id is string => id != null);
+}

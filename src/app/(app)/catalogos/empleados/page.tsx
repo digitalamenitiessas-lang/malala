@@ -16,6 +16,7 @@ const TIPO_LABEL: Record<string, string> = {
 
 interface SearchParams {
   sucursal?: string;
+  bajas?: string;
 }
 
 export default async function EmpleadosPage({
@@ -36,10 +37,17 @@ export default async function EmpleadosPage({
     sucursales.length > 1
       ? clampSucursalId(scope, sp.sucursal)
       : sucursales[0]?.id ?? null;
-  const empleados = await listEmpleados({
+  // Las dadas de baja quedan fuera salvo que se pidan. El salón no quiere ver
+  // en la pantalla de todos los días a gente que ya no trabaja ahí; pero
+  // tampoco se pueden borrar, porque sus ventas y su comisión tienen que seguir
+  // existiendo. Se ocultan, no se eliminan.
+  const verBajas = sp.bajas === "1";
+  const todos = await listEmpleados({
     incluirInactivos: true,
     sucursalId: sucursalId ?? undefined,
   });
+  const empleados = verBajas ? todos : todos.filter((e) => e.activo);
+  const bajas = todos.length - todos.filter((e) => e.activo).length;
   const sucMap = new Map(sucursales.map((s) => [s.id, s.nombre]));
   const puedeGestionar = user.rol === "admin" || user.rol === "superadmin";
 
@@ -54,6 +62,22 @@ export default async function EmpleadosPage({
             {empleados.length} empleados
             {sucursalId ? ` · ${sucMap.get(sucursalId) ?? "Sucursal"}` : ""}
           </p>
+          {bajas > 0 && (
+            <Link
+              href={{
+                pathname: "/catalogos/empleados",
+                query: {
+                  ...(sucursalId ? { sucursal: sucursalId } : {}),
+                  ...(verBajas ? {} : { bajas: "1" }),
+                },
+              }}
+              className="text-xs uppercase tracking-wider text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              {verBajas
+                ? "Ocultar las dadas de baja"
+                : `Ver ${bajas} dada${bajas === 1 ? "" : "s"} de baja`}
+            </Link>
+          )}
         </div>
         {puedeGestionar && (
           <Link
