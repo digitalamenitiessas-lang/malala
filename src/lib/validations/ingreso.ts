@@ -47,9 +47,18 @@ export type LineaServicioInput = z.infer<typeof lineaServicioSchema>;
 export type LineaProductoInput = z.infer<typeof lineaProductoSchema>;
 export type LineaInput = z.infer<typeof lineaSchema>;
 
+/**
+ * Subtotal de una línea. El precio es unitario en los dos casos.
+ *
+ * Los servicios quedaron sin multiplicar cuando se les agregó cantidad, y esta
+ * copia de la cuenta no salta en ningún test: el formulario sumaba bien, el
+ * guardado sumaba bien, y sólo esta validación sumaba de menos. El resultado
+ * era una venta que no se podía guardar con un mensaje incomprensible en el
+ * mostrador —"la suma de pagos (60000) no coincide con el total (55000)"—
+ * sobre un ticket donde en pantalla las dos cifras decían 60000.
+ */
 function lineaSubtotal(linea: LineaInput): number {
-  if (linea.tipo === "producto") return linea.precio_efectivo * linea.cantidad;
-  return linea.precio_efectivo;
+  return linea.precio_efectivo * linea.cantidad;
 }
 
 export const ingresoSchema = z
