@@ -1,0 +1,994 @@
+[
+ {
+  "codigo": "PEL100",
+  "servicio": "Corte",
+  "rubro": "Peluqueria",
+  "subrubro": "Corte y peinado",
+  "estado": "Completa (copiada de YB PEL100)",
+  "refYB": "PEL100"
+ },
+ {
+  "codigo": "PEL101",
+  "servicio": "Peinado ondas",
+  "rubro": "Peluqueria",
+  "subrubro": "Corte y peinado",
+  "estado": "Completa (copiada de YB PEL105)",
+  "refYB": "PEL105"
+ },
+ {
+  "codigo": "PEL102",
+  "servicio": "Peinado",
+  "rubro": "Peluqueria",
+  "subrubro": "Corte y peinado",
+  "estado": "Completa (armada para Centro)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL103",
+  "servicio": "Corte y lavado hombre",
+  "rubro": "Peluqueria",
+  "subrubro": "Corte y peinado",
+  "estado": "Completa (armada para Centro)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL200",
+  "servicio": "Lavado + Brushing",
+  "rubro": "Peluqueria",
+  "subrubro": "Lavados",
+  "estado": "Completa (copiada de YB PEL200)",
+  "refYB": "PEL200"
+ },
+ {
+  "codigo": "PEL201",
+  "servicio": "Lavado especial (Wella)",
+  "rubro": "Peluqueria",
+  "subrubro": "Lavados",
+  "estado": "Completa (copiada de YB PEL204)",
+  "refYB": "PEL204"
+ },
+ {
+  "codigo": "PEL300",
+  "servicio": "Nutricion Colageno 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL300)",
+  "refYB": "PEL300"
+ },
+ {
+  "codigo": "PEL301",
+  "servicio": "Nutricion Colágeno 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL301)",
+  "refYB": "PEL301"
+ },
+ {
+  "codigo": "PEL302",
+  "servicio": "Nutricion Colageno 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL345)",
+  "refYB": "PEL345"
+ },
+ {
+  "codigo": "PEL303",
+  "servicio": "Nutricion Wella ULTIMATE REPAIR (1)",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL324, tipificacion alineada: Wella=Ultimate Repair)",
+  "refYB": "PEL324"
+ },
+ {
+  "codigo": "PEL304",
+  "servicio": "Nutricion Wella ULTIMATE REPAIR (2)",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL326, tipificacion alineada: Wella=Ultimate Repair)",
+  "refYB": "PEL326"
+ },
+ {
+  "codigo": "PEL305",
+  "servicio": "Nutricion Wella ULTIMATE REPAIR (3)",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL327, tipificacion alineada: Wella=Ultimate Repair)",
+  "refYB": "PEL327"
+ },
+ {
+  "codigo": "PEL306",
+  "servicio": "Nutricion Intensa Olaplex 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL306)",
+  "refYB": "PEL306"
+ },
+ {
+  "codigo": "PEL307",
+  "servicio": "Nutricion Intensa Olaplex 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL307)",
+  "refYB": "PEL307"
+ },
+ {
+  "codigo": "PEL308",
+  "servicio": "Nutricion Intensa Olaplex 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL351)",
+  "refYB": "PEL351"
+ },
+ {
+  "codigo": "PEL309",
+  "servicio": "Nutricion Intensa Olaplex 4",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (extrapolada siguiendo la progresion de PEL306/307/351 Olaplex 1/2/3: incrementos constantes +20/+20/+10)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL310",
+  "servicio": "Keraplex/Tratamiento antifrizz 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL308) [verificado con Lucia]",
+  "refYB": "PEL308"
+ },
+ {
+  "codigo": "PEL311",
+  "servicio": "Keraplex/Tratamiento antifrizz 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL309) [verificado con Lucia]",
+  "refYB": "PEL309"
+ },
+ {
+  "codigo": "PEL312",
+  "servicio": "Keraplex/Tratamiento antifrizz 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL310) [verificado con Lucia]",
+  "refYB": "PEL310"
+ },
+ {
+  "codigo": "PEL313",
+  "servicio": "Keraplex/Tratamiento antifrizz 4",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL344)",
+  "refYB": "PEL344"
+ },
+ {
+  "codigo": "PEL314",
+  "servicio": "Alisado sin formol 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL311)",
+  "refYB": "PEL311"
+ },
+ {
+  "codigo": "PEL315",
+  "servicio": "Alisado sin formol 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL312)",
+  "refYB": "PEL312"
+ },
+ {
+  "codigo": "PEL316",
+  "servicio": "Alisado sin formol 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL313)",
+  "refYB": "PEL313"
+ },
+ {
+  "codigo": "PEL317",
+  "servicio": "Alisado sin formol 4",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (copiada de YB PEL346)",
+  "refYB": "PEL346"
+ },
+ {
+  "codigo": "PEL318",
+  "servicio": "Tratamiento Sow Vitamin Repair 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro, cantidades tomadas del patron Wella Ultimate Repair)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL319",
+  "servicio": "Tratamiento Sow Vitamin Repair 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro, cantidades tomadas del patron Wella Ultimate Repair)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL320",
+  "servicio": "Tratamiento Sow Vitamin Repair 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro, cantidades tomadas del patron Wella Ultimate Repair)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL323",
+  "servicio": "Nutricion 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro, cantidades tomadas del patron Nutricion Colageno 1/2)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL324",
+  "servicio": "Nutricion 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro, cantidades tomadas del patron Nutricion Colageno 1/2)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL334",
+  "servicio": "Tratamiento molecular regen force 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro, cantidad shampoo tomada del patron Nutricion Colageno 1/2/3, serum fijo en 3 disparos por indicacion de Lucia)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL335",
+  "servicio": "Tratamiento molecular regen force 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro, cantidad shampoo tomada del patron Nutricion Colageno 1/2/3, serum fijo en 3 disparos por indicacion de Lucia)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL336",
+  "servicio": "Tratamiento molecular regen force 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro, cantidad shampoo tomada del patron Nutricion Colageno 1/2/3, serum fijo en 3 disparos por indicacion de Lucia)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL337",
+  "servicio": "Tratamiento Vitamino Color (bacha) Largo 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro. Tratamiento Vitamino Color bacha; Precio Lista $75.000 / Precio Efectivo $60.000)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL338",
+  "servicio": "Tratamiento Vitamino Color (bacha) Largo 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro. Tratamiento Vitamino Color bacha; Precio Lista $87.500 / Precio Efectivo $70.000)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL339",
+  "servicio": "Tratamiento Vitamino Color (bacha) Largo 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Tratamientos capilares",
+  "estado": "Completa (armada para Centro. Tratamiento Vitamino Color bacha; Precio Lista $100.000 / Precio Efectivo $80.000)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL400",
+  "servicio": "Reflejo/Iluminacion (Precio 1)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL400 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL400"
+ },
+ {
+  "codigo": "PEL401",
+  "servicio": "Reflejo/Iluminacion (Precio 2)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL401 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL401"
+ },
+ {
+  "codigo": "PEL402",
+  "servicio": "Reflejo/Iluminacion (Precio 3)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL402 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL402"
+ },
+ {
+  "codigo": "PEL403",
+  "servicio": "Reflejo/Iluminacion (Precio 4)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL403 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL403"
+ },
+ {
+  "codigo": "PEL404",
+  "servicio": "Mechas contorno (solo linea del flequillo)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL408 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL408"
+ },
+ {
+  "codigo": "PEL405",
+  "servicio": "Mechas frontal (parte frotal de la cabeza)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL409 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL409"
+ },
+ {
+  "codigo": "PEL406",
+  "servicio": "Balayage/mechas con papel (Precio 1)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL412 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL412"
+ },
+ {
+  "codigo": "PEL407",
+  "servicio": "Balayage/mechas con papel (Precio 2)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL413 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL413"
+ },
+ {
+  "codigo": "PEL408",
+  "servicio": "Balayage/mechas con papel (Precio 3)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL414 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL414"
+ },
+ {
+  "codigo": "PEL409",
+  "servicio": "Balayage/mechas con papel (Precio 4)",
+  "rubro": "Peluqueria",
+  "subrubro": "Trabajos tecnicos",
+  "estado": "Completa (copiada de YB PEL415 (YB), decolorante cambiado a Issue Profesional)",
+  "refYB": "PEL415"
+ },
+ {
+  "codigo": "PEL500",
+  "servicio": "Aplicación de color 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL500) [verificado con Lucia]",
+  "refYB": "PEL500"
+ },
+ {
+  "codigo": "PEL501",
+  "servicio": "Aplicacion de color 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL500) [verificado con Lucia]",
+  "refYB": "PEL500"
+ },
+ {
+  "codigo": "PEL502",
+  "servicio": "Gloss (bano de luz) 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL501/502 Gloss Question, nivel 3 extrapolado por indicacion de Lucia)",
+  "refYB": "PEL501"
+ },
+ {
+  "codigo": "PEL503",
+  "servicio": "Gloss (bano de luz) 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL501/502 Gloss Question, nivel 3 extrapolado por indicacion de Lucia)",
+  "refYB": "PEL501"
+ },
+ {
+  "codigo": "PEL504",
+  "servicio": "Gloss (bano de luz) 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL501/502 Gloss Question, nivel 3 extrapolado por indicacion de Lucia)",
+  "refYB": "PEL501"
+ },
+ {
+  "codigo": "PEL505",
+  "servicio": "Color raiz",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL503 Color Raiz Question)",
+  "refYB": "PEL503"
+ },
+ {
+  "codigo": "PEL506",
+  "servicio": "Color global 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL504-506 Color global Question, nivel 4 extrapolado siguiendo la progresion existente)",
+  "refYB": "PEL504"
+ },
+ {
+  "codigo": "PEL507",
+  "servicio": "Color global 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL504-506 Color global Question, nivel 4 extrapolado siguiendo la progresion existente)",
+  "refYB": "PEL504"
+ },
+ {
+  "codigo": "PEL508",
+  "servicio": "Color global 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL504-506 Color global Question, nivel 4 extrapolado siguiendo la progresion existente)",
+  "refYB": "PEL504"
+ },
+ {
+  "codigo": "PEL509",
+  "servicio": "Color global 4",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL504-506 Color global Question, nivel 4 extrapolado siguiendo la progresion existente)",
+  "refYB": "PEL504"
+ },
+ {
+  "codigo": "PEL510",
+  "servicio": "Color vincha",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (corregida a Tintura con amoniaco Question; fila reescrita, tenia columnas corridas)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL511",
+  "servicio": "Decoloracion raiz comun",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (Polvo Issue Profesional 50g + Oxidante 120ml + tintura de matizado Lumiplex sin amoniaco 30g/45ml)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL516",
+  "servicio": "Decoloracion raiz SOW",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (Polvo SOW Pro-Plex 40g + Oxidante 90ml + tintura de matizado Lumiplex sin amoniaco 30g/45ml). Insumo: bolsa 500gr $40.000",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL512",
+  "servicio": "Color global sin amoniaco 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL508 Color global question sin Amoniaco 1)",
+  "refYB": "PEL508"
+ },
+ {
+  "codigo": "PEL513",
+  "servicio": "Color global sin amoniaco 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL509 Color global question sin Amoniaco 2)",
+  "refYB": "PEL509"
+ },
+ {
+  "codigo": "PEL514",
+  "servicio": "Color global sin amoniaco 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL510 Color global question sin Amoniaco 3)",
+  "refYB": "PEL510"
+ },
+ {
+  "codigo": "PEL515",
+  "servicio": "Color vincha sin amoniaco",
+  "rubro": "Peluqueria",
+  "subrubro": "Coloracion",
+  "estado": "Completa (copiada de YB PEL511 Color vincha Question, linea Lumiplex sin amoniaco)",
+  "refYB": "PEL511"
+ },
+ {
+  "codigo": "PEL600",
+  "servicio": "Corte + Nutri comun 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (patron PEL600 YB (Colageno) con Mascara Lumiere)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL601",
+  "servicio": "Corte + Nutri comun 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (patron PEL617/620 YB (Colageno largo2) con Mascara Lumiere)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL602",
+  "servicio": "Corte + Nutri Colageno",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL600 Nutricion + Corte)",
+  "refYB": "PEL600"
+ },
+ {
+  "codigo": "PEL603",
+  "servicio": "Color raiz + Corte + Nutri + Brushing + Planchita",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL601) [verificado con Lucia]",
+  "refYB": "PEL601"
+ },
+ {
+  "codigo": "PEL604",
+  "servicio": "Color raiz + corte + brushing + planchita",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL601) [combo sin Nutricion (se removio el insumo Colageno/Nutri de la receta copiada)] [verificado con Lucia]",
+  "refYB": "PEL601"
+ },
+ {
+  "codigo": "PEL605",
+  "servicio": "Keraplex + Corte 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL602)",
+  "refYB": "PEL602"
+ },
+ {
+  "codigo": "PEL606",
+  "servicio": "Keraplex + Corte 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL603)",
+  "refYB": "PEL603"
+ },
+ {
+  "codigo": "PEL607",
+  "servicio": "Keraplex + corte 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL604)",
+  "refYB": "PEL604"
+ },
+ {
+  "codigo": "PEL608",
+  "servicio": "Balayage + gloss + Nutricion + Corte + Ondas 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL608)",
+  "refYB": "PEL608"
+ },
+ {
+  "codigo": "PEL609",
+  "servicio": "Balayage + gloss + Nutricion + Corte + Ondas 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL609)",
+  "refYB": "PEL609"
+ },
+ {
+  "codigo": "PEL610",
+  "servicio": "Balayage + gloss + Nutricion + Corte + Ondas 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL610)",
+  "refYB": "PEL610"
+ },
+ {
+  "codigo": "PEL611",
+  "servicio": "Balayage + Gloss + nutri + corte + ondas 4",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (extrapolada siguiendo YB PEL608/609/610: oxidante = 2x decolorante siempre, decolorante con incremento creciente 30/40/50)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL612",
+  "servicio": "Color raiz + nutricion + brushing + planchita",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL611) [verificado con Lucia]",
+  "refYB": "PEL611"
+ },
+ {
+  "codigo": "PEL613",
+  "servicio": "Reflejos + Corte + Colageno + Brushing + Planchita 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL605, corregida - antes tenia mal el tramo 4 para los 3 niveles)",
+  "refYB": "PEL605"
+ },
+ {
+  "codigo": "PEL614",
+  "servicio": "Reflejos + Corte + Colageno + Brushing + Planchita 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL606, corregida - antes tenia mal el tramo 4 para los 3 niveles)",
+  "refYB": "PEL606"
+ },
+ {
+  "codigo": "PEL615",
+  "servicio": "Reflejos + Corte + Colageno + Brushing + Planchita 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (copiada de YB PEL607, corregida - antes tenia mal el tramo 4 para los 3 niveles)",
+  "refYB": "PEL607"
+ },
+ {
+  "codigo": "PEL616",
+  "servicio": "Color global 1 + nutricion colageno",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Color global 1 + Corte + Nutri Colageno (base color global tier1 + colageno combo))",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL617",
+  "servicio": "Color global 2 + nutricion colageno",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Color global 2 + Corte + Nutri Colageno)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL619",
+  "servicio": "Reflejos + color + nutri + brushing 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Reflejos+Color raiz+Nutri+Brushing nivel1 (patron PEL605 + color raiz))",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL620",
+  "servicio": "Reflejos + color + nutri + brushing 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Reflejos+Color raiz+Nutri+Brushing nivel2 (patron PEL606 + color raiz))",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL621",
+  "servicio": "Reflejos + color + nutri + brushing 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Reflejos+Color raiz+Nutri+Brushing nivel3 (patron PEL607 + color raiz))",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL622",
+  "servicio": "Balayage + color + Nutricion + Brushing 1",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Balayage+Color raiz+Nutri+Brushing nivel1)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL623",
+  "servicio": "Balayage + color + Nutricion + Brushing 2",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Balayage+Color raiz+Nutri+Brushing nivel2)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL624",
+  "servicio": "Balayage + color + Nutricion + Brushing 3",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Balayage+Color raiz+Nutri+Brushing nivel3)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL625",
+  "servicio": "Reflejos + nutr + color + corte",
+  "rubro": "Peluqueria",
+  "subrubro": "Combos",
+  "estado": "Completa (armada para Centro: Reflejos+Nutri+Color raiz+Corte (patron nivel1, sin numeracion))",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL700",
+  "servicio": "PLUMITAS",
+  "rubro": "Peluqueria",
+  "subrubro": "Adicionales",
+  "estado": "Completa (sin receta propia)",
+  "refYB": null
+ },
+ {
+  "codigo": "PEL701",
+  "servicio": "Adicional corte flequillo",
+  "rubro": "Peluqueria",
+  "subrubro": "Adicionales",
+  "estado": "Completa (sin receta propia)",
+  "refYB": null
+ },
+ {
+  "codigo": "NAI100",
+  "servicio": "Kapping",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI102)",
+  "refYB": "NAI102"
+ },
+ {
+  "codigo": "NAI101",
+  "servicio": "Esculpidas - Soft Gel",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI103)",
+  "refYB": "NAI103"
+ },
+ {
+  "codigo": "NAI102",
+  "servicio": "Polygel",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI104)",
+  "refYB": "NAI104"
+ },
+ {
+  "codigo": "NAI103",
+  "servicio": "Podo + Tradicional",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI105 Podoestetica + esmaltado comun, renombrada)",
+  "refYB": "NAI105"
+ },
+ {
+  "codigo": "NAI121",
+  "servicio": "Podo + Semi",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI106 Podoestetica + esmaltado semi, servicio nuevo mismo precio que Podo + Tradicional)",
+  "refYB": "NAI106"
+ },
+ {
+  "codigo": "NAI104",
+  "servicio": "Remoción semi",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI107)",
+  "refYB": "NAI107"
+ },
+ {
+  "codigo": "NAI105",
+  "servicio": "Remoción soft",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI108)",
+  "refYB": "NAI108"
+ },
+ {
+  "codigo": "NAI106",
+  "servicio": "Francesita - Polvo - Cat Eyes - Chrome -",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI110 Francesita/Chrome/Cat Eyes)",
+  "refYB": "NAI110"
+ },
+ {
+  "codigo": "NAI107",
+  "servicio": "Baby boomer - aerografo",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI111)",
+  "refYB": "NAI111"
+ },
+ {
+  "codigo": "NAI108",
+  "servicio": "Reconstrucción (por uña)",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI112)",
+  "refYB": "NAI112"
+ },
+ {
+  "codigo": "NAI109",
+  "servicio": "Reparación (por uña)",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI113)",
+  "refYB": "NAI113"
+ },
+ {
+  "codigo": "NAI110",
+  "servicio": "Esmaltado semi (manos - pies)",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI114 Semi manos + pies)",
+  "refYB": "NAI114"
+ },
+ {
+  "codigo": "NAI111",
+  "servicio": "Pack semipermanente (manos + pies)",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (pack manos+pies = 2x la receta de NAI110 Esmaltado semi, que es solo uno de los dos)",
+  "refYB": null
+ },
+ {
+  "codigo": "NAI112",
+  "servicio": "Esmaltado común (manos - pies)",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI115)",
+  "refYB": "NAI115"
+ },
+ {
+  "codigo": "NAI113",
+  "servicio": "Pack esmalte comun (manos + pies)",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI115) [verificado con Lucia]",
+  "refYB": "NAI115"
+ },
+ {
+  "codigo": "NAI114",
+  "servicio": "Podoestética",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (YB pattern (Podoestetica sin esmaltado))",
+  "refYB": null
+ },
+ {
+  "codigo": "NAI115",
+  "servicio": "Deco por uña",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (copiada de YB NAI109 Deco (el par))",
+  "refYB": "NAI109"
+ },
+ {
+  "codigo": "NAI116",
+  "servicio": "Belleza de manos o pies",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (armada para Centro (limado + cuticulas, sin insumo liquido))",
+  "refYB": null
+ },
+ {
+  "codigo": "NAI117",
+  "servicio": "Belleza de Manos",
+  "rubro": "Nails",
+  "subrubro": "Nails",
+  "estado": "Completa (armada para Centro (limado + cuticulas, sin insumo liquido))",
+  "refYB": null
+ },
+ {
+  "codigo": "NAI200",
+  "servicio": "Remoción kapping",
+  "rubro": "Nails",
+  "subrubro": "Adicionales",
+  "estado": "Completa (mismos insumos que Remocion semi NAI104, solo cambia el tiempo de servicio)",
+  "refYB": null
+ },
+ {
+  "codigo": "CEP100",
+  "servicio": "Laminado",
+  "rubro": "Cejas y pestañas",
+  "subrubro": "Cejas y pestañas",
+  "estado": "Completa (copiada de YB CEP101)",
+  "refYB": "CEP101"
+ },
+ {
+  "codigo": "CEP101",
+  "servicio": "Diseño y perfilado de cejas",
+  "rubro": "Cejas y pestañas",
+  "subrubro": "Cejas y pestañas",
+  "estado": "Completa (copiada de YB CEP102)",
+  "refYB": "CEP102"
+ },
+ {
+  "codigo": "CEP102",
+  "servicio": "Lifting de pestañas",
+  "rubro": "Cejas y pestañas",
+  "subrubro": "Cejas y pestañas",
+  "estado": "Completa (copiada de YB CEP103)",
+  "refYB": "CEP103"
+ },
+ {
+  "codigo": "CEP103",
+  "servicio": "Laminado + perfilado cejas",
+  "rubro": "Cejas y pestañas",
+  "subrubro": "Cejas y pestañas",
+  "estado": "Completa (copiada de YB CEP104) [verificado con Lucia]",
+  "refYB": "CEP104"
+ },
+ {
+  "codigo": "CEP104",
+  "servicio": "Lifting de pestañas coreano",
+  "rubro": "Cejas y pestañas",
+  "subrubro": "Cejas y pestañas",
+  "estado": "Completa (copiada de YB CEP106)",
+  "refYB": "CEP106"
+ },
+ {
+  "codigo": "CEP105",
+  "servicio": "Extensión de pestañas (clásicas)",
+  "rubro": "Cejas y pestañas",
+  "subrubro": "Cejas y pestañas",
+  "estado": "Completa (ESTIMADA por rendimiento estandar de industria, sin factura real - Clasicas: 1 pestaña postiza x 1 natural, rendimiento estimado ~1/25 de una caja de bandejas. Ajustar cuando haya precio real de insumos.)",
+  "refYB": null
+ },
+ {
+  "codigo": "CEP106",
+  "servicio": "Extensión de pestañas (híbridas)",
+  "rubro": "Cejas y pestañas",
+  "subrubro": "Cejas y pestañas",
+  "estado": "Completa (ESTIMADA por rendimiento estandar de industria, sin factura real - Hibridas: mezcla clasicas+volumen, mayor consumo que clasicas. Ajustar cuando haya precio real de insumos.)",
+  "refYB": null
+ },
+ {
+  "codigo": "CEP107",
+  "servicio": "Volumen Pestañas",
+  "rubro": "Cejas y pestañas",
+  "subrubro": "Cejas y pestañas",
+  "estado": "Completa (ESTIMADA por rendimiento estandar de industria, sin factura real - Volumen: abanicos armados, mayor tiempo/adhesivo. Ajustar cuando haya precio real de insumos.)",
+  "refYB": null
+ },
+ {
+  "codigo": "FAC100",
+  "servicio": "Dermaplaning",
+  "rubro": "Facial",
+  "subrubro": "Facial",
+  "estado": "Completa (copiada de YB FAC100)",
+  "refYB": "FAC100"
+ },
+ {
+  "codigo": "FAC101",
+  "servicio": "Limpieza profunda (punta diamante)",
+  "rubro": "Facial",
+  "subrubro": "Facial",
+  "estado": "Completa (copiada de YB FAC101 limpieza facial profunda)",
+  "refYB": "FAC101"
+ },
+ {
+  "codigo": "FAC102",
+  "servicio": "Full facial limpieza profunda + dermaplaning",
+  "rubro": "Facial",
+  "subrubro": "Facial",
+  "estado": "Completa (copiada de YB FAC102 Full Facial)",
+  "refYB": "FAC102"
+ },
+ {
+  "codigo": "FAC103",
+  "servicio": "Maquillaje social",
+  "rubro": "Facial",
+  "subrubro": "Facial",
+  "estado": "Completa (copiada de YB FAC103)",
+  "refYB": "FAC103"
+ },
+ {
+  "codigo": "FAC104",
+  "servicio": "Promo evento makeup+peinado",
+  "rubro": "Facial",
+  "subrubro": "Facial",
+  "estado": "Completa (insumo de Peinado PEL101; maquillaje sin insumo propio)",
+  "refYB": null
+ },
+ {
+  "codigo": "ALQ100",
+  "servicio": "Alquiler de Gabinete",
+  "rubro": "Otros Ingresos",
+  "subrubro": "Alquiler de Gabinete",
+  "estado": "No aplica",
+  "refYB": null
+ },
+ {
+  "codigo": "GFC100",
+  "servicio": "GIFT CARD",
+  "rubro": "Gift Cards",
+  "subrubro": "Gift Cards",
+  "estado": "No aplica",
+  "refYB": null
+ }
+]
