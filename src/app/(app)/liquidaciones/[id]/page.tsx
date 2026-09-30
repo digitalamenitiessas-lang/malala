@@ -151,6 +151,12 @@ export default async function LiquidacionDetallePage({
                 value={formatARS(liquidacion.sueldo_horas)}
               />
             )}
+            {liquidacion.sueldo_basico > 0 && (
+              <KV
+                label="Sueldo básico"
+                value={formatARS(liquidacion.sueldo_basico)}
+              />
+            )}
             {liquidacion.total_viatico > 0 && (
               <KV
                 // Las liquidaciones viejas guardaron el viático como días ×
