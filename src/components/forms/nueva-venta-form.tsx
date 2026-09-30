@@ -783,7 +783,22 @@ export function NuevaVentaForm({
   return (
     <>
     <form
-      action={handleSubmit}
+      // onSubmit y no action={handleSubmit}, a propósito.
+      //
+      // React resetea los campos del formulario cuando la función de `action`
+      // termina. Como acá todo está controlado por estado, después de un error
+      // el estado seguía diciendo "gift card" pero el <select> del DOM volvía a
+      // su primera opción: la pantalla mostraba "EF — Efectivo" con el selector
+      // de gift card abajo, y la tarjeta elegida en blanco. O sea que al error
+      // se le sumaba perder lo cargado.
+      //
+      // El `action` no aportaba nada más: ningún campo tiene `name`, así que el
+      // FormData que arma React llega vacío y lo completa handleSubmit entero
+      // desde el estado.
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit(new FormData());
+      }}
       // Enter no guarda la venta. En un formulario de una sola línea es cómodo;
       // acá, con una docena de campos donde se tabula y se tipean números, es
       // un disparo accidental que registra una venta a medio cargar. Guardar es
