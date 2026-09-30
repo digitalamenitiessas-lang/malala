@@ -12,19 +12,38 @@
  * Idempotente.
  *
  * Uso:
- *   npx tsx scripts/import-precios-centro.ts precios-centro.csv
- *   npx tsx scripts/import-precios-centro.ts precios-centro.csv --aplicar
+ *   npx tsx scripts/import-precios-centro.ts precios-centro.xlsx
+ *   npx tsx scripts/import-precios-centro.ts precios-centro.xlsx --aplicar
  */
 import "../envConfig";
 import { readFileSync } from "node:fs";
+import { leerXlsx } from "./lib/xlsx";
 import { getSqlClient } from "../src/lib/db/client/postgres";
 
 const CE = "seed-000001";
 const APLICAR = process.argv.includes("--aplicar");
 const ARCHIVO = process.argv.slice(2).find((a) => !a.startsWith("--"));
 
+/**
+ * Acepta el .xlsx que manda pedir-precios-centro.ts y tambien un CSV, por si el
+ * salon lo exporta asi desde el Excel o desde Google Sheets. En el CSV se
+ * detecta el separador: el Excel en español exporta con punto y coma.
+ */
+function leerTabla(ruta: string): string[][] {
+  if (/\.xlsx$/i.test(ruta)) {
+    const hojas = leerXlsx(ruta);
+    const primera = [...hojas.values()][0];
+    if (!primera?.length) throw new Error("El xlsx no tiene ninguna hoja con datos");
+    return primera.filter((f) => f.some((x) => String(x).trim() !== ""));
+  }
+  const texto = readFileSync(ruta, "utf8");
+  const cabecera = texto.split("\n")[0] ?? "";
+  const sep = (cabecera.match(/;/g)?.length ?? 0) > (cabecera.match(/,/g)?.length ?? 0) ? ";" : ",";
+  return parseCsv(texto, sep);
+}
+
 /** CSV con comillas dobles al estilo Excel; una fila por linea logica. */
-function parseCsv(texto: string): string[][] {
+function parseCsv(texto: string, sep: string): string[][] {
   const filas: string[][] = [];
   let fila: string[] = [];
   let campo = "";
@@ -37,7 +56,7 @@ function parseCsv(texto: string): string[][] {
       else if (c === '"') enComillas = false;
       else campo += c;
     } else if (c === '"') enComillas = true;
-    else if (c === ",") { fila.push(campo); campo = ""; }
+    else if (c === sep) { fila.push(campo); campo = ""; }
     else if (c === "\n") { fila.push(campo); filas.push(fila); fila = []; campo = ""; }
     else if (c !== "\r") campo += c;
   }
@@ -65,16 +84,16 @@ function plata(v: string): number | null {
 async function main() {
   const sql = getSqlClient();
   if (!ARCHIVO) {
-    console.log("Falta el CSV. Uso: npx tsx scripts/import-precios-centro.ts <archivo.csv> [--aplicar]");
+    console.log("Falta el archivo. Uso: npx tsx scripts/import-precios-centro.ts <archivo.xlsx> [--aplicar]");
     process.exit(1);
   }
-  const filas = parseCsv(readFileSync(ARCHIVO, "utf8"));
+  const filas = leerTabla(ARCHIVO);
   const cab = filas[0].map((h) => h.toLowerCase().trim());
   const iCod = cab.findIndex((h) => h.startsWith("codigo"));
   const iEf = cab.findIndex((h) => h.includes("efectivo"));
   const iLi = cab.findIndex((h) => h.includes("lista"));
   if (iCod < 0 || iEf < 0 || iLi < 0) {
-    console.log(`El CSV no tiene las columnas esperadas. Encabezado leido: ${cab.join(" | ")}`);
+    console.log(`La planilla no tiene las columnas esperadas. Encabezado leido: ${cab.join(" | ")}`);
     process.exit(1);
   }
 

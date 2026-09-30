@@ -12,14 +12,18 @@
  * salen todos de un unico "Alisado sin formol" con precio, asi que el salon ve
  * el numero actual al lado y solo tiene que abrir la escala.
  *
- * Uso: npx tsx scripts/pedir-precios-centro.ts [salida.csv]
+ * Sale en .xlsx y no en CSV a proposito: el Excel en español separa por punto
+ * y coma, asi que un CSV con comas se les abre todo en una sola columna.
+ *
+ * Uso: npx tsx scripts/pedir-precios-centro.ts [salida.xlsx]
  */
 import "../envConfig";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { getSqlClient } from "../src/lib/db/client/postgres";
+import { escribirXlsx } from "./lib/xlsx";
 
 const CE = "seed-000001";
-const SALIDA = process.argv[2] ?? "precios-centro.csv";
+const SALIDA = process.argv[2] ?? "precios-centro.xlsx";
 
 const norm = (s: string) =>
   String(s ?? "")
@@ -31,11 +35,6 @@ const norm = (s: string) =>
 
 /** "Alisado sin formol 3" -> "alisado sin formol": el nivel es el largo de pelo. */
 const sinNivel = (s: string) => norm(s).replace(/\s+[1-4]$/, "");
-
-const csv = (v: unknown) => {
-  const s = String(v ?? "");
-  return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
 
 async function main() {
   const sql = getSqlClient();
@@ -87,13 +86,14 @@ async function main() {
     "Precio LISTA (tarjeta)",
     "Referencia (lo que cobran hoy)",
   ];
-  const cuerpo = filas.map((f) =>
-    [f.codigo, f.servicio, f.rubro, f.efectivo, f.lista, f.referencia]
-      .map(csv)
-      .join(","),
+  escribirXlsx(
+    SALIDA,
+    [
+      cab,
+      ...filas.map((f) => [f.codigo, f.servicio, f.rubro, f.efectivo, f.lista, f.referencia]),
+    ],
+    { nombre: "Precios Centro", anchos: [10, 46, 22, 16, 22, 52] },
   );
-  // BOM para que Excel abra bien las tildes.
-  writeFileSync(SALIDA, "﻿" + [cab.join(","), ...cuerpo].join("\r\n"), "utf8");
 
   console.log(`${SALIDA}: ${filas.length} prestaciones.`);
   console.log(`  ya tienen precio cargado        : ${filas.length - faltan.length}`);
