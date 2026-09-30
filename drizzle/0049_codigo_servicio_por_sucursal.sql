@@ -1,0 +1,29 @@
+-- El código de un servicio pasa a ser único POR SUCURSAL, no en todo el catálogo.
+--
+-- Las dos sedes numeran su planilla por separado y llegaron a los mismos códigos
+-- para servicios distintos: PEL101 es "Corte flequillo" en Yerba Buena y
+-- "Peinado ondas" en Centro; PEL103 es "Peinado recogido" allá y "Corte y lavado
+-- hombre" acá. De los 124 códigos de la planilla de Centro, 115 ya estaban
+-- usados en YB. El salón eligió que sean independientes: cada sucursal cruza
+-- contra su propia planilla de costos.
+--
+-- El único global, que venía de drizzle/0026, impedía cargar el catálogo de
+-- Centro sin inventarle códigos nuevos. Su propio comentario anticipaba esto:
+-- "si algún día Centro carga su propia planilla y repite un PEL100, hay que
+-- mover el código a servicio_sucursal".
+--
+-- No se movió la columna. `servicios` no tiene sucursal_id (la pertenencia vive
+-- en `servicio_sucursal`), así que Postgres no puede hacer un único por
+-- (sucursal, código) sobre esa tabla, y un trigger —que sí podría— no se puede
+-- aplicar con este runner, que parte los archivos por ";" y rompería el cuerpo.
+--
+-- Entonces la unicidad queda del lado de la aplicación, en
+-- codigoOcupadoEnSucursal (src/lib/data/servicios.ts), que corre en el alta y en
+-- la edición. Esto es una PÉRDIDA de garantía y hay que saberlo: una carga
+-- masiva por script que no llame a esas funciones puede meter duplicados. Los
+-- scripts de import tienen que chequear por su cuenta.
+--
+-- El único de `insumos` no se toca: esa tabla sí tiene sucursal_id y su índice
+-- ya es por (sucursal, código), que es el modelo correcto.
+
+drop index if exists "servicios_codigo_uq";

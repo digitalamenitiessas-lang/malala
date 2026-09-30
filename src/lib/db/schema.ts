@@ -243,14 +243,17 @@ export const servicios = pgTable(
     esPromo: boolean("es_promo").notNull().default(false),
     venceEl: date("vence_el"),
   },
-  (table) => ({
-    // Único parcial y GLOBAL: `servicios` no tiene sucursal_id (la pertenencia
-    // vive en servicio_sucursal), así que no se puede hacer único por sucursal.
-    // Ver el comentario de drizzle/0026_codigos_unicos.sql.
-    codigoUq: uniqueIndex("servicios_codigo_uq")
-      .on(table.codigo)
-      .where(sql`${table.codigo} is not null`),
-  }),
+  // SIN índice único sobre `codigo`, a propósito (ver drizzle/0049).
+  //
+  // El código es único POR SUCURSAL, no en todo el catálogo: las dos sedes
+  // numeran su planilla por separado y llegaron a los mismos códigos para
+  // servicios distintos. Postgres no puede garantizarlo desde acá porque
+  // `servicios` no tiene sucursal_id —la pertenencia vive en
+  // `servicio_sucursal`—, así que lo garantiza la aplicación en
+  // codigoOcupadoEnSucursal (src/lib/data/servicios.ts).
+  //
+  // Consecuencia para quien cargue datos por script: la base ya NO frena un
+  // código repetido. Hay que chequearlo a mano antes de insertar.
 );
 
 export const promocionItems = pgTable("promocion_items", {

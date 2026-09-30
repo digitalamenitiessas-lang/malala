@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, eq, ilike, ne, or } from "drizzle-orm";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   servicios as serviciosTable,
@@ -16,6 +16,48 @@ const CODIGO_REPETIDO = {
 
 function createId() {
   return crypto.randomUUID();
+}
+
+/**
+ * ¿Ya hay otro servicio de ESTA sucursal usando este código?
+ *
+ * El código dejó de ser único en todo el catálogo para pasar a serlo por
+ * sucursal: las dos sedes numeran su planilla por separado y llegaron a los
+ * mismos códigos para servicios distintos —PEL101 es "Corte flequillo" en Yerba
+ * Buena y "Peinado ondas" en Centro—, así que exigir que no se repitan obligaba
+ * a inventarle códigos nuevos a una de las dos.
+ *
+ * El chequeo vive acá y no en la base a propósito, y conviene saber por qué:
+ * `servicios` no tiene sucursal_id (la pertenencia está en `servicio_sucursal`),
+ * así que Postgres no puede hacer un único por (sucursal, código) sobre esa
+ * tabla. Un trigger sí podría, pero el runner de migraciones parte los archivos
+ * por ";" y el cuerpo de un trigger tiene punto y coma adentro: no se puede
+ * aplicar. Queda la aplicación como único guardián, así que este chequeo tiene
+ * que correr en TODA alta y edición.
+ */
+async function codigoOcupadoEnSucursal(args: {
+  codigo: string;
+  sucursalId: string;
+  exceptoServicioId?: string;
+}): Promise<boolean> {
+  const db = getDb();
+  const filtros = [
+    eq(servicioSucursalTable.sucursalId, args.sucursalId),
+    ilike(serviciosTable.codigo, args.codigo.trim()),
+  ];
+  if (args.exceptoServicioId) {
+    filtros.push(ne(serviciosTable.id, args.exceptoServicioId));
+  }
+  const [fila] = await db
+    .select({ id: serviciosTable.id })
+    .from(serviciosTable)
+    .innerJoin(
+      servicioSucursalTable,
+      eq(servicioSucursalTable.servicioId, serviciosTable.id),
+    )
+    .where(and(...filtros))
+    .limit(1);
+  return !!fila;
 }
 
 function mapServicio(row: typeof serviciosTable.$inferSelect): Servicio {
@@ -233,6 +275,15 @@ export async function createServicio(formData: FormData): Promise<ActionResult> 
   }
 
   const db = getDb();
+  const sucursalActiva = await getActiveSucursalForUser(user);
+  if (parsed.data.codigo && sucursalActiva) {
+    const ocupado = await codigoOcupadoEnSucursal({
+      codigo: parsed.data.codigo,
+      sucursalId: sucursalActiva.id,
+    });
+    if (ocupado) return CODIGO_REPETIDO;
+  }
+
   const servicioId = createId();
   try {
     await db.insert(serviciosTable).values({
@@ -253,7 +304,6 @@ export async function createServicio(formData: FormData): Promise<ActionResult> 
   }
 
   // Membresía: el servicio queda habilitado en la sucursal activa del admin.
-  const sucursalActiva = await getActiveSucursalForUser(user);
   if (sucursalActiva) {
     await db.insert(servicioSucursalTable).values({
       id: createId(),
@@ -289,6 +339,25 @@ export async function updateServicio(
     .limit(1);
   if (!existing) {
     return { ok: false, errors: { _: ["Servicio no encontrado"] } };
+  }
+
+  // Contra la sucursal del servicio que se edita, no contra la activa del
+  // admin: si no, editar un servicio de Centro parado en Yerba Buena chequearía
+  // contra el catálogo equivocado.
+  if (parsed.data.codigo) {
+    const [suyo] = await db
+      .select({ sucursalId: servicioSucursalTable.sucursalId })
+      .from(servicioSucursalTable)
+      .where(eq(servicioSucursalTable.servicioId, servicioId))
+      .limit(1);
+    if (suyo) {
+      const ocupado = await codigoOcupadoEnSucursal({
+        codigo: parsed.data.codigo,
+        sucursalId: suyo.sucursalId,
+        exceptoServicioId: servicioId,
+      });
+      if (ocupado) return CODIGO_REPETIDO;
+    }
   }
 
   try {
