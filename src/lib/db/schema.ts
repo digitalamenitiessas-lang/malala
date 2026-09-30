@@ -123,8 +123,10 @@ export const empleados = pgTable("empleados", {
     .references(() => sucursales.id),
   tipoComision: tipoComisionEnum("tipo_comision").notNull(),
   porcentajeDefault: doublePrecision("porcentaje_default").notNull(),
-  // Legacy: monto fijo asegurado, ya no se usa en el cálculo. Reemplazado por valorHora.
-  sueldoAsegurado: doublePrecision("sueldo_asegurado").notNull().default(0),
+  // Monto fijo por semana, arriba de la comisión y de las horas. Semanal
+  // porque el salón liquida por semana (Centro los viernes, YB los sábados).
+  // Al liquidar se prorratea por los días del período. Ver drizzle/0048.
+  sueldoBasicoSemanal: doublePrecision("sueldo_basico_semanal").notNull().default(0),
   valorHora: doublePrecision("valor_hora").notNull().default(0),
   viaticoPorDia: doublePrecision("viatico_por_dia").notNull().default(0),
   // Jornada: horas por día y días de la semana que trabaja (0=domingo … 6=sábado).
@@ -1009,6 +1011,7 @@ export const liquidaciones = pgTable(
     horasTrabajadas: doublePrecision("horas_trabajadas").notNull().default(0),
     valorHora: doublePrecision("valor_hora").notNull().default(0),
     sueldoHoras: doublePrecision("sueldo_horas").notNull().default(0),
+    sueldoBasico: doublePrecision("sueldo_basico").notNull().default(0),
     viaticoPorDia: doublePrecision("viatico_por_dia").notNull().default(0),
     diasViatico: doublePrecision("dias_viatico").notNull().default(0),
     totalViatico: doublePrecision("total_viatico").notNull().default(0),

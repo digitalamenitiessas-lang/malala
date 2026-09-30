@@ -85,6 +85,7 @@ function mapLiquidacion(
     horas_trabajadas: row.horasTrabajadas,
     valor_hora: row.valorHora,
     sueldo_horas: row.sueldoHoras,
+    sueldo_basico: row.sueldoBasico,
     viatico_por_dia: row.viaticoPorDia,
     dias_viatico: row.diasViatico,
     total_viatico: row.totalViatico,
@@ -152,6 +153,7 @@ export interface LiquidacionPreview {
   dias_trabajados: number;
   valor_hora: number;
   horas_sugeridas: number;
+  sueldo_basico_sugerido: number;
   viaticos: LiquidacionPreviewViatico[];
   /** Todo lo que cobró de viático en el período. Es lo que se muestra. */
   total_viatico: number;
@@ -243,6 +245,7 @@ async function fetchValorHoraYAnticipos(args: {
   hasta: string;
 }): Promise<{
   valorHora: number;
+  sueldoBasicoSugerido: number;
   horasSugeridas: number;
   viaticoPorDia: number;
   anticipos: { id: string; fecha: string; monto: number; observacion?: string }[];
@@ -252,6 +255,7 @@ async function fetchValorHoraYAnticipos(args: {
   const [empleado] = await db
     .select({
       valorHora: empleadosTable.valorHora,
+      sueldoBasicoSemanal: empleadosTable.sueldoBasicoSemanal,
       viaticoPorDia: empleadosTable.viaticoPorDia,
       horasPorSemana: empleadosTable.horasPorSemana,
       diasTrabajo: empleadosTable.diasTrabajo,
@@ -311,8 +315,29 @@ async function fetchValorHoraYAnticipos(args: {
         ? (diasEnRango / diasPorSemana) * (empleado?.horasPorSemana ?? 0)
         : 0;
 
+  // El basico es semanal y el periodo se cuenta en SEMANAS, no en dias.
+  //
+  // Dividir por 7 estaba mal: el salon liquida semanal pero la semana no dura
+  // lo mismo en las dos sucursales. Centro va de sabado a viernes (7 dias) y
+  // Yerba Buena de lunes a sabado (6, porque el domingo esta cerrado). Con la
+  // division por dias, una semana entera en YB pagaba 6/7 del basico: $42.857
+  // en vez de $50.000, y todas las semanas.
+  //
+  // Se redondea a la semana mas cercana, con minimo de una: un periodo de 6 o
+  // de 7 dias es una semana, uno de 14 son dos. Queda editable igual, que es
+  // donde se resuelve cualquier caso raro.
+  const diasDelPeriodo =
+    Math.round(
+      (new Date(`${args.hasta}T12:00:00Z`).getTime() -
+        new Date(`${args.desde}T12:00:00Z`).getTime()) /
+        86400000,
+    ) + 1;
+  const semanas = Math.max(1, Math.round(diasDelPeriodo / 7));
+  const sueldoBasicoSugerido = (empleado?.sueldoBasicoSemanal ?? 0) * semanas;
+
   return {
     valorHora: empleado?.valorHora ?? 0,
+    sueldoBasicoSugerido,
     horasSugeridas,
     viaticoPorDia: empleado?.viaticoPorDia ?? 0,
     anticipos: anticipoRows.map((a) => ({
@@ -437,7 +462,7 @@ export async function previewLiquidacion(input: {
   const dias = new Set(lineas.map((l) => l.fecha));
   const totalComision = lineas.reduce((s, l) => s + l.comision_monto, 0);
 
-  const { valorHora, horasSugeridas, anticipos } =
+  const { valorHora, horasSugeridas, sueldoBasicoSugerido, anticipos } =
     await fetchValorHoraYAnticipos({
       empleadoId: parsed.data.empleado_id,
       sucursalId: parsed.data.sucursal_id,
@@ -475,6 +500,7 @@ export async function previewLiquidacion(input: {
       dias_trabajados: dias.size,
       valor_hora: valorHora,
       horas_sugeridas: horasSugeridas,
+      sueldo_basico_sugerido: sueldoBasicoSugerido,
       viaticos: viaticosPeriodo.map((v) => ({
         id: v.id,
         fecha: v.fecha,
@@ -508,6 +534,7 @@ export async function createLiquidacion(
     periodo_desde: formData.get("periodo_desde"),
     periodo_hasta: formData.get("periodo_hasta"),
     horas_trabajadas: formData.get("horas_trabajadas"),
+    sueldo_basico: formData.get("sueldo_basico"),
     dias_viatico: formData.get("dias_viatico"),
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
@@ -559,6 +586,7 @@ export async function createLiquidacion(
   const dias = new Set(lineas.map((l) => l.fecha));
   const totalComision = lineas.reduce((s, l) => s + l.comision_monto, 0);
   const sueldoHoras = horasTrabajadas * valorHora;
+  const sueldoBasico = parsed.data.sueldo_basico;
 
   // Viáticos del período: los que se cargaron día por día, no un fijo por una
   // cantidad de días adivinada. Se toman sólo los que no entraron todavía en
@@ -588,7 +616,7 @@ export async function createLiquidacion(
 
   const totalAnticipos = anticipos.reduce((s, a) => s + a.monto, 0);
   const totalPagar =
-    totalComision + sueldoHoras + viaticoAPagar - totalAnticipos;
+    totalComision + sueldoHoras + sueldoBasico + viaticoAPagar - totalAnticipos;
   const liquidacionId = createId();
 
   let solapadaError: ReturnType<typeof errorSolapada> | null = null;
@@ -621,6 +649,7 @@ export async function createLiquidacion(
       horasTrabajadas,
       valorHora,
       sueldoHoras,
+      sueldoBasico,
       viaticoPorDia,
       diasViatico,
       totalViatico,
@@ -753,7 +782,7 @@ function mapEmpleadoRow(row: typeof empleadosTable.$inferSelect): Empleado {
     sucursal_principal_id: row.sucursalPrincipalId,
     tipo_comision: row.tipoComision,
     porcentaje_default: row.porcentajeDefault,
-    sueldo_asegurado: row.sueldoAsegurado,
+    sueldo_basico_semanal: row.sueldoBasicoSemanal,
     valor_hora: row.valorHora,
     viatico_por_dia: row.viaticoPorDia,
     horas_por_semana: row.horasPorSemana,

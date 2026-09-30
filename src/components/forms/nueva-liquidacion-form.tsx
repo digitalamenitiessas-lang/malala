@@ -1,5 +1,6 @@
 "use client";
 
+import { CurrencyInput } from "@/components/forms/currency-input";
 import { useMemo, useState, useTransition } from "react";
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { LoadingButton } from "@/components/forms/field";
@@ -85,12 +86,16 @@ export function NuevaLiquidacionForm({
   const [previewing, startPreview] = useTransition();
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [horas, setHoras] = useState(0);
+  // Monto fijo del periodo. Se propone prorrateado y queda editable: si esa
+  // semana se acordo otra cosa, el numero lo pone quien liquida.
+  const [basico, setBasico] = useState(0);
   const [diasViatico, setDiasViatico] = useState(0);
 
   function clearPreviewState() {
     setPreview(null);
     setPreviewError(null);
     setHoras(0);
+    setBasico(0);
     setDiasViatico(0);
   }
 
@@ -118,6 +123,7 @@ export function NuevaLiquidacionForm({
       setPreview(res.preview);
       // Proponer las horas según la jornada del empleado (editable).
       setHoras(res.preview.horas_sugeridas);
+      setBasico(res.preview.sueldo_basico_sugerido);
     });
   }
 
@@ -127,7 +133,12 @@ export function NuevaLiquidacionForm({
       setErrors({ _: ["Primero calculá el período"] });
       return;
     }
-    if (preview.lineas.length === 0 && horas <= 0 && preview.total_viatico <= 0) {
+    if (
+      preview.lineas.length === 0 &&
+      horas <= 0 &&
+      basico <= 0 &&
+      preview.total_viatico <= 0
+    ) {
       setErrors({ _: ["No hay servicios, horas ni viatico para liquidar"] });
       return;
     }
@@ -137,6 +148,7 @@ export function NuevaLiquidacionForm({
     fd.set("periodo_desde", desde);
     fd.set("periodo_hasta", hasta);
     fd.set("horas_trabajadas", String(horas));
+    fd.set("sueldo_basico", String(basico));
     fd.set("dias_viatico", String(diasViatico));
     runSave(
       async () => {
@@ -170,10 +182,18 @@ export function NuevaLiquidacionForm({
   // El viatico ya no se estima: sale de lo cargado dia por dia.
   const totalViatico = preview?.viatico_a_pagar ?? 0;
   const totalPagar = preview
-    ? preview.total_comision + sueldoHoras + totalViatico - preview.total_anticipos
+    ? preview.total_comision +
+      sueldoHoras +
+      basico +
+      totalViatico -
+      preview.total_anticipos
     : 0;
   const puedeGuardar =
-    !!preview && (preview.lineas.length > 0 || horas > 0 || preview.total_viatico > 0);
+    !!preview &&
+    (preview.lineas.length > 0 ||
+      horas > 0 ||
+      basico > 0 ||
+      preview.total_viatico > 0);
 
   return (
     <div className="space-y-6">
@@ -376,6 +396,42 @@ export function NuevaLiquidacionForm({
               )}
             </div>
           </div>
+
+          {/* Sueldo basico del periodo. Solo aparece si esta persona lo tiene:
+              para el resto seria un campo en cero pidiendo atencion. */}
+          {(preview.sueldo_basico_sugerido > 0 || basico > 0) && (
+            <div className="border-t border-border pt-4">
+              <div className="sm:max-w-xs space-y-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Sueldo básico del período
+                </label>
+                <CurrencyInput
+                  value={basico}
+                  onChange={setBasico}
+                  min={0}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-right text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Va arriba de la comisión y de las horas.
+                </p>
+                {preview.sueldo_basico_sugerido > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Sugerido por su semanal:{" "}
+                    {formatARS(preview.sueldo_basico_sugerido)}.
+                    {Math.abs(basico - preview.sueldo_basico_sugerido) > 0.5 && (
+                      <button
+                        type="button"
+                        onClick={() => setBasico(preview.sueldo_basico_sugerido)}
+                        className="ml-1 underline hover:text-foreground"
+                      >
+                        Usar sugerido
+                      </button>
+                    )}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
           <div className="border-t border-border pt-4 space-y-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-xs uppercase tracking-widest text-muted-foreground">

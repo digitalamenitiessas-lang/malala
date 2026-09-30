@@ -106,7 +106,7 @@ export function mapEmpleado(
     sucursal_principal_id: row.sucursalPrincipalId,
     tipo_comision: row.tipoComision,
     porcentaje_default: row.porcentajeDefault,
-    sueldo_asegurado: row.sueldoAsegurado,
+    sueldo_basico_semanal: row.sueldoBasicoSemanal,
     valor_hora: row.valorHora,
     viatico_por_dia: row.viaticoPorDia,
     horas_por_semana: row.horasPorSemana,

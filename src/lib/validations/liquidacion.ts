@@ -28,6 +28,8 @@ export const liquidacionPreviewSchema = z
 
 export const liquidacionCreateSchema = liquidacionPreviewSchema.extend({
   horas_trabajadas: z.coerce.number().nonnegative().default(0),
+  // Monto fijo del periodo, arriba de la comision y de las horas.
+  sueldo_basico: z.coerce.number().nonnegative().default(0),
   dias_viatico: z.coerce.number().nonnegative().default(0),
 });
 
