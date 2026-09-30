@@ -635,13 +635,31 @@ export function NuevaVentaForm({
       notifyError("Elegí con qué se cobra");
       return;
     }
-    if (giftFalta) {
-      setErrors({ gift_card_1_id: ["Elegí qué gift card se está canjeando"] });
-      notifyError("Elegí qué gift card se está canjeando");
+    // Cuál de los dos medios, y no "una gift card" a secas. El mensaje se
+    // colgaba siempre del medio 1, así que cuando la que faltaba era la del
+    // medio 2 el error aparecía al lado de una tarjeta YA elegida. Reportado
+    // tal cual desde el mostrador: "me salta el error de que ponga la gc pero
+    // si la estoy poniendo".
+    if (mp1EsGift && !giftCard1Id) {
+      setErrors({ gift_card_1_id: ["Elegí cuál"] });
+      notifyError("Falta elegir la gift card del Medio 1");
+      return;
+    }
+    if (mp2EsGift && !giftCard2Id) {
+      setErrors({ gift_card_2_id: ["Elegí cuál"] });
+      notifyError("Falta elegir la gift card del Medio 2");
       return;
     }
     if (giftSinSaldo) {
-      notifyError("La gift card no tiene saldo suficiente");
+      // Con el saldo y lo que se le quiere cobrar: sin los dos números, quien
+      // está en el mostrador no sabe cuánto tiene que mover al otro medio.
+      const corta =
+        giftCard1 && (Number(valor1) || 0) > giftCard1.saldo + 0.005
+          ? { g: giftCard1, monto: Number(valor1) || 0, medio: 1 }
+          : { g: giftCard2!, monto: Number(valor2) || 0, medio: 2 };
+      notifyError(
+        `A la gift card ${corta.g.codigo} le quedan ${formatARS(corta.g.saldo)} y en el Medio ${corta.medio} le estás cobrando ${formatARS(corta.monto)}`,
+      );
       return;
     }
     if (motivoFalta) {
