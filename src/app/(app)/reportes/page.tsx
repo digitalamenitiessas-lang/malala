@@ -87,6 +87,12 @@ export default async function ReportesHubPage({ searchParams }: PageProps) {
       Icon: Rows3,
     },
     {
+      href: "/reportes/rubros",
+      label: "Qué vende cada sucursal",
+      desc: "Facturación por rubro, las dos sucursales lado a lado y contra el período anterior",
+      Icon: Rows3,
+    },
+    {
       href: "/reportes/resultados",
       label: "Estado de resultados",
       desc: "Lo que gana el salón operando, con retiros e inversión bajo la línea",
