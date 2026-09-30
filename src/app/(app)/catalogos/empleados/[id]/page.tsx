@@ -247,19 +247,25 @@ function DisponibilidadPublicaPanel({
         <h2 className="font-display text-xl tracking-[0.15em] uppercase">
           Disponibilidad pública
         </h2>
+        {/* Esto es, antes que nada, la reserva online. El texto anterior
+            arrancaba por "se usa para dos cosas" y ponía las horas de la
+            liquidación al mismo nivel, y eso llevó a querer cargar acá el
+            horario de una encargada — que la habría puesto a recibir turnos de
+            clientas. Primero para qué es; las horas, después. */}
         <p className="text-xs text-muted-foreground">
-          El horario semanal de cada sucursal se usa para <strong>dos cosas</strong>:
-          qué turnos se ofrecen en la reserva online, y cuántas horas se proponen
-          al liquidarle el sueldo. Cargalo con la jornada real.
+          <strong>Esto la pone en la reserva online.</strong> Acá se declara qué
+          turnos puede sacar una clienta con ella. Si no atiende clientas —una
+          encargada, por ejemplo— no hay que cargar nada de esto.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          De paso, el total de las franjas es el que se propone al liquidarle las
+          horas. Si no atiende clientas, ese número sale de{" "}
+          <strong>Horas por semana</strong> en su ficha, y con eso alcanza.
         </p>
         <p className="text-xs text-muted-foreground">
           <strong>Se carga una sola vez y queda.</strong> Semana a semana no hay
-          que volver a cargar nada: el total de acá abajo es el que se propone
-          al liquidar, y sólo se toca cuando le cambia la jornada.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Si no hay franjas, la reserva ofrece todo el horario de la sucursal y
-          las horas de la liquidación se calculan con la jornada de la ficha.
+          que volver a cargar nada; sólo se toca cuando le cambia la jornada. Si
+          no hay franjas, la reserva ofrece todo el horario de la sucursal.
         </p>
       </div>
 
