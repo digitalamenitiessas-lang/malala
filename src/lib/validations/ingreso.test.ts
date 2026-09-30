@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ingresoSchema } from "./ingreso";
+import { ingresoDesdeFormData, ingresoSchema } from "./ingreso";
 
 /**
  * Estos tests existen por un caso real del mostrador.
@@ -91,5 +91,59 @@ describe("ingresoSchema · total contra lo cobrado", () => {
       ),
     );
     expect(r.success).toBe(true);
+  });
+});
+
+/**
+ * Este bloque existe por otro caso real, y peor que el anterior: durante un
+ * tiempo NINGUNA venta cobrada con gift card se pudo guardar en ninguna de las
+ * dos sucursales.
+ *
+ * El formulario mandaba gift_card_1_id y el schema lo declaraba, pero el objeto
+ * que se le pasa a safeParse se arma campo por campo y ese campo no estaba en
+ * la lista. Quedaba undefined, y el chequeo del servidor contestaba "elegí qué
+ * gift card se está canjeando" con la tarjeta elegida ahí en pantalla. Desde el
+ * mostrador se reportó como "me salta el error de que ponga la gc pero si la
+ * estoy poniendo", y se buscó dos veces del lado del formulario.
+ */
+describe("ingresoDesdeFormData", () => {
+  const formDe = (campos: Record<string, string>) => {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(campos)) fd.set(k, v);
+    return fd;
+  };
+
+  it("no pierde ningún campo que el schema declare", () => {
+    // La red de seguridad de verdad: cualquier campo que se agregue al schema y
+    // se olvide acá aparece como un test rojo y no como una venta que no se
+    // puede guardar.
+    const delSchema = Object.keys(ingresoSchema.shape).sort();
+    const delForm = Object.keys(ingresoDesdeFormData(new FormData(), [])).sort();
+    expect(delForm).toEqual(delSchema);
+  });
+
+  it("deja pasar la gift card de cada medio de pago", () => {
+    const obj = ingresoDesdeFormData(
+      formDe({ gift_card_1_id: "gc-1", gift_card_2_id: "gc-2" }),
+      [],
+    );
+    expect(obj.gift_card_1_id).toBe("gc-1");
+    expect(obj.gift_card_2_id).toBe("gc-2");
+  });
+
+  it("una venta con gift card pasa la validación", () => {
+    const r = ingresoSchema.safeParse(
+      ingresoDesdeFormData(
+        formDe({
+          sucursal_id: "suc-1",
+          mp1_id: "mp-gift",
+          valor1: "10000",
+          gift_card_1_id: "gc-1",
+        }),
+        [lineaServicio(10000, 1)],
+      ),
+    );
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.gift_card_1_id).toBe("gc-1");
   });
 });

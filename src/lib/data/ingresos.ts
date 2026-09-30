@@ -28,7 +28,10 @@ import {
   detallarLineas,
   type IngresoConDetalle,
 } from "./ingresos-helpers";
-import { ingresoSchema } from "@/lib/validations/ingreso";
+import {
+  ingresoDesdeFormData,
+  ingresoSchema,
+} from "@/lib/validations/ingreso";
 import { fieldErrors, requireRole } from "./_helpers";
 import { applyMovementTx } from "./stock";
 import {
@@ -503,21 +506,9 @@ export async function createIngreso(
     }
   }
 
-  const parsed = ingresoSchema.safeParse({
-    sucursal_id: formData.get("sucursal_id"),
-    cliente_id: formData.get("cliente_id"),
-    lineas: lineasParsed,
-    descuento_tipo: formData.get("descuento_tipo") ?? "pct",
-    descuento_valor: formData.get("descuento_valor") ?? 0,
-    descuento_motivo_id: formData.get("descuento_motivo_id"),
-    mp1_id: formData.get("mp1_id"),
-    valor1: formData.get("valor1"),
-    mp1_cuenta_id: formData.get("mp1_cuenta_id"),
-    mp2_id: formData.get("mp2_id"),
-    valor2: formData.get("valor2"),
-    mp2_cuenta_id: formData.get("mp2_cuenta_id"),
-    observacion: formData.get("observacion"),
-  });
+  const parsed = ingresoSchema.safeParse(
+    ingresoDesdeFormData(formData, lineasParsed),
+  );
 
   if (!parsed.success) {
     return { ok: false, errors: fieldErrors(parsed.error) };

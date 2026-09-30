@@ -159,3 +159,40 @@ export const ingresoSchema = z
   });
 
 export type IngresoInput = z.infer<typeof ingresoSchema>;
+
+/**
+ * Pasa el FormData del mostrador al objeto que valida ingresoSchema.
+ *
+ * Vive acá, al lado del schema, porque el armado es campo por campo y un campo
+ * que falte no falla ruidosamente: queda undefined y lo rechaza alguna
+ * validación de más abajo, con un error que apunta a otra cosa. Así se
+ * perdieron gift_card_1_id y gift_card_2_id —el form los mandaba, el schema los
+ * declaraba, y en el medio nadie los leía— y durante ese tiempo NINGUNA venta
+ * cobrada con gift card se pudo guardar: el servidor contestaba "elegí qué gift
+ * card se está canjeando" con la tarjeta elegida en pantalla.
+ *
+ * El test compara estas claves contra las del schema, que es lo único que
+ * convierte "me olvidé un campo" en un error ruidoso.
+ */
+export function ingresoDesdeFormData(
+  formData: FormData,
+  lineas: unknown,
+): Record<string, unknown> {
+  return {
+    sucursal_id: formData.get("sucursal_id"),
+    cliente_id: formData.get("cliente_id"),
+    lineas,
+    descuento_tipo: formData.get("descuento_tipo") ?? "pct",
+    descuento_valor: formData.get("descuento_valor") ?? 0,
+    descuento_motivo_id: formData.get("descuento_motivo_id"),
+    mp1_id: formData.get("mp1_id"),
+    valor1: formData.get("valor1"),
+    mp1_cuenta_id: formData.get("mp1_cuenta_id"),
+    mp2_id: formData.get("mp2_id"),
+    valor2: formData.get("valor2"),
+    mp2_cuenta_id: formData.get("mp2_cuenta_id"),
+    gift_card_1_id: formData.get("gift_card_1_id"),
+    gift_card_2_id: formData.get("gift_card_2_id"),
+    observacion: formData.get("observacion"),
+  };
+}
