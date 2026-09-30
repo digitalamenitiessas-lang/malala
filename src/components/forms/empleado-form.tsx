@@ -32,6 +32,9 @@ export function EmpleadoForm({
   submitLabel,
 }: Props) {
   const [crearAcceso, setCrearAcceso] = useState(false);
+  const [pctDefault, setPctDefault] = useState(
+    String(empleado?.porcentaje_default ?? 30),
+  );
   const [horasPorSemana, setHorasPorSemana] = useState(
     String(empleado?.horas_por_semana ?? 0),
   );
@@ -60,6 +63,12 @@ export function EmpleadoForm({
             options={sucursales.map((s) => ({ value: s.id, label: s.nombre }))}
             required
           />
+          {/* Este campo no decide nada: la liquidación siempre suma las dos
+              cosas, la comisión de los servicios que tenga asignados MÁS las
+              horas por el valor hora. Los que mandan son los dos números de
+              abajo. Se deja porque sirve para agrupar y leer la lista, pero
+              hace falta decir qué hace de verdad: alguien que elige "sueldo
+              fijo" espera que no cobre comisión, y no es así. */}
           <SelectField
             label="Tipo de comisión"
             name="tipo_comision"
@@ -68,14 +77,20 @@ export function EmpleadoForm({
             options={TIPOS}
             required
           />
+          <p className="-mt-2 text-xs text-muted-foreground">
+            Es una etiqueta para ordenar la lista. Lo que decide cuánto cobra
+            son los dos campos de abajo.
+          </p>
           <div className="grid grid-cols-2 gap-4">
             <Field
               label="Porcentaje default"
               name="porcentaje_default"
               type="number"
               step="0.01"
-              defaultValue={empleado?.porcentaje_default ?? 30}
+              value={pctDefault}
+              onChange={(e) => setPctDefault(e.currentTarget.value)}
               error={errors.porcentaje_default}
+              hint="Sobre los servicios que se le asignen. En 0 si no cobra comisión."
               required
             />
             <CurrencyField
@@ -83,9 +98,17 @@ export function EmpleadoForm({
               name="valor_hora"
               defaultValue={empleado?.valor_hora ?? 0}
               error={errors.valor_hora}
+              hint="Se multiplica por las horas del período al liquidar."
               required
             />
           </div>
+          {Number(pctDefault) > 0 && (
+            <p className="text-xs text-warning">
+              Con {pctDefault}% de comisión, si se le asignan servicios va a
+              cobrar eso <strong>además</strong> de las horas. Si solo cobra por
+              hora, poné 0.
+            </p>
+          )}
           {/* El viático ya no vive acá: se carga día por día, con su monto, en
               la ficha de la empleada. Un fijo en el alta hacía creer que el
               sistema sabía quién almorzó cada día, y en realidad lo adivinaba
