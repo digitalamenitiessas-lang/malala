@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
 import { profiles, sucursales } from "@/lib/db/schema";
 import type { Sucursal, Usuario } from "@/lib/types";
+import { ordenarSucursalesPermitidas } from "./sucursales-permitidas";
 import { cache } from "react";
 
 const COOKIE_SUCURSAL = "malala_sucursal";
@@ -46,14 +47,29 @@ const getSupabaseCurrentUser = cache(async (): Promise<Usuario | null> => {
 
   if (!profile || !profile.activo) return null;
 
+  const activas =
+    profile.rol === "superadmin"
+      ? await db
+          .select({ id: sucursales.id })
+          .from(sucursales)
+          .where(eq(sucursales.activo, true))
+          .orderBy(sucursales.nombre)
+      : [];
+
+  // El superadmin ve todas las sucursales activas, pero el ORDEN importa:
+  // clampSucursalId cae a sucursalIdsPermitidas[0] cuando la URL no trae
+  // ninguna, o sea que el primero del array es la sucursal en la que aterriza.
+  //
+  // Por eso se ordena (sin ORDER BY, Postgres no garantiza nada y la sucursal
+  // por defecto podia cambiar entre una pantalla y otra) y se pone adelante su
+  // sucursal_default_id, que es justamente donde trabaja. Sin esto un
+  // superadmin de Yerba Buena abria el sistema parado en Centro.
   const sucursalIdsPermitidas =
     profile.rol === "superadmin"
-      ? (
-          await db
-            .select({ id: sucursales.id })
-            .from(sucursales)
-            .where(eq(sucursales.activo, true))
-        ).map((item) => item.id)
+      ? ordenarSucursalesPermitidas(
+          activas.map((item) => item.id),
+          profile.sucursalDefaultId,
+        )
       : [profile.sucursalDefaultId];
 
   return {
