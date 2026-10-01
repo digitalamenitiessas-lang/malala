@@ -48,7 +48,7 @@ function mapGiftCard(row: typeof giftCardsTable.$inferSelect): GiftCard {
     compradora: row.compradora ?? undefined,
     beneficiaria: row.beneficiaria ?? undefined,
     observacion: row.observacion ?? undefined,
-    emitida_pre_sistema: row.emitidaPreSistema,
+    origen: row.origen as GiftCard["origen"],
     usuario_id: row.usuarioId,
   };
 }
@@ -274,8 +274,7 @@ export async function emitirGiftCard(
     compradora: formData.get("compradora"),
     beneficiaria: formData.get("beneficiaria"),
     observacion: formData.get("observacion"),
-    pre_sistema: formData.get("pre_sistema") === "on" ||
-      formData.get("pre_sistema") === "true",
+    origen: formData.get("origen") ?? "venta",
     fecha_venta: formData.get("fecha_venta"),
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
@@ -300,7 +299,7 @@ export async function emitirGiftCard(
   // Las de antes del sistema llevan la fecha en que se vendieron de verdad, no
   // la de hoy: es lo que permite entender despues de cuando viene cada una.
   const fecha =
-    parsed.data.pre_sistema && parsed.data.fecha_venta
+    parsed.data.origen === "pre_sistema" && parsed.data.fecha_venta
       ? new Date(`${parsed.data.fecha_venta}T12:00:00-03:00`)
       : new Date();
   let aviso: string | undefined;
@@ -319,7 +318,10 @@ export async function emitirGiftCard(
         compradora: parsed.data.compradora ?? null,
         beneficiaria: parsed.data.beneficiaria ?? null,
         observacion: parsed.data.observacion ?? null,
-        emitidaPreSistema: parsed.data.pre_sistema,
+        origen: parsed.data.origen,
+        // Derivado, para que el deploy anterior siga leyendo algo coherente
+        // mientras sale este. Nadie mas lo lee.
+        emitidaPreSistema: parsed.data.origen !== "venta",
         usuarioId: user.id,
       });
 
@@ -331,14 +333,22 @@ export async function emitirGiftCard(
         monto: parsed.data.importe,
         saldoResultante: parsed.data.importe,
         ingresoId: null,
-        descripcion: "Venta de gift card",
+        descripcion:
+          parsed.data.origen === "cortesia"
+            ? "Gift card de cortesia (la regala el salon)"
+            : "Venta de gift card",
         usuarioId: user.id,
       });
 
-      // La tarjeta vendida antes del sistema no cobra nada hoy: esa plata entró
-      // en su momento y ya está contada donde corresponda. Emitir el ingreso
-      // acá la contaría dos veces e inflaría el arqueo del día.
-      if (parsed.data.pre_sistema) return;
+      // Dos motivos distintos para no cobrar hoy, y en los dos el resultado es
+      // el mismo: no se emite movimiento.
+      //
+      // La vendida antes del sistema porque esa plata entró en su momento y ya
+      // está contada; cobrarla acá la contaría dos veces e inflaría el arqueo.
+      // La cortesía porque no entra plata nunca: el salón la regala y el costo
+      // aparece recién al canjearla, cuando el servicio factura sin que entre
+      // un peso.
+      if (parsed.data.origen !== "venta") return;
 
       const cuentaId =
         parsed.data.mp_cuenta_id ??

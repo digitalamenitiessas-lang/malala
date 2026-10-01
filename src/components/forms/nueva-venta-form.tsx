@@ -2162,9 +2162,12 @@ function GiftCardSelector({
       {elegida && (
         <p className="text-[10px] text-muted-foreground tabular-nums">
           Le quedan {formatARS(elegida.saldo)}
-          {elegida.emitida_pre_sistema
-            ? " · se vendió antes del sistema: su venta ya se contó como facturación"
-            : ""}
+          {elegida.origen === "pre_sistema" &&
+            " · se vendió antes del sistema: su venta ya se contó como facturación"}
+          {/* Lo contrario de la anterior, y por eso no puede decir lo mismo:
+              esta plata no entró nunca y no va a entrar. */}
+          {elegida.origen === "cortesia" &&
+            " · cortesía del salón: no se cobró al emitirla, la absorbe el negocio"}
         </p>
       )}
       {error && <p className="text-xs text-destructive">{error.join(", ")}</p>}

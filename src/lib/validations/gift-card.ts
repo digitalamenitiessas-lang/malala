@@ -32,19 +32,27 @@ export const giftCardSchema = z.object({
   beneficiaria: optStr,
   observacion: optStr,
   /**
-   * La tarjeta ya se había vendido antes de usar este sistema.
+   * De dónde sale la tarjeta. Define lo único que importa acá: si hoy entra
+   * plata o no.
    *
-   * Cambia lo único que importa: no se cobra nada hoy. Esa plata entró en su
-   * momento, así que pedir un medio de pago y emitir el ingreso la contaría dos
-   * veces e inflaría el arqueo del día.
+   *  - venta: el caso normal. Se cobra, así que se pide medio de pago.
+   *  - pre_sistema: se vendió antes de usar el sistema. Esa plata entró en su
+   *    momento, así que cobrarla hoy la contaría dos veces e inflaría el arqueo.
+   *  - cortesia: la regala el salón. No entra plata hoy ni va a entrar nunca;
+   *    el costo lo absorbe el negocio cuando la canjean.
+   *
+   * Antes esto era un booleano "pre_sistema", que mezclaba el hecho (no entra
+   * plata) con el motivo (ya se cobró antes). Con las cortesías el motivo es el
+   * contrario, y usar el mismo campo hacía que la pantalla afirmara de un
+   * regalo que su venta ya estaba facturada.
    */
-  pre_sistema: z.coerce.boolean().default(false),
+  origen: z.enum(["venta", "pre_sistema", "cortesia"]).default("venta"),
   /** Cuándo se vendió realmente. Solo para las de antes del sistema. */
   fecha_venta: optStr,
 })
   .superRefine((data, ctx) => {
     // El medio de pago solo se exige cuando hoy entra plata.
-    if (!data.pre_sistema && !data.mp_id) {
+    if (data.origen === "venta" && !data.mp_id) {
       ctx.addIssue({
         code: "custom",
         path: ["mp_id"],

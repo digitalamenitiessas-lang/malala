@@ -46,15 +46,18 @@ export function GiftCardForm({
     () => (mediosPago.find((m) => m.cuenta_id) ?? mediosPago[0])?.id ?? "",
   );
   const [cuentaId, setCuentaId] = useState("");
-  // Tarjeta que ya se habia vendido antes de usar el sistema: se carga para
-  // poder canjearla y controlar el codigo, pero hoy no se cobra nada.
-  const [preSistema, setPreSistema] = useState(false);
+  // De donde sale la tarjeta. Lo unico que cambia en la pantalla es si hoy se
+  // cobra: "venta" si, las otras dos no, por motivos opuestos.
+  const [origen, setOrigen] = useState<"venta" | "pre_sistema" | "cortesia">(
+    "venta",
+  );
+  const cobraHoy = origen === "venta";
   const mp = mediosPago.find((m) => m.id === mpId);
 
   // Sin cuenta —ni la del medio ni una elegida a mano— el cobro no impacta en
   // caja. El servidor lo permite igual (no frena la venta por configuración),
   // así que el aviso tiene que estar acá, antes de guardar.
-  const sinCuenta = !preSistema && !!mp && !mp.cuenta_id && !cuentaId;
+  const sinCuenta = cobraHoy && !!mp && !mp.cuenta_id && !cuentaId;
 
   return (
     <CrudForm
@@ -81,31 +84,56 @@ export function GiftCardForm({
             name="importe"
             error={errors.importe}
             hint={
-              preSistema
+              origen === "pre_sistema"
                 ? "El saldo que le queda a la tarjeta hoy."
-                : "Lo que paga quien la compra. Es el saldo con el que arranca."
+                : origen === "cortesia"
+                  ? "Por cuanto se regala. Es el saldo con el que arranca."
+                  : "Lo que paga quien la compra. Es el saldo con el que arranca."
             }
             required
           />
 
           <div className="rounded-md border border-border bg-cream/40 p-3 space-y-2">
-            <label className="flex items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="pre_sistema"
-                checked={preSistema}
-                onChange={(e) => setPreSistema(e.currentTarget.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-border accent-sage-500"
-              />
-              <span>
-                Se vendio antes de usar este sistema
-                <span className="block text-xs text-muted-foreground">
-                  La clienta trae una tarjeta vieja. Se carga para poder
-                  canjearla, pero hoy no entra plata: ya entro cuando se vendio.
+            <span className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              De dónde sale
+            </span>
+            {(
+              [
+                {
+                  v: "venta",
+                  t: "Se vende ahora",
+                  d: "Alguien la compra. Entra la plata hoy.",
+                },
+                {
+                  v: "pre_sistema",
+                  t: "Se vendió antes de usar este sistema",
+                  d: "La clienta trae una tarjeta vieja. Se carga para poder canjearla, pero hoy no entra plata: ya entró cuando se vendió.",
+                },
+                {
+                  v: "cortesia",
+                  t: "Cortesía del salón",
+                  d: "La regala el salón. No entra plata hoy ni después: cuando la canjeen, el servicio factura y la chica cobra su comisión, pero ese monto lo pone el negocio.",
+                },
+              ] as const
+            ).map((o) => (
+              <label key={o.v} className="flex items-start gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="origen"
+                  value={o.v}
+                  checked={origen === o.v}
+                  onChange={() => setOrigen(o.v)}
+                  className="mt-0.5 h-4 w-4 border-border accent-sage-500"
+                />
+                <span>
+                  {o.t}
+                  <span className="block text-xs text-muted-foreground">
+                    {o.d}
+                  </span>
                 </span>
-              </span>
-            </label>
-            {preSistema && (
+              </label>
+            ))}
+            {origen === "pre_sistema" && (
               <div className="space-y-1.5">
                 <label
                   htmlFor="fecha_venta"
@@ -123,9 +151,9 @@ export function GiftCardForm({
             )}
           </div>
 
-          {/* Con la tarjeta vieja no se cobra nada hoy, asi que no hay medio
-              de pago ni cuenta que elegir. */}
-          {!preSistema && (
+          {/* Si hoy no entra plata no hay medio de pago ni cuenta que elegir:
+              ni la tarjeta vieja ni la cortesia se cobran. */}
+          {cobraHoy && (
             <>
             <div className="space-y-1.5">
               <label

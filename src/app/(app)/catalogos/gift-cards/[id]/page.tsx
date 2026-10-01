@@ -83,14 +83,22 @@ export default async function GiftCardPage({
         </span>
       </header>
 
-      {giftCard.emitida_pre_sistema ? (
+      {giftCard.origen === "pre_sistema" && (
         <p className="rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-brown-700">
           Esta tarjeta se vendió antes de que existiera esta pantalla, así que su
           venta ya se contó como facturación en su momento. Cuando se canjee, el
           servicio va a facturar de nuevo: ese monto figura aparte para poder
           descontarlo.
         </p>
-      ) : null}
+      )}
+
+      {giftCard.origen === "cortesia" && (
+        <p className="rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-brown-700">
+          Esta tarjeta la regaló el salón: no se cobró al emitirla y no se va a
+          cobrar. Cuando se canjee, el servicio factura normal y la chica cobra
+          su comisión, pero no entra plata: ese monto lo pone el negocio.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-md border border-border bg-card p-5">

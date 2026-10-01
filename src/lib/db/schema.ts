@@ -1153,6 +1153,14 @@ export const giftCards = pgTable(
     compradora: text("compradora"),
     beneficiaria: text("beneficiaria"),
     observacion: text("observacion"),
+    /**
+     * De donde salio la tarjeta: "venta" | "pre_sistema" | "cortesia".
+     * Ver drizzle/0052. Reemplaza a emitidaPreSistema, que mezclaba el hecho
+     * (no entro plata) con el motivo (ya se habia cobrado antes), y por eso la
+     * pantalla afirmaba de una cortesia que su venta ya estaba facturada.
+     */
+    origen: text("origen").notNull().default("venta"),
+    /** Derivado de origen. Se sigue escribiendo pero ya no lo lee nadie. */
     emitidaPreSistema: boolean("emitida_pre_sistema").notNull().default(false),
     usuarioId: uuid("usuario_id")
       .notNull()

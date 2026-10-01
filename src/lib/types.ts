@@ -672,6 +672,8 @@ export type GiftCardEstado = "activa" | "anulada";
  */
 export type GiftCardEstadoVista = GiftCardEstado | "canjeada" | "vencida";
 
+export type GiftCardOrigen = "venta" | "pre_sistema" | "cortesia";
+
 export interface GiftCard {
   id: ID;
   sucursal_id: ID;
@@ -685,8 +687,13 @@ export interface GiftCard {
   compradora?: string;
   beneficiaria?: string;
   observacion?: string;
-  /** Vendida antes de que existiera esta pantalla; ya se contó como facturación. */
-  emitida_pre_sistema: boolean;
+  /**
+   * De dónde salió la tarjeta.
+   *  - venta: se cobró al emitirla (el caso normal)
+   *  - pre_sistema: se vendió antes de usar el sistema; esa plata ya entró
+   *  - cortesia: la regala el salón; esa plata no entra nunca
+   */
+  origen: GiftCardOrigen;
   usuario_id: ID;
 }
 
