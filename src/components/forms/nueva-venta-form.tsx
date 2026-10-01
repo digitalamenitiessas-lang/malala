@@ -26,6 +26,7 @@ import { esCanjeable, estadoGiftCard, hoyAr } from "@/lib/gift-card-estado";
 import { formatARS } from "@/lib/utils";
 import { CurrencyInput } from "@/components/forms/currency-input";
 import { ClienteCombobox } from "@/components/forms/cliente-combobox";
+import { expandirLineas } from "@/lib/ventas/reparto-comision";
 
 type LineaServicioForm = {
   tempId: string;
@@ -50,6 +51,18 @@ type LineaServicioForm = {
   // Si la línea proviene de una promo: id del servicio-promo y su nombre (display).
   promo_servicio_id?: string;
   promo_nombre?: string;
+  /**
+   * Un servicio que hicieron dos personas y se reparte la comisión.
+   *
+   * No se guarda así: al enviar, la línea se parte en dos (ver expandirLineas).
+   * Vive sólo en el formulario porque es una forma de cargar, no una forma de
+   * guardar — la base sigue teniendo una empleada por línea.
+   */
+  reparto?: {
+    empleado_id: string;
+    /** Qué parte del 100% le toca a la empleada principal. */
+    parte: number;
+  };
 };
 
 type LineaProductoForm = {
@@ -286,7 +299,11 @@ export function NuevaVentaForm({
   const [warnings, setWarnings] = useState<string[]>([]);
 
   // ----- Cálculos derivados -----
-  const subtotal = lineas.reduce((acc, l) => acc + subtotalLinea(l), 0);
+  //
+  // Sobre las líneas YA partidas: una línea con reparto son dos a la hora de
+  // calcular plata, y de acá en más nadie se tiene que acordar de eso.
+  const lineasCalc = expandirLineas(lineas);
+  const subtotal = lineasCalc.reduce((acc, l) => acc + subtotalLinea(l), 0);
   const descMonto =
     descTipo === "pct"
       ? subtotal * (Number(descValor) / 100)
@@ -333,7 +350,14 @@ export function NuevaVentaForm({
       soportaDescuento: l.soporta_descuento,
     });
   };
-  const totalComisiones = lineas.reduce((acc, l) => acc + comisionDe(l), 0);
+  const totalComisiones = lineasCalc.reduce((acc, l) => acc + comisionDe(l), 0);
+
+  /** Lo que cobra cada una en una línea repartida, para mostrarlo en la línea. */
+  const partesDe = (l: LineaForm): { a: number; b: number } | null => {
+    if (l.tipo !== "servicio" || !l.reparto?.empleado_id) return null;
+    const [a, b] = expandirLineas([l]);
+    return { a: comisionDe(a), b: comisionDe(b) };
+  };
   const paraElLocal = total - totalComisiones;
 
   // Cliente seleccionado y si admite cuenta corriente.
@@ -423,7 +447,7 @@ export function NuevaVentaForm({
     .filter((x): x is { nombre: string; motivo: string } => x !== null);
 
   // Comisiones por empleado en este ticket
-  const comisionPorEmpleado = lineas.reduce<
+  const comisionPorEmpleado = lineasCalc.reduce<
     Map<string, { nombre: string; total: number; lineas: number }>
   >((acc, l) => {
     if (!l.empleado_id) return acc;
@@ -679,6 +703,25 @@ export function NuevaVentaForm({
       if (l.tipo === "servicio") return !l.servicio_id || !l.empleado_id;
       return !l.insumo_id || !(Number(l.cantidad) > 0);
     });
+    // Un reparto a medio llenar guardaría el servicio entero a nombre de la
+    // primera, que es justo lo que se quiso evitar al abrirlo.
+    const repartoIncompleto = lineas.find(
+      (l) => l.tipo === "servicio" && l.reparto && !l.reparto.empleado_id,
+    );
+    if (repartoIncompleto) {
+      notifyError("Elegí con quién se reparte la comisión, o cerrá el reparto");
+      return;
+    }
+    const repartoMismaPersona = lineas.find(
+      (l) =>
+        l.tipo === "servicio" &&
+        l.reparto?.empleado_id &&
+        l.reparto.empleado_id === l.empleado_id,
+    );
+    if (repartoMismaPersona) {
+      notifyError("El reparto tiene dos veces a la misma persona");
+      return;
+    }
     if (lineaInvalida) {
       setErrors({
         lineas: [
@@ -694,7 +737,7 @@ export function NuevaVentaForm({
     formData.set(
       "lineas",
       JSON.stringify(
-        lineas.map((l) => {
+        lineasCalc.map((l) => {
           if (l.tipo === "producto") {
             return {
               tipo: "producto" as const,
@@ -939,6 +982,8 @@ export function NuevaVentaForm({
                   onPrecio={(v) => updateLinea(idx, { precio: v })}
                   onCantidad={(v) => updateLinea(idx, { cantidad: v })}
                   onPrecioTipo={(t) => handlePrecioTipoChange(idx, t)}
+                  onReparto={(r) => updateLinea(idx, { reparto: r })}
+                  partes={partesDe(l)}
                   onRemove={() => removeLinea(idx)}
                   removable={lineas.length > 1 || !!l.promo_servicio_id}
                 />
@@ -1701,6 +1746,8 @@ function LineaServicioRow({
   onPrecio,
   onCantidad,
   onPrecioTipo,
+  onReparto,
+  partes,
   onRemove,
   removable,
 }: {
@@ -1715,6 +1762,9 @@ function LineaServicioRow({
   onPrecio: (v: number) => void;
   onCantidad: (v: number) => void;
   onPrecioTipo: (t: "lista" | "efectivo") => void;
+  onReparto: (r: LineaServicioForm["reparto"]) => void;
+  /** Comisión de cada una, ya calculada por el padre sobre la línea partida. */
+  partes: { a: number; b: number } | null;
   onRemove: () => void;
   removable: boolean;
 }) {
@@ -1884,6 +1934,91 @@ function LineaServicioRow({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Reparto de comisión entre dos personas.
+          No se ofrece en las líneas de promo: ahí el precio lo fija la promo y
+          la línea no se puede partir sin romperlo. */}
+      {!locked && linea.servicio_id && (
+        <div className="pl-1">
+          {!linea.reparto ? (
+            <button
+              type="button"
+              onClick={() => onReparto({ empleado_id: "", parte: 50 })}
+              className="text-[11px] text-muted-foreground hover:text-ink underline underline-offset-2"
+            >
+              + Lo hicieron dos
+            </button>
+          ) : (
+            <div className="rounded-md border border-border bg-cream/30 p-2.5 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Comisión repartida
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onReparto(undefined)}
+                  className="text-[11px] text-muted-foreground hover:text-destructive"
+                >
+                  Quitar
+                </button>
+              </div>
+              <div className="grid grid-cols-12 gap-2 items-center">
+                <select
+                  value={linea.reparto.empleado_id}
+                  onChange={(e) =>
+                    onReparto({ ...linea.reparto!, empleado_id: e.target.value })
+                  }
+                  className="col-span-7 px-2 py-1.5 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">— Con quién —</option>
+                  {empleados
+                    .filter((e) => e.id !== linea.empleado_id)
+                    .map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.nombre}
+                      </option>
+                    ))}
+                </select>
+                <div className="col-span-5 flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={linea.reparto.parte}
+                    onChange={(e) =>
+                      onReparto({
+                        ...linea.reparto!,
+                        parte: Math.min(99, Math.max(1, Number(e.target.value) || 0)),
+                      })
+                    }
+                    className="w-16 px-2 py-1.5 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <span className="text-[11px] text-muted-foreground">
+                    / {100 - linea.reparto.parte}
+                  </span>
+                </div>
+              </div>
+              {/* Los dos números, siempre. Es lo único que deja ver de un
+                  vistazo que el reparto no cambió la comisión total. */}
+              {partes && (
+                <p className="text-[11px] tabular-nums text-muted-foreground">
+                  {empleados.find((e) => e.id === linea.empleado_id)?.nombre ??
+                    "Primera"}{" "}
+                  <span style={{ color: "var(--sage-700)" }}>
+                    {formatARS(partes.a)}
+                  </span>
+                  {" · "}
+                  {empleados.find((e) => e.id === linea.reparto!.empleado_id)
+                    ?.nombre ?? "Segunda"}{" "}
+                  <span style={{ color: "var(--sage-700)" }}>
+                    {formatARS(partes.b)}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
