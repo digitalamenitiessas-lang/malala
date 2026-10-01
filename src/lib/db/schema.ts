@@ -744,6 +744,10 @@ export const egresos = pgTable("egresos", {
   mp2Id: text("mp2_id").references(() => mediosPago.id),
   valor2: doublePrecision("valor2"),
   mp2CuentaId: text("mp2_cuenta_id").references(() => cuentasBancarias.id),
+  // De que venta salio, cuando lo genero el sistema. Hoy solo lo usa el costo
+  // de las gift cards de cortesia: permite darlo de baja si la venta se anula.
+  // Ver drizzle/0053.
+  ingresoId: text("ingreso_id").references(() => ingresos.id, { onDelete: "set null" }),
   observacion: text("observacion"),
   pagado: boolean("pagado").notNull().default(false),
   // Anulado: el gasto no se borra, se marca, y las lecturas lo filtran. Ver

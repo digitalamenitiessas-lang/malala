@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db/client/postgres";
 import {
   clienteSucursal as clienteSucursalTable,
   clientes as clientesTable,
+  egresos as egresosTable,
   giftCardMovimientos as giftCardMovimientosTable,
   giftCards as giftCardsTable,
   ingresoLineas as ingresoLineasTable,
@@ -418,6 +419,16 @@ export async function anularIngreso(
           .delete(giftCardMovimientosTable)
           .where(eq(giftCardMovimientosTable.ingresoId, ingresoId));
       }
+
+      // 3.b. El costo de una gift card de cortesía se genera solo al canjearla
+      // (ver canjearGiftCardTx). Si la venta se anula, el salón no prestó el
+      // servicio y ese costo no existe: sin esto quedaría cargado para siempre
+      // contra una venta que no pasó. Se marca anulado, no se borra, igual que
+      // cualquier otro gasto.
+      await tx
+        .update(egresosTable)
+        .set({ anulado: true })
+        .where(eq(egresosTable.ingresoId, ingresoId));
 
       // 4. Stock: se devuelve con un movimiento propio en vez de borrar el de
       //    la venta. El stock es un libro: que se vea que salió y volvió.

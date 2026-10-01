@@ -4,8 +4,10 @@ import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
+  egresos as egresosTable,
   giftCardMovimientos as giftCardMovimientosTable,
   giftCards as giftCardsTable,
+  rubrosGasto as rubrosGastoTable,
 } from "@/lib/db/schema";
 import {
   emitMovimientoBancarioTx,
@@ -557,6 +559,7 @@ export async function canjearGiftCardTx(
       saldo: giftCardsTable.saldo,
       codigo: giftCardsTable.codigo,
       venceEl: giftCardsTable.venceEl,
+      origen: giftCardsTable.origen,
     });
 
   const fila = filas[0];
@@ -599,6 +602,41 @@ export async function canjearGiftCardTx(
       : `Canje de gift card ${fila.codigo}`,
     usuarioId: args.usuarioId,
   });
+
+  // Una cortesía canjeada le cuesta plata al salón, y hasta acá eso no figuraba
+  // en ningún lado: el servicio facturaba por su precio, la chica cobraba su
+  // comisión y no entraba un peso, así que la ganancia quedaba sobrestimada por
+  // el valor de la tarjeta. El gasto lo compensa.
+  //
+  // Va pagado y sin medio de pago, que parece contradictorio y no lo es: no se
+  // le debe nada a nadie (por eso pagado) pero tampoco salió plata de ninguna
+  // cuenta (por eso sin medio). Los cálculos de caja filtran por medio de pago,
+  // así que este gasto no toca el arqueo; el estado de resultados suma por
+  // rubro, así que sí le resta a la ganancia, que es lo que se busca.
+  if (fila.origen === "cortesia") {
+    const [rubro] = await tx
+      .select({ id: rubrosGastoTable.id })
+      .from(rubrosGastoTable)
+      .where(sql`lower(trim(${rubrosGastoTable.rubro})) = 'gift cards de cortesia'`)
+      .limit(1);
+    // Sin el rubro no se frena el canje: la clienta está en el mostrador y la
+    // venta no puede caerse por una fila que falta en un catálogo.
+    if (rubro) {
+      await tx.insert(egresosTable).values({
+        id: createId(),
+        fecha: args.fecha,
+        sucursalId: args.sucursalId,
+        rubroId: rubro.id,
+        valor: args.monto,
+        mpId: null,
+        pagado: true,
+        anulado: false,
+        ingresoId: args.ingresoId,
+        observacion: `Gift card ${fila.codigo} — cortesía del salón`,
+        usuarioId: args.usuarioId,
+      });
+    }
+  }
 
   return fila.saldo;
 }
