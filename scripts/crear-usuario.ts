@@ -49,6 +49,24 @@ async function main() {
     console.log(`Rol invalido: "${rol}". Validos: ${ROLES.join(", ")}`);
     process.exit(1);
   }
+
+  // Contra el enum de la BASE, no contra la lista de arriba.
+  //
+  // El schema de Drizzle declaraba 'superadmin' pero ninguna migracion lo habia
+  // agregado al enum de Postgres, asi que el alta creaba el usuario de Auth,
+  // fallaba al insertar el profile y tenia que borrarlo. Chequearlo antes
+  // convierte eso en un error limpio que no toca nada.
+  const enBase = (
+    (await sql`select e.enumlabel from pg_enum e
+                 join pg_type t on t.oid = e.enumtypid
+                where t.typname = 'rol'`) as any[]
+  ).map((r) => r.enumlabel as string);
+  if (!enBase.includes(rol)) {
+    console.log(`El rol "${rol}" no existe en el enum de la base.`);
+    console.log(`  la base tiene: ${enBase.join(" | ")}`);
+    console.log(`Falta correr la migracion que lo agrega antes de dar el alta.`);
+    process.exit(1);
+  }
   if (password.length < 8) {
     console.log("La contraseña tiene menos de 8 caracteres; Supabase la va a rechazar.");
     process.exit(1);
@@ -87,7 +105,14 @@ async function main() {
     email_confirm: true,
   });
   if (error || !data?.user) {
-    console.log(`No se pudo crear el usuario de Auth: ${error?.message ?? "sin detalle"}`);
+    const msg = error?.message ?? "sin detalle";
+    console.log(`No se pudo crear el usuario de Auth: ${msg}`);
+    // Pasa cuando un intento anterior creo el usuario y no se limpio: queda en
+    // Auth sin profile, que es un usuario que entra y no ve nada.
+    if (/already (been )?registered|already exists/i.test(msg)) {
+      console.log(`Ese email ya existe en Auth pero no tiene profile. Hay que borrarlo`);
+      console.log(`desde Supabase (Authentication > Users) y volver a correr esto.`);
+    }
     process.exit(1);
   }
 

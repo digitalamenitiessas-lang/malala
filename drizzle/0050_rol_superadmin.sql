@@ -1,0 +1,15 @@
+-- Agrega 'superadmin' al enum de roles.
+--
+-- El schema de Drizzle lo declara desde el principio
+-- (rolEnum = pgEnum("rol", ["superadmin", "admin", "encargada", "empleado"]))
+-- pero ninguna migracion lo agrego nunca al enum de Postgres, que tenia solo
+-- admin | encargada | empleado. O sea que todo el camino de superadmin era
+-- codigo muerto: puedeVerGlobal nunca pudo dar true, y la parte de
+-- getCurrentUser que resuelve las sucursales permitidas leyendo todas las
+-- activas nunca se ejecuto para nadie. Se descubrio al intentar dar de alta el
+-- primer usuario con ese rol.
+--
+-- BEFORE 'admin' para que el orden del enum en la base coincida con el
+-- declarado en el schema. Hoy no lo mira nadie (no hay ningun ORDER BY sobre
+-- rol), pero dos ordenes distintos para la misma lista se cobran solos.
+ALTER TYPE rol ADD VALUE IF NOT EXISTS 'superadmin' BEFORE 'admin';
