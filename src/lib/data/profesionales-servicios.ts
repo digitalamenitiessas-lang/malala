@@ -2,7 +2,7 @@
 
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
+import { buildAccessScope, isSucursalAllowed, esAdmin } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import { getDb } from "@/lib/db/client/postgres";
 import {
@@ -138,7 +138,7 @@ export async function listServiciosPublicosElegibles(
 
 async function requireAgendaAccess(agendaId: string) {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada" && user.rol !== "superadmin") {
+  if (!esAdmin(user.rol) && user.rol !== "encargada") {
     return { agenda: null, error: "No autorizado" };
   }
 

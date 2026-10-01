@@ -7,10 +7,11 @@ import {
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { SubmitButton } from "@/components/forms/field";
 import { GrupoSelector } from "./grupo-selector";
+import { esAdmin } from "@/lib/auth/access";
 
 export default async function RubrosGastoPage() {
   const user = await requireUser();
-  if (user.rol !== "admin") redirect("/catalogos");
+  if (!esAdmin(user.rol)) redirect("/catalogos");
 
   const sucursal = await getActiveSucursal();
   const rubros = await listRubrosGasto({ sucursalId: sucursal?.id });

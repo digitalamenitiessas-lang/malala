@@ -4,7 +4,7 @@ import { Plus, TrendingUp } from "lucide-react";
 import { listServicios } from "@/lib/data/servicios";
 import { redirect } from "next/navigation";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
-import { buildAccessScope } from "@/lib/auth/access";
+import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { formatARS } from "@/lib/utils";
 import { ServiciosSearch } from "./servicios-search";
 
@@ -51,7 +51,7 @@ export default async function ServiciosPage({
           </p>
         </div>
 
-        {user.rol === "admin" && (
+        {esAdmin(user.rol) && (
           <div className="flex items-center gap-2">
             <Link
               href="/catalogos/servicios/aumento"
@@ -95,7 +95,7 @@ export default async function ServiciosPage({
                     <th className="text-right font-medium px-4 py-3">P. lista</th>
                     <th className="text-right font-medium px-4 py-3">P. efectivo</th>
                     <th className="text-center font-medium px-4 py-3">Estado</th>
-                    {user.rol === "admin" && (
+                    {esAdmin(user.rol) && (
                       <th className="px-4 py-3 w-44"></th>
                     )}
                   </tr>
@@ -114,7 +114,7 @@ export default async function ServiciosPage({
                           para verlos, y en la práctica no se encuentran. Acá se
                           llega tocando lo primero que se busca, el servicio. */}
                       <td className="px-4 py-3">
-                        {user.rol === "admin" ? (
+                        {esAdmin(user.rol) ? (
                           <Link
                             href={`/catalogos/servicios/${s.id}`}
                             className="underline decoration-transparent underline-offset-2 transition-colors hover:decoration-inherit"
@@ -152,7 +152,7 @@ export default async function ServiciosPage({
                           )}
                         </div>
                       </td>
-                      {user.rol === "admin" && (
+                      {esAdmin(user.rol) && (
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
                             <TableActionLink

@@ -7,7 +7,7 @@ import { ServiciosProfesionalForm } from "@/components/forms/servicios-profesion
 import { ViaticosPanel } from "@/components/viaticos-panel";
 import { EmpleadoForm } from "@/components/forms/empleado-form";
 import { AccesoEmpleadoPanel } from "@/components/forms/acceso-empleado-panel";
-import { buildAccessScope } from "@/lib/auth/access";
+import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { listAnticipos } from "@/lib/data/anticipos";
 import { listViaticos } from "@/lib/data/viaticos";
@@ -70,7 +70,7 @@ export default async function EditarEmpleadoPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "superadmin") {
+  if (!esAdmin(user.rol)) {
     redirect("/catalogos/empleados");
   }
 

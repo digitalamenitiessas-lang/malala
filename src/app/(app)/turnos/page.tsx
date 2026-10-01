@@ -27,6 +27,7 @@ import { ViewSelector, type VistaAgenda } from "./view-selector";
 import { DailyTimelineView } from "./daily-timeline-view";
 import { WeeklyView } from "./weekly-view";
 import { MonthlyView } from "./monthly-view";
+import { esAdmin } from "@/lib/auth/access";
 
 interface SearchParams {
   fecha?: string;
@@ -118,7 +119,7 @@ export default async function TurnosPage({
     },
     {},
   );
-  const canManage = user.rol === "admin" || user.rol === "encargada";
+  const canManage = esAdmin(user.rol) || user.rol === "encargada";
   // Sucursales y profesionales para el header, filtros y modal de turno salen
   // de la agenda diaria o, en semanal/mensual, de los datos del rango.
   const sucursales = agenda?.sucursales ?? rangeData?.sucursales ?? [];

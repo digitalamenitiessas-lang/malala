@@ -47,7 +47,7 @@ export default async function EditarRecetaPage({
   ]);
   if (!servicio) notFound();
 
-  const isAdmin = user.rol === "admin";
+  const isAdmin = esAdmin(user.rol);
   // La server action de confirmar también la puede correr la encargada.
   const puedeConfirmar = esAdmin(user.rol) || user.rol === "encargada";
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Trash2 } from "lucide-react";
-import { isSucursalAllowed, buildAccessScope } from "@/lib/auth/access";
+import { isSucursalAllowed, buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import {
   addProfesionalHorario,
@@ -40,7 +40,7 @@ export default async function ProfesionalAgendaPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada" && user.rol !== "superadmin") {
+  if (!esAdmin(user.rol) && user.rol !== "encargada") {
     redirect("/turnos");
   }
 

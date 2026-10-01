@@ -12,7 +12,7 @@ import {
 } from "@/lib/data/cuenta-impuestos";
 import { listSucursales } from "@/lib/data/sucursales";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
-import { buildAccessScope } from "@/lib/auth/access";
+import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { SubmitButton } from "@/components/forms/field";
 import type { ImpuestoBase } from "@/lib/types";
 
@@ -24,7 +24,7 @@ const BASE_LABEL: Record<ImpuestoBase, string> = {
 
 export default async function CuentasBancariasPage() {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "superadmin") {
+  if (!esAdmin(user.rol)) {
     redirect("/catalogos");
   }
 

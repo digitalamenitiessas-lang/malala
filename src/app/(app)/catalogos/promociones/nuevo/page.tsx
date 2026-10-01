@@ -3,10 +3,11 @@ import { PromocionForm } from "@/components/forms/promocion-form";
 import { createPromocion } from "@/lib/data/promociones";
 import { listServicios } from "@/lib/data/servicios";
 import { requireUser } from "@/lib/auth/session";
+import { esAdmin } from "@/lib/auth/access";
 
 export default async function NuevaPromocionPage() {
   const user = await requireUser();
-  if (user.rol !== "admin") redirect("/catalogos/promociones");
+  if (!esAdmin(user.rol)) redirect("/catalogos/promociones");
 
   const servicios = await listServicios();
 

@@ -9,6 +9,7 @@ import { AperturaCajaForm } from "@/components/forms/apertura-caja-form";
 import { ReabrirAperturaButton } from "./reabrir-apertura-button";
 import { formatARS } from "@/lib/utils";
 import { hoyAr } from "@/lib/fecha-ar";
+import { esAdmin } from "@/lib/auth/access";
 
 function todayYMD(): string {
   return hoyAr();
@@ -16,7 +17,7 @@ function todayYMD(): string {
 
 export default async function AperturaCajaPage() {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada") redirect("/caja");
+  if (!esAdmin(user.rol) && user.rol !== "encargada") redirect("/caja");
 
   const sucursal = await getActiveSucursal();
   if (!sucursal) redirect("/dev/login");

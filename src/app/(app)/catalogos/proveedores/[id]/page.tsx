@@ -11,7 +11,7 @@ import {
 import { listEgresos } from "@/lib/data/egresos";
 import { listInsumosByProveedor } from "@/lib/data/insumos";
 import { requireUser } from "@/lib/auth/session";
-import { buildAccessScope } from "@/lib/auth/access";
+import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { formatARS, formatDateShort } from "@/lib/utils";
 import type { EgresoConDetalle } from "@/lib/data/egresos-helpers";
 
@@ -49,7 +49,7 @@ export default async function EditarProveedorPage({
   const user = await requireUser();
   const scope = buildAccessScope(user);
   if (!scope.puedeVerCatalogos) redirect("/dashboard");
-  const puedeRegistrarCompra = user.rol === "admin" || user.rol === "encargada";
+  const puedeRegistrarCompra = esAdmin(user.rol) || user.rol === "encargada";
   const { id } = await params;
   const sp = await searchParams;
   const rango = sp.rango ?? "3meses";

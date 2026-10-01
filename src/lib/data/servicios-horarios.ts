@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db/client/postgres";
 import { serviciosHorarios as serviciosHorariosTable } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/session";
 import type { ServicioHorario } from "@/lib/types";
+import { esAdmin } from "@/lib/auth/access";
 
 function createId() {
   return crypto.randomUUID();
@@ -80,7 +81,7 @@ export async function addServicioHorario(
 ): Promise<ActionResult> {
   "use server";
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada") {
+  if (!esAdmin(user.rol) && user.rol !== "encargada") {
     return { ok: false, errors: { _: ["No autorizado"] } };
   }
 
@@ -119,7 +120,7 @@ export async function deleteServicioHorario(
 ): Promise<ActionResult> {
   "use server";
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada") {
+  if (!esAdmin(user.rol) && user.rol !== "encargada") {
     return { ok: false, errors: { _: ["No autorizado"] } };
   }
 

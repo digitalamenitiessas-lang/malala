@@ -4,7 +4,7 @@ import { TableActionLink } from "@/components/table-action-link";
 import { listPromociones } from "@/lib/data/promociones";
 import { redirect } from "next/navigation";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
-import { buildAccessScope } from "@/lib/auth/access";
+import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { formatARS } from "@/lib/utils";
 
 export default async function PromocionesPage() {
@@ -30,7 +30,7 @@ export default async function PromocionesPage() {
           </p>
         </div>
 
-        {user.rol === "admin" && (
+        {esAdmin(user.rol) && (
           <Link
             href="/catalogos/promociones/nuevo"
             className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium uppercase tracking-wider hover:bg-brown-700 transition-colors flex items-center gap-2"
@@ -55,7 +55,7 @@ export default async function PromocionesPage() {
                 <th className="text-right font-medium px-4 py-3">P. efectivo</th>
                 <th className="text-center font-medium px-4 py-3">Vence</th>
                 <th className="text-center font-medium px-4 py-3">Estado</th>
-                {user.rol === "admin" && <th className="px-4 py-3 w-20"></th>}
+                {esAdmin(user.rol) && <th className="px-4 py-3 w-20"></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -82,7 +82,7 @@ export default async function PromocionesPage() {
                       </span>
                     )}
                   </td>
-                  {user.rol === "admin" && (
+                  {esAdmin(user.rol) && (
                     <td className="px-4 py-3 text-right">
                       <TableActionLink
                         href={`/catalogos/promociones/${p.id}`}

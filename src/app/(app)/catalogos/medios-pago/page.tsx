@@ -9,12 +9,12 @@ import {
 import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { listSucursales } from "@/lib/data/sucursales";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
-import { buildAccessScope } from "@/lib/auth/access";
+import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { SubmitButton } from "@/components/forms/field";
 
 export default async function MediosPagoPage() {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "superadmin") redirect("/catalogos");
+  if (!esAdmin(user.rol)) redirect("/catalogos");
 
   const scope = buildAccessScope(user);
   const [medios, cuentas, sucursalesAll, activa] = await Promise.all([

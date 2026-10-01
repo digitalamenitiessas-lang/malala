@@ -5,10 +5,11 @@ import { listMediosPago } from "@/lib/data/medios-pago";
 import { listProveedores } from "@/lib/data/proveedores";
 import { listSucursales } from "@/lib/data/sucursales";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { esAdmin } from "@/lib/auth/access";
 
 export default async function NuevoInsumoPage() {
   const user = await requireUser();
-  if (user.rol !== "admin") redirect("/catalogos/insumos");
+  if (!esAdmin(user.rol)) redirect("/catalogos/insumos");
   const [proveedores, sucursales, mediosPago, sucursalActiva, bloquesCodigo] =
     await Promise.all([
       listProveedores(),

@@ -10,6 +10,7 @@ import { getActiveSucursalForUser, requireUser } from "@/lib/auth/session";
 import { promocionSchema } from "@/lib/validations/promocion";
 import type { Promocion, PromocionComponente } from "@/lib/types";
 import { revalidarCatalogoServicios } from "./_helpers";
+import { esAdmin } from "@/lib/auth/access";
 
 export { estaVigente } from "@/lib/promo-vigencia";
 
@@ -166,7 +167,7 @@ async function assertComponentesValidos(ids: string[]): Promise<boolean> {
 export async function createPromocion(formData: FormData): Promise<ActionResult> {
   "use server";
   const user = await requireUser();
-  if (user.rol !== "admin") {
+  if (!esAdmin(user.rol)) {
     return { ok: false, errors: { _: ["Solo admin puede crear promociones"] } };
   }
 
@@ -221,7 +222,7 @@ export async function updatePromocion(
 ): Promise<ActionResult> {
   "use server";
   const user = await requireUser();
-  if (user.rol !== "admin") {
+  if (!esAdmin(user.rol)) {
     return { ok: false, errors: { _: ["Solo admin puede editar promociones"] } };
   }
 
@@ -273,7 +274,7 @@ export async function updatePromocion(
 export async function togglePromocionActiva(id: string): Promise<ActionResult> {
   "use server";
   const user = await requireUser();
-  if (user.rol !== "admin") {
+  if (!esAdmin(user.rol)) {
     return { ok: false, errors: { _: ["Solo admin"] } };
   }
 

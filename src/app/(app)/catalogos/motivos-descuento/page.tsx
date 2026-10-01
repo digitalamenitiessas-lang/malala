@@ -8,10 +8,11 @@ import {
 } from "@/lib/data/motivos-descuento";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { SubmitButton } from "@/components/forms/field";
+import { esAdmin } from "@/lib/auth/access";
 
 export default async function MotivosDescuentoPage() {
   const user = await requireUser();
-  if (user.rol !== "admin") redirect("/catalogos");
+  if (!esAdmin(user.rol)) redirect("/catalogos");
 
   const sucursal = await getActiveSucursal();
   const motivos = await listMotivosDescuento({ sucursalId: sucursal?.id });

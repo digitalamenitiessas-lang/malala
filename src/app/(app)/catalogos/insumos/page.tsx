@@ -5,7 +5,7 @@ import { listMediosPago } from "@/lib/data/medios-pago";
 import { listProveedores } from "@/lib/data/proveedores";
 import { listSucursales } from "@/lib/data/sucursales";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
-import { buildAccessScope } from "@/lib/auth/access";
+import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { redirect } from "next/navigation";
 import { formatARS } from "@/lib/utils";
 import { RegistrarCompraInsumoModal } from "@/components/forms/registrar-compra-insumo-modal";
@@ -42,7 +42,7 @@ export default async function InsumosPage({
   // Se cuenta sobre la lista que se está mostrando, así el número no contradice
   // a la búsqueda activa. Son los insumos que dejan corto el costo de la receta.
   const sinPrecio = insumos.filter((i) => i.precio_unitario == null).length;
-  const puedeCargarCompra = user.rol === "admin" || user.rol === "encargada";
+  const puedeCargarCompra = esAdmin(user.rol) || user.rol === "encargada";
   // Las compras se cargan solo en la sucursal activa (sucursales aisladas).
   const sucursalesParaCompra = sucursalActiva
     ? sucursales.filter((s) => s.id === sucursalActiva.id)
@@ -71,7 +71,7 @@ export default async function InsumosPage({
             </p>
           )}
         </div>
-        {user.rol === "admin" && (
+        {esAdmin(user.rol) && (
           <Link
             href="/catalogos/insumos/nuevo"
             className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium uppercase tracking-wider hover:bg-brown-700 transition-colors flex items-center gap-2"
@@ -191,7 +191,7 @@ export default async function InsumosPage({
                             defaultSucursalId={sucursalActiva.id}
                           />
                         )}
-                      {user.rol === "admin" && (
+                      {esAdmin(user.rol) && (
                         <Link
                           href={`/catalogos/insumos/${i.id}`}
                           className="text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"

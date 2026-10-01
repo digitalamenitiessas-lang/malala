@@ -3,7 +3,7 @@ import { AlertTriangle, Plus } from "lucide-react";
 import { CierresAnteriores } from "./cierres-anteriores";
 import { DesgloseCaja } from "./desglose-caja";
 import { redirect } from "next/navigation";
-import { clampSucursalId, getAccessScopeForUser } from "@/lib/auth/access";
+import { clampSucursalId, getAccessScopeForUser, esAdmin } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import { hoyAr } from "@/lib/fecha-ar";
 import {
@@ -65,7 +65,7 @@ export default async function CajaPage({
   }
 
   const hoy = todayYMD();
-  const puedeCerrar = user.rol === "admin" || user.rol === "encargada";
+  const puedeCerrar = esAdmin(user.rol) || user.rol === "encargada";
 
   // Aperturas y cierres son 100% manuales: no se autocierra ningún día. Los días
   // abiertos sin cerrar quedan como pendientes hasta que se cierren a mano.
@@ -333,7 +333,7 @@ export default async function CajaPage({
       {/* Desglose de la jornada en curso (mismo componente que las cajas
           cerradas). Rentabilidad y comisiones solo para admin. */}
       {(resumen.cantIngresos > 0 || resumen.cantEgresos > 0) && (
-        <DesgloseCaja resumen={resumen} isAdmin={user.rol === "admin"} />
+        <DesgloseCaja resumen={resumen} isAdmin={esAdmin(user.rol)} />
       )}
 
       {resumen.fiado.total > 0 && (

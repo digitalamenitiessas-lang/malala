@@ -3,10 +3,11 @@ import { AjusteForm } from "@/components/forms/ajuste-form";
 import { listInsumos } from "@/lib/data/insumos";
 import { createAjusteManual, listStockBySucursal } from "@/lib/data/stock";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { esAdmin } from "@/lib/auth/access";
 
 export default async function AjustePage() {
   const user = await requireUser();
-  if (user.rol !== "admin") redirect("/stock");
+  if (!esAdmin(user.rol)) redirect("/stock");
   const sucursal = await getActiveSucursal();
   if (!sucursal) redirect("/stock");
 

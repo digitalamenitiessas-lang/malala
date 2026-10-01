@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Ban, Check, Clock, Plus, Sandwich } from "lucide-react";
 import { redirect } from "next/navigation";
-import { clampSucursalId, getAccessScopeForUser } from "@/lib/auth/access";
+import { clampSucursalId, getAccessScopeForUser, esAdmin } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import { inicioDeDiaArISO } from "@/lib/fecha-ar";
 import { listEgresos } from "@/lib/data/egresos";
@@ -92,7 +92,7 @@ export default async function EgresosPage({
   ]);
 
   const totales = aggregateEgresos(egresos);
-  const puedeCargar = user.rol === "admin" || user.rol === "encargada";
+  const puedeCargar = esAdmin(user.rol) || user.rol === "encargada";
 
   return (
     <div className="space-y-8 max-w-6xl">

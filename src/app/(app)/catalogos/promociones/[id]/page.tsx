@@ -14,6 +14,7 @@ import {
   listServicioHorarios,
 } from "@/lib/data/servicios-horarios";
 import { requireUser } from "@/lib/auth/session";
+import { esAdmin } from "@/lib/auth/access";
 
 const DIAS = [
   { value: 1, label: "Lunes" },
@@ -35,7 +36,7 @@ export default async function EditarPromocionPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireUser();
-  if (user.rol !== "admin") redirect("/catalogos/promociones");
+  if (!esAdmin(user.rol)) redirect("/catalogos/promociones");
 
   const { id } = await params;
   const [promocion, servicios, horarios] = await Promise.all([

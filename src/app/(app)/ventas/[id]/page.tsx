@@ -11,6 +11,7 @@ import { CambiarClienteVenta } from "@/components/forms/cambiar-cliente-venta";
 import { BaseComisionVenta } from "@/components/forms/base-comision-venta";
 import { comisionMontoServicio } from "@/lib/data/ingresos-helpers";
 import { formatARS, formatDateTimeLong } from "@/lib/utils";
+import { esAdmin } from "@/lib/auth/access";
 
 export default async function VentaDetallePage({
   params,
@@ -18,7 +19,7 @@ export default async function VentaDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireUser();
-  const puedeRevisar = user.rol === "admin" || user.rol === "encargada";
+  const puedeRevisar = esAdmin(user.rol) || user.rol === "encargada";
   const { id } = await params;
   const [row, sucursales, motivos, cuentas] = await Promise.all([
     getIngreso(id),

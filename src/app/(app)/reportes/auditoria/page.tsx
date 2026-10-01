@@ -13,6 +13,7 @@ import { listSucursales } from "@/lib/data/sucursales";
 import { listUsuariosApp } from "@/lib/data/usuarios";
 import { formatARS, formatDateTime } from "@/lib/utils";
 import { getAnalyticsSnapshot } from "@/lib/data/analytics";
+import { esAdmin } from "@/lib/auth/access";
 
 interface SearchParams {
   rango?: "hoy" | "semana" | "mes" | "todo";
@@ -135,7 +136,7 @@ export default async function ReportesPage({
           {usaFechasCustom
             ? `${sp.desde ?? "inicio"} → ${sp.hasta ?? "hoy"}`
             : RANGOS.find((r) => r.value === rango)?.label.toLowerCase()}
-          {user.rol !== "admin" ? " · vista limitada" : ""}
+          {!esAdmin(user.rol) ? " · vista limitada" : ""}
         </p>
       </header>
 

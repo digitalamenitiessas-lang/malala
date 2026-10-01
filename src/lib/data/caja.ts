@@ -3,7 +3,7 @@
 import { and, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
-import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
+import { buildAccessScope, isSucursalAllowed, esAdmin } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import {
   fechaArDeISO,
@@ -686,7 +686,7 @@ export async function autocerrarDiasSinMovimiento(
   opts?: { dias?: number },
 ): Promise<number> {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada") return 0;
+  if (!esAdmin(user.rol) && user.rol !== "encargada") return 0;
   const scope = buildAccessScope(user);
   if (!scope.puedeVerCaja || !isSucursalAllowed(scope, sucursalId)) return 0;
 

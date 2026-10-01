@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { TableActionLink } from "@/components/table-action-link";
 import { redirect } from "next/navigation";
-import { buildAccessScope, clampSucursalId } from "@/lib/auth/access";
+import { buildAccessScope, clampSucursalId, esAdmin } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import { listEmpleados } from "@/lib/data/empleados";
 import { listSucursales } from "@/lib/data/sucursales";
@@ -49,7 +49,7 @@ export default async function EmpleadosPage({
   const empleados = verBajas ? todos : todos.filter((e) => e.activo);
   const bajas = todos.length - todos.filter((e) => e.activo).length;
   const sucMap = new Map(sucursales.map((s) => [s.id, s.nombre]));
-  const puedeGestionar = user.rol === "admin" || user.rol === "superadmin";
+  const puedeGestionar = esAdmin(user.rol) || user.rol === "superadmin";
 
   return (
     <div className="space-y-8 max-w-5xl">

@@ -10,6 +10,7 @@ import { listProveedores } from "@/lib/data/proveedores";
 import { listServiciosByInsumo } from "@/lib/data/recetas";
 import { listServicios } from "@/lib/data/servicios";
 import { requireUser } from "@/lib/auth/session";
+import { esAdmin } from "@/lib/auth/access";
 
 export default async function EditarInsumoPage({
   params,
@@ -17,7 +18,7 @@ export default async function EditarInsumoPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireUser();
-  if (user.rol !== "admin") redirect("/catalogos/insumos");
+  if (!esAdmin(user.rol)) redirect("/catalogos/insumos");
   const { id } = await params;
   const [insumo, proveedores, serviciosUsando, todosServicios] =
     await Promise.all([

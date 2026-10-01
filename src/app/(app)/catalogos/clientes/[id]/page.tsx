@@ -21,6 +21,7 @@ import { listMediosPago } from "@/lib/data/medios-pago";
 import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { formatARS, formatDate } from "@/lib/utils";
+import { esAdmin } from "@/lib/auth/access";
 
 function fmtFecha(iso: string): string {
   return formatDate(iso);
@@ -36,7 +37,7 @@ export default async function EditarClientePage({
   const cliente = await getCliente(id);
   if (!cliente) notFound();
 
-  const puedeEditar = user.rol === "admin" || user.rol === "encargada";
+  const puedeEditar = esAdmin(user.rol) || user.rol === "encargada";
 
   const sucursal = await getActiveSucursal();
   const [movimientosCc, mediosPago, cuentas] = await Promise.all([

@@ -9,6 +9,7 @@ import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { createEgreso } from "@/lib/data/egresos";
 import { registrarCompraInsumo } from "@/lib/data/insumos";
 import { hoyAr } from "@/lib/fecha-ar";
+import { esAdmin } from "@/lib/auth/access";
 
 function todayYMD(): string {
   return hoyAr();
@@ -20,7 +21,7 @@ export default async function NuevoEgresoPage({
   searchParams: Promise<{ proveedor?: string; compra?: string }>;
 }) {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada") redirect("/egresos");
+  if (!esAdmin(user.rol) && user.rol !== "encargada") redirect("/egresos");
 
   const sucursal = await getActiveSucursal();
   if (!sucursal) redirect("/dev/login");

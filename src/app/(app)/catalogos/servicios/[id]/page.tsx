@@ -15,6 +15,7 @@ import {
 } from "@/lib/data/servicios-horarios";
 import { requireUser } from "@/lib/auth/session";
 import { formatARS } from "@/lib/utils";
+import { esAdmin } from "@/lib/auth/access";
 
 const DIAS = [
   { value: 1, label: "Lunes" },
@@ -36,10 +37,10 @@ export default async function EditarServicioPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada") {
+  if (!esAdmin(user.rol) && user.rol !== "encargada") {
     redirect("/catalogos/servicios");
   }
-  const puedeEditar = user.rol === "admin";
+  const puedeEditar = esAdmin(user.rol);
 
   const { id } = await params;
   const [servicio, horarios, rubros] = await Promise.all([

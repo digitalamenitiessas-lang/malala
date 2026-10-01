@@ -6,10 +6,11 @@ import {
   listRubrosServicios,
 } from "@/lib/data/servicios";
 import { requireUser } from "@/lib/auth/session";
+import { esAdmin } from "@/lib/auth/access";
 
 export default async function NuevoServicioPage() {
   const user = await requireUser();
-  if (user.rol !== "admin") redirect("/catalogos/servicios");
+  if (!esAdmin(user.rol)) redirect("/catalogos/servicios");
 
   const [rubros, codigos] = await Promise.all([
     listRubrosServicios(),

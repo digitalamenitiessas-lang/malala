@@ -8,6 +8,7 @@ import { getActiveSucursalForUser, requireUser } from "@/lib/auth/session";
 import { servicioSchema } from "@/lib/validations/servicio";
 import { esCodigoDuplicado, revalidarCatalogoServicios } from "./_helpers";
 import type { Servicio } from "@/lib/types";
+import { esAdmin } from "@/lib/auth/access";
 
 const CODIGO_REPETIDO = {
   ok: false as const,
@@ -265,7 +266,7 @@ function parse(formData: FormData) {
 export async function createServicio(formData: FormData): Promise<ActionResult> {
   "use server";
   const user = await requireUser();
-  if (user.rol !== "admin") {
+  if (!esAdmin(user.rol)) {
     return { ok: false, errors: { _: ["Solo admin puede crear servicios"] } };
   }
 
@@ -322,7 +323,7 @@ export async function updateServicio(
 ): Promise<ActionResult> {
   "use server";
   const user = await requireUser();
-  if (user.rol !== "admin") {
+  if (!esAdmin(user.rol)) {
     return { ok: false, errors: { _: ["Solo admin puede editar servicios"] } };
   }
 
@@ -389,7 +390,7 @@ export async function toggleServicioActivo(
 ): Promise<ActionResult> {
   "use server";
   const user = await requireUser();
-  if (user.rol !== "admin") {
+  if (!esAdmin(user.rol)) {
     return { ok: false, errors: { _: ["Solo admin"] } };
   }
 

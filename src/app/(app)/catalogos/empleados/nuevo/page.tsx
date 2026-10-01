@@ -3,7 +3,7 @@ import { EmpleadoForm } from "@/components/forms/empleado-form";
 import { createEmpleado } from "@/lib/data/empleados";
 import { listSucursales } from "@/lib/data/sucursales";
 import { requireUser } from "@/lib/auth/session";
-import { buildAccessScope } from "@/lib/auth/access";
+import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 
 const ROL_LABEL: Record<string, string> = {
   empleado: "Empleado",
@@ -13,7 +13,7 @@ const ROL_LABEL: Record<string, string> = {
 
 export default async function NuevoEmpleadoPage() {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "superadmin") {
+  if (!esAdmin(user.rol)) {
     redirect("/catalogos/empleados");
   }
   const scope = buildAccessScope(user);

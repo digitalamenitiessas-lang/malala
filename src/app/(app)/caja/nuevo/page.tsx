@@ -13,6 +13,7 @@ import {
 import { formatARS } from "@/lib/utils";
 import { CierreCajaSimpleForm } from "@/components/forms/cierre-caja-simple-form";
 import { hoyAr } from "@/lib/fecha-ar";
+import { esAdmin } from "@/lib/auth/access";
 
 function todayYMD(): string {
   return hoyAr();
@@ -24,7 +25,7 @@ export default async function NuevoCierrePage({
   searchParams: Promise<{ fecha?: string }>;
 }) {
   const user = await requireUser();
-  if (user.rol !== "admin" && user.rol !== "encargada") redirect("/caja");
+  if (!esAdmin(user.rol) && user.rol !== "encargada") redirect("/caja");
 
   const sucursal = await getActiveSucursal();
   if (!sucursal) redirect("/dev/login");

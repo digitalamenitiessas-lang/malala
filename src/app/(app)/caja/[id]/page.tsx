@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { formatARS, formatDateTimeLong } from "@/lib/utils";
 import { ReabrirCierreButton } from "./reabrir-button";
 import { DesgloseCaja } from "../desglose-caja";
+import { esAdmin } from "@/lib/auth/access";
 
 function formatYMD(ymd: string): string {
   const [y, m, d] = ymd.split("-");
@@ -22,7 +23,7 @@ export default async function CierreDetallePage({
   if (!data) notFound();
 
   const { cierre, sucursal_nombre, cerrado_por_nombre, efectivoEsperado } = data;
-  const isAdmin = user.rol === "admin";
+  const isAdmin = esAdmin(user.rol);
 
   const resumen = await getResumenDelDia(cierre.sucursal_id, cierre.fecha);
   const arqueo = await getCierreCuentas(cierre.id);
