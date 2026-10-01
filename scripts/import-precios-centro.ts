@@ -18,6 +18,7 @@
 import "../envConfig";
 import { readFileSync } from "node:fs";
 import { leerXlsx } from "./lib/xlsx";
+import { norm, RUBRO_NORM } from "./lib/rubros-centro";
 import { getSqlClient } from "../src/lib/db/client/postgres";
 
 const CE = "seed-000001";
@@ -89,9 +90,15 @@ async function main() {
   }
   const filas = leerTabla(ARCHIVO);
   const cab = filas[0].map((h) => h.toLowerCase().trim());
-  const iCod = cab.findIndex((h) => h.startsWith("codigo"));
+  const iCod = cab.findIndex((h) => /^cod/.test(h));
   const iEf = cab.findIndex((h) => h.includes("efectivo"));
-  const iLi = cab.findIndex((h) => h.includes("lista"));
+  // "Precio LISTA (tarjeta)" en la planilla que mandamos nosotros, "Precio
+  // Tarjeta 3 Cuotas" en la lista propia del salon. Es la misma columna.
+  const iLi = cab.findIndex((h) => h.includes("lista") || h.includes("tarjeta"));
+  // Opcionales: si vienen, se pueden dar de alta los codigos que todavia no
+  // estan cargados en vez de solo avisar que no existen.
+  const iNom = cab.findIndex((h) => /^servicio|nombre/.test(h));
+  const iSub = cab.findIndex((h) => h.includes("subrubro"));
   if (iCod < 0 || iEf < 0 || iLi < 0) {
     console.log(`La planilla no tiene las columnas esperadas. Encabezado leido: ${cab.join(" | ")}`);
     process.exit(1);
@@ -104,30 +111,64 @@ async function main() {
      where ss.sucursal_id = ${CE} and s.codigo is not null`) as any[];
   const porCodigo = new Map(actuales.map((s) => [String(s.codigo).trim(), s]));
 
-  const cambios: Array<{ s: any; ef: number; li: number }> = [];
+  const cambios: Array<{ s: any; ef: number; li: number; nom?: string }> = [];
+  const altas: Array<{ cod: string; nom: string; sub: string; ef: number; li: number }> = [];
   const sinCodigo: string[] = [];
   const vacias: string[] = [];
 
   for (const f of filas.slice(1)) {
     const cod = String(f[iCod] ?? "").trim();
     if (!cod) continue;
-    const s = porCodigo.get(cod);
-    if (!s) { sinCodigo.push(cod); continue; }
     const ef = plata(f[iEf]);
     // Sin precio de lista se usa el de efectivo: un servicio sin recargo de
     // tarjeta es valido, cero no lo es (romperia el calculo de comision, que
     // toma precio_efectivo como base del catalogo).
     const li = plata(f[iLi]) ?? ef;
+    const s = porCodigo.get(cod);
+    if (!s) {
+      // Un codigo que no esta cargado se puede dar de alta, pero solo si la
+      // planilla dice como se llama y en que rubro va. Inventar cualquiera de
+      // las dos cosas seria meter basura en el catalogo.
+      const nom = iNom >= 0 ? String(f[iNom] ?? "").trim() : "";
+      const sub = iSub >= 0 ? String(f[iSub] ?? "").trim() : "";
+      if (nom && sub && ef != null && li != null) altas.push({ cod, nom, sub, ef, li });
+      else sinCodigo.push(cod);
+      continue;
+    }
     if (ef == null || li == null) { vacias.push(cod); continue; }
-    if (s.precio_efectivo === ef && s.precio_lista === li && s.activo) continue;
-    cambios.push({ s, ef, li });
+    // El nombre de la planilla manda cuando dice otra cosa ("Podo + Tradicional"
+    // contra "Podo + Semi o Tradicional"): es la lista desde la que venden.
+    //
+    // Pero SOLO cuando dice otra cosa. Las planillas vienen sin tildes y con
+    // mayusculas a mano, asi que comparar la cadena cruda renombraria "Color
+    // raiz + nutricion" sobre "Color raíz + nutrición" y el catalogo perderia
+    // los acentos que ya tiene bien puestos.
+    const nom = iNom >= 0 ? String(f[iNom] ?? "").trim() : "";
+    const renombra = nom && norm(nom) !== norm(String(s.nombre)) ? nom : undefined;
+    if (s.precio_efectivo === ef && s.precio_lista === li && s.activo && !renombra) continue;
+    cambios.push({ s, ef, li, nom: renombra });
   }
 
   console.log(`${filas.length - 1} filas leidas.`);
   console.log(`  con precio para aplicar : ${cambios.length}`);
+  console.log(`  altas nuevas            : ${altas.length}`);
   console.log(`  todavia sin completar   : ${vacias.length}`);
   if (sinCodigo.length) {
-    console.log(`  codigos que no existen en Centro (${sinCodigo.length}): ${sinCodigo.slice(0, 10).join(", ")}`);
+    console.log(`  codigos que no existen y no se pueden crear (${sinCodigo.length}): ${sinCodigo.slice(0, 10).join(", ")}`);
+  }
+
+  const renombres = cambios.filter((c) => c.nom);
+  if (renombres.length) {
+    console.log(`\n  ${renombres.length} servicios se renombran segun la planilla:`);
+    for (const c of renombres) {
+      console.log(`     ${c.s.codigo}  "${String(c.s.nombre).slice(0, 34)}"  ->  "${c.nom!.slice(0, 34)}"`);
+    }
+  }
+  if (altas.length) {
+    console.log(`\n  Altas:`);
+    for (const a of altas) {
+      console.log(`     ${a.cod.padEnd(8)} ${a.nom.slice(0, 40).padEnd(42)} ${a.sub.slice(0, 22).padEnd(24)} $${a.ef}`);
+    }
   }
 
   // Un precio de lista por debajo del de efectivo casi siempre es que se
@@ -146,8 +187,26 @@ async function main() {
   }
   for (const c of cambios) {
     await sql`update servicios
-                 set precio_efectivo = ${c.ef}, precio_lista = ${c.li}, activo = true
+                 set precio_efectivo = ${c.ef},
+                     precio_lista = ${c.li},
+                     nombre = ${c.nom ?? c.s.nombre},
+                     activo = true
                where id = ${c.s.id}`;
+  }
+  for (const a of altas) {
+    const rubro = RUBRO_NORM.get(norm(a.sub));
+    if (!rubro) {
+      console.log(`  (saltada) ${a.cod}: subrubro "${a.sub}" sin equivalente de rubro`);
+      continue;
+    }
+    const id = crypto.randomUUID();
+    await sql`insert into servicios
+      (id, rubro, nombre, codigo, precio_lista, precio_efectivo,
+       comision_default_pct, activo, visible_reserva, es_promo)
+      values (${id}, ${rubro}, ${a.nom}, ${a.cod}, ${a.li}, ${a.ef},
+              0, true, false, false)`;
+    await sql`insert into servicio_sucursal (id, servicio_id, sucursal_id)
+      values (${crypto.randomUUID()}, ${id}, ${CE})`;
   }
   const faltan = (await sql`
     select count(*)::int n from servicios s

@@ -38,45 +38,12 @@
 import "../envConfig";
 import { readFileSync } from "node:fs";
 import { getSqlClient } from "../src/lib/db/client/postgres";
+import { norm, RUBRO_NORM, rubroDeSubrubro } from "./lib/rubros-centro";
 
 const CE = "seed-000001";
 const APLICAR = process.argv.includes("--aplicar");
 const BAJA_VIEJOS = process.argv.includes("--baja-viejos");
 
-const norm = (s: string) =>
-  String(s ?? "")
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-
-/**
- * El subrubro de la planilla ES el rubro de Yerba Buena, con otra grafia. Se
- * mapea a la cadena exacta que ya usa YB para que el comparativo por rubro
- * ponga las dos sucursales en la misma fila: "Coloracion" y "COLORACION" serian
- * dos rubros distintos para el reporte.
- */
-const RUBRO: Record<string, string> = {
-  "Corte y peinado": "CORTE Y PEINADO",
-  Lavados: "LAVADOS",
-  "Tratamientos capilares": "TRATAMIENTOS CAPILARES",
-  "Trabajos tecnicos": "TRABAJOS TECNICOS",
-  Coloracion: "COLORACION",
-  Combos: "COMBOS",
-  Adicionales: "ADICIONALES",
-  Nails: "NAILS",
-  "Cejas y pestanas": "CEJAS Y PESTAÑAS",
-  Facial: "FACIAL",
-  // Sin equivalente en YB: rubro nuevo de Centro.
-  "Alquiler de Gabinete": "ALQUILER DE GABINETE",
-  "Gift Cards": "GIFT CARDS",
-};
-
-/** El mapa se indexa normalizado para no depender de tildes ni mayusculas. */
-const RUBRO_NORM = new Map(
-  Object.entries(RUBRO).map(([k, v]) => [norm(k), v]),
-);
 
 interface Fila {
   codigo: string;
@@ -110,8 +77,7 @@ async function main() {
   const reusar: Array<{ fila: Fila; actual: any }> = [];
   const crear: Fila[] = [];
   for (const f of plan) {
-    const rubro = RUBRO_NORM.get(norm(f.subrubro));
-    if (!rubro) throw new Error(`Subrubro sin mapear: "${f.subrubro}" (${f.codigo})`);
+    rubroDeSubrubro(f.subrubro, f.codigo);
     // Por codigo primero: si el script ya corrio una vez, la fila reusada quedo
     // con el codigo puesto y el nombre puede haberlo editado el salon.
     const actual = porCodigo.get(f.codigo) ?? porNombre.get(norm(f.servicio));
@@ -120,7 +86,17 @@ async function main() {
   }
 
   const reclamados = new Set(reusar.map((r) => r.actual.id));
-  const sobran = actuales.filter((s) => !reclamados.has(s.id) && s.activo);
+  // Lo que sale del catalogo es lo que vino de Calendico, y lo que lo
+  // identifica es NO tener codigo: esa carga nunca los tuvo.
+  //
+  // No alcanza con "no esta en el JSON de la planilla". La lista de precios del
+  // salon trajo servicios que la planilla de costos no tenia (los Ionizados,
+  // las Nutriciones question, el masaje), y esos entraron con codigo y precio:
+  // son catalogo nuevo, no resto viejo. Filtrar por el JSON los apagaria el
+  // mismo dia que se cargaron.
+  const sobran = actuales.filter(
+    (s) => !reclamados.has(s.id) && s.activo && !s.codigo,
+  );
 
   console.log(`Planilla: ${plan.length} prestaciones. Centro hoy: ${actuales.length}.`);
   console.log(`  REUSAR (se les pone codigo y rubro) : ${reusar.length}`);
@@ -153,17 +129,26 @@ async function main() {
     // Segunda pasada. Solo tiene sentido cuando el catalogo nuevo ya se puede
     // vender: si los nuevos siguen en $0 y ademas se apagan los viejos, la caja
     // de Centro se queda sin nada que cobrar.
-    const sinPrecio = (await sql`
-      select count(*)::int n from servicios s
+    //
+    // La condicion es sobre los ACTIVOS. Un servicio en $0 pero inactivo no es
+    // un problema: no se puede vender y no le falta nada a la caja. Son los que
+    // la lista de precios del salon no incluyo, o sea los que dejaron de
+    // ofrecer. Lo que no puede pasar es apagar el catalogo viejo y que lo que
+    // queda vendible este en cero.
+    const [estado] = (await sql`
+      select count(*) filter (where s.activo and s.precio_efectivo > 0)::int vendibles,
+             count(*) filter (where s.activo and s.precio_efectivo <= 0)::int activos_en_cero
+        from servicios s
         join servicio_sucursal ss on ss.servicio_id = s.id
-       where ss.sucursal_id = ${CE} and s.codigo is not null and s.precio_efectivo <= 0`) as any[];
-    if (sinPrecio[0].n > 0) {
+       where ss.sucursal_id = ${CE} and s.codigo is not null`) as any[];
+    if (estado.activos_en_cero > 0 || estado.vendibles === 0) {
       console.log(
-        `\nNO se dan de baja los viejos: ${sinPrecio[0].n} servicios nuevos siguen en $0.`,
+        `\nNO se dan de baja los viejos: ${estado.vendibles} servicios vendibles y ${estado.activos_en_cero} activos en $0.`,
       );
       console.log(`Cargar los precios primero, si no Centro se queda sin catalogo vendible.`);
       process.exit(1);
     }
+    console.log(`\nEl catalogo nuevo tiene ${estado.vendibles} servicios con precio.`);
     console.log(`\nDando de baja ${sobran.length} servicios de la carga de Calendico.`);
     if (APLICAR && sobran.length) {
       await sql`update servicios set activo = false, visible_reserva = false
