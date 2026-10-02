@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth/session";
 import {
   aperturasCaja as aperturasCajaTable,
   aperturaCajaCuentas as aperturaCajaCuentasTable,
+  cierreCajaCuentas as cierreCajaCuentasTable,
   cierresCaja as cierresCajaTable,
 } from "@/lib/db/schema";
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
@@ -68,7 +69,24 @@ function mapLinea(
 
 export interface AperturaCuentaSugerida {
   cuenta: CuentaBancaria;
+  /** Lo que el sistema calcula que debería haber. Contra esto se mide el ajuste. */
   esperado: number;
+  /**
+   * Lo que se propone en el casillero. Es lo CONTADO en el último cierre cuando
+   * hay uno, y el esperado cuando no.
+   *
+   * No son lo mismo y confundirlos costaba plata. El cierre guarda el arqueo
+   * pero no toca saldos (a propósito: cerrar no es mover plata), así que si la
+   * caja cerró con $15.000 de más, al día siguiente el esperado seguía sin
+   * contarlos. Alguien tenía que acordarse de copiar el contado a mano, y el
+   * día que no se acordó esos $15.000 desaparecieron. Caso real, reportado
+   * desde el mostrador.
+   */
+  sugerido: number;
+  /** De qué cierre sale la corrección, para poder decirlo en pantalla. */
+  contadoEn?: string;
+  /** Contado menos esperado en ese cierre. Lo que falta sumar al saldo de hoy. */
+  correccion?: number;
 }
 
 /**
@@ -84,9 +102,58 @@ export async function getSugerenciasApertura(
   if (!scope.puedeVerCaja || !isSucursalAllowed(scope, sucursalId)) return [];
 
   const saldos = await listSaldos({ sucursalId });
+
+  // Lo contado en el último cierre: es con lo que arranca el día de verdad,
+  // porque es la plata que quedó en el cajón. El esperado puede diferir y esa
+  // diferencia es justamente lo que hay que ajustar, no lo que hay que arrastrar.
+  const db = getDb();
+  const [ultimo] = await db
+    .select({
+      id: cierresCajaTable.id,
+      fecha: cierresCajaTable.fecha,
+      fechaCierre: cierresCajaTable.fechaCierre,
+    })
+    .from(cierresCajaTable)
+    .where(eq(cierresCajaTable.sucursalId, sucursalId))
+    .orderBy(desc(cierresCajaTable.fecha))
+    .limit(1);
+
+  const contadoPorCuenta = new Map<string, number>();
+  if (ultimo) {
+    const filas = await db
+      .select({
+        cuentaId: cierreCajaCuentasTable.cuentaId,
+        contado: cierreCajaCuentasTable.saldoContado,
+        esperado: cierreCajaCuentasTable.saldoEsperado,
+      })
+      .from(cierreCajaCuentasTable)
+      .where(eq(cierreCajaCuentasTable.cierreId, ultimo.id));
+
+    // Lo contado vale para el momento del cierre, no para ahora: después se
+    // sigue vendiendo. Arrastrar el contado pelado borraría todo lo que entró
+    // desde entonces — en Yerba Buena eran $50.600 de ventas posteriores al
+    // cierre. Lo que se arrastra es la CORRECCIÓN (contado − esperado), que es
+    // el dato que el arqueo aporta y que hoy se pierde.
+    for (const f of filas) {
+      const correccion = f.contado - f.esperado;
+      if (Math.abs(correccion) > EPSILON) {
+        contadoPorCuenta.set(f.cuentaId, correccion);
+      }
+    }
+  }
+
   return saldos
     .filter((s) => s.cuenta.activo)
-    .map((s) => ({ cuenta: s.cuenta, esperado: s.saldo }))
+    .map((s) => {
+      const correccion = contadoPorCuenta.get(s.cuenta.id);
+      return {
+        cuenta: s.cuenta,
+        esperado: s.saldo,
+        sugerido: s.saldo + (correccion ?? 0),
+        contadoEn: correccion != null ? ultimo?.fecha : undefined,
+        correccion,
+      };
+    })
     .sort((a, b) => {
       // efectivo primero, luego alfabético por nombre
       const ae = a.cuenta.tipo === "efectivo" ? 0 : 1;

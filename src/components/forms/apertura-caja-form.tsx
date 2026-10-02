@@ -28,7 +28,9 @@ export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
   const [cajaAbierta, setCajaAbierta] = useState<string | null>(null);
   const [observacion, setObservacion] = useState("");
   const [declarado, setDeclarado] = useState<Record<string, number>>(() =>
-    Object.fromEntries(cuentas.map((cuenta) => [cuenta.cuenta.id, cuenta.esperado])),
+    // Arranca en lo CONTADO del ultimo cierre, no en lo esperado: es la plata
+    // que de verdad quedo en el cajon. Igual se puede pisar contando de nuevo.
+    Object.fromEntries(cuentas.map((cuenta) => [cuenta.cuenta.id, cuenta.sugerido])),
   );
 
   const totales = useMemo(() => {
@@ -36,7 +38,7 @@ export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
     let decl = 0;
     for (const cuenta of cuentas) {
       esperado += cuenta.esperado;
-      decl += declarado[cuenta.cuenta.id] ?? cuenta.esperado;
+      decl += declarado[cuenta.cuenta.id] ?? cuenta.sugerido;
     }
     return { esperado, declarado: decl, diferencia: decl - esperado };
   }, [cuentas, declarado]);
@@ -52,7 +54,7 @@ export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
     for (const cuenta of cuentas) {
       fd.set(
         `declarado_${cuenta.cuenta.id}`,
-        String(declarado[cuenta.cuenta.id] ?? cuenta.esperado),
+        String(declarado[cuenta.cuenta.id] ?? cuenta.sugerido),
       );
     }
 
@@ -94,7 +96,7 @@ export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
           </thead>
           <tbody className="divide-y divide-border">
             {cuentas.map((cuenta) => {
-              const decl = declarado[cuenta.cuenta.id] ?? cuenta.esperado;
+              const decl = declarado[cuenta.cuenta.id] ?? cuenta.sugerido;
               const diff = decl - cuenta.esperado;
               return (
                 <tr key={cuenta.cuenta.id}>
@@ -106,6 +108,18 @@ export function AperturaCajaForm({ sucursalId, fecha, cuentas }: Props) {
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                     {formatARS(cuenta.esperado)}
+                    {/* El arqueo del cierre no mueve saldos, así que cuando lo
+                        contado difiere del esperado hay que decirlo: si no, el
+                        número de arriba parece el único dato y la diferencia
+                        contada se pierde al día siguiente. */}
+                    {cuenta.contadoEn && cuenta.correccion != null && (
+                      <span className="block text-[10px] text-warning">
+                        incluye {cuenta.correccion > 0 ? "+" : ""}
+                        {formatARS(cuenta.correccion)} que contaste de
+                        {cuenta.correccion > 0 ? " mas" : " menos"} al cerrar el{" "}
+                        {cuenta.contadoEn}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <CurrencyInput
