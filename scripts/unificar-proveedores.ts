@@ -34,8 +34,9 @@ async function main() {
     process.exit(1);
   }
 
-  const filas = (await sql`
-    select id, nombre, deuda_pendiente from proveedores where id in (${queda}, ${sale})`) as any[];
+  const filas = await sql<
+    { id: string; nombre: string; deuda_pendiente: number }[]
+  >`select id, nombre, deuda_pendiente from proveedores where id in (${queda}, ${sale})`;
   const pQueda = filas.find((p) => p.id === queda);
   const pSale = filas.find((p) => p.id === sale);
   if (!pQueda || !pSale) {
@@ -43,7 +44,9 @@ async function main() {
     process.exit(1);
   }
 
-  const [n] = (await sql`
+  const [n] = await sql<
+    { egresos: number; insumos: number; sucursales: number; insumos_repetidos: number }[]
+  >`
     select
       (select count(*)::int from egresos where proveedor_id = ${sale}) egresos,
       (select count(*)::int from insumo_proveedores where proveedor_id = ${sale}) insumos,
@@ -51,7 +54,7 @@ async function main() {
       (select count(*)::int from insumo_proveedores ip
         where ip.proveedor_id = ${sale}
           and exists (select 1 from insumo_proveedores q
-                       where q.proveedor_id = ${queda} and q.insumo_id = ip.insumo_id)) insumos_repetidos`) as any[];
+                       where q.proveedor_id = ${queda} and q.insumo_id = ip.insumo_id)) insumos_repetidos`;
 
   console.log(`Queda:   ${pQueda.id}  "${pQueda.nombre}"  deuda $${pQueda.deuda_pendiente}`);
   console.log(`Se borra:${pSale.id}  "${pSale.nombre}"  deuda $${pSale.deuda_pendiente}`);
