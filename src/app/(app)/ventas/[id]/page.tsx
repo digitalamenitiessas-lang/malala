@@ -231,7 +231,25 @@ export default async function VentaDetallePage({
                       ) : (
                         <>
                           {formatARS(l.comision_monto)}
-                          <span className="text-xs"> ({l.comision_pct}%)</span>
+                          {/* El porcentaje solo no alcanza y confunde: la base
+                              de la comisión es el precio EN EFECTIVO del
+                              catálogo, no lo que se cobró. Cuando la clienta
+                              paga con tarjeta, la línea dice $35.000 y la
+                              comisión $8.400, que es el 30% de $28.000 — y en
+                              pantalla parecía un error de cálculo. Lo
+                              preguntaron desde el mostrador dos veces. */}
+                          {(() => {
+                            const base = l.servicio?.precio_efectivo;
+                            const cobrado = l.cantidad > 0 ? l.subtotal / l.cantidad : 0;
+                            const esOtraBase =
+                              base != null && Math.abs(base - cobrado) > 0.5;
+                            return (
+                              <span className="block text-xs">
+                                {l.comision_pct}%
+                                {esOtraBase && ` de ${formatARS(base)} (efectivo)`}
+                              </span>
+                            );
+                          })()}
                         </>
                       )}
                     </td>
