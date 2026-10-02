@@ -45,6 +45,23 @@ export const egresoSchema = z
         message: "Elegí con qué se pagó",
       });
     }
+    // Un gasto a pagar SIN proveedor queda en el aire: no sale plata de la caja
+    // y tampoco le queda deuda a nadie, porque la deuda se carga a la cuenta del
+    // proveedor y sin proveedor no hay cuenta donde cargarla.
+    //
+    // Pasó con una compra de ampollas de $64.000: se dejó "a pagar" —que era lo
+    // correcto— pero el campo decía "Proveedor (opcional)" y quedó vacío. El
+    // insumo entró al stock, la plata nunca salió, y cuando fueron a buscar la
+    // deuda del proveedor no había nada. El campo es opcional sólo cuando el
+    // gasto ya está pagado.
+    if (!data.pagado && !data.proveedor_id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["proveedor_id"],
+        message:
+          "Elegí el proveedor: si el gasto queda a pagar, la deuda va a su cuenta. Sin proveedor no queda registrada en ningún lado.",
+      });
+    }
     // Si se vinculó un insumo, exigir cantidad > 0
     if (data.insumo_id && (!data.cantidad || data.cantidad <= 0)) {
       ctx.addIssue({

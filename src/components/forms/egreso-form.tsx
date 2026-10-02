@@ -238,7 +238,16 @@ export function EgresoForm({
       )}
 
       <SelectField
-        label={esCompraInsumo ? "Proveedor" : "Proveedor (opcional)"}
+        // Opcional solo si ya esta pagado. Si queda a pagar, la deuda va a la
+        // cuenta del proveedor y sin proveedor no queda registrada en ningun
+        // lado: el gasto no sale de la caja y nadie figura como acreedor.
+        label={
+          !pagado
+            ? "Proveedor (a quien se le debe)"
+            : esCompraInsumo
+              ? "Proveedor"
+              : "Proveedor (opcional)"
+        }
         name="proveedor_id"
         value={proveedorId}
         onChange={(e) => setProveedorId(e.currentTarget.value)}
