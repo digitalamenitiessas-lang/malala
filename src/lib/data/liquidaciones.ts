@@ -885,6 +885,8 @@ export async function marcarLiquidacionPagada(
 
   const parsed = liquidacionPagoSchema.safeParse({
     mp_id: formData.get("mp_id"),
+    mp2_id: formData.get("mp2_id"),
+    valor2: formData.get("valor2"),
     observacion: formData.get("observacion"),
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
@@ -965,6 +967,17 @@ export async function marcarLiquidacionPagada(
 
       if (montoAPagar > 0.01) {
         egresoIdFinal = egresoId;
+
+        // Reparto entre los dos medios. El total lo fija la liquidación, así
+        // que sólo se pide cuánto va por el segundo y el resto cae en el
+        // primero: pedir los dos montos permitiría que sumen otra cosa que el
+        // sueldo. Se acota para que una cifra de más no deje el primero en
+        // negativo.
+        const monto2 = parsed.data.mp2_id
+          ? Math.min(Math.max(Number(parsed.data.valor2) || 0, 0), montoAPagar)
+          : 0;
+        const monto1 = montoAPagar - monto2;
+
         await tx.insert(egresosTable).values({
           id: egresoId,
           fecha: ahora,
@@ -972,17 +985,30 @@ export async function marcarLiquidacionPagada(
           rubroId: rubro.id,
           valor: montoAPagar,
           mpId: parsed.data.mp_id,
+          mp2Id: monto2 > 0 ? parsed.data.mp2_id : null,
+          valor2: monto2 > 0 ? monto2 : null,
           observacion: observacionEgreso,
           pagado: true,
           usuarioId: user.id,
         });
 
-        const cuentaId = await getCuentaIdForMpTx(tx, parsed.data.mp_id);
-        if (cuentaId) {
+        // Un movimiento por medio, igual que un gasto cargado a mano. Si fuera
+        // uno solo por el total, el arqueo de efectivo descontaría también la
+        // parte que salió del banco.
+        const pagos: Array<{ mpId: string; monto: number }> = [
+          { mpId: parsed.data.mp_id, monto: monto1 },
+        ];
+        if (monto2 > 0 && parsed.data.mp2_id) {
+          pagos.push({ mpId: parsed.data.mp2_id, monto: monto2 });
+        }
+        for (const pago of pagos) {
+          if (pago.monto <= 0.01) continue;
+          const cuentaId = await getCuentaIdForMpTx(tx, pago.mpId);
+          if (!cuentaId) continue;
           await emitMovimientoBancarioTx(tx, {
             cuentaId,
             fecha: ahora,
-            monto: -Math.abs(montoAPagar),
+            monto: -Math.abs(pago.monto),
             tipo: "egreso",
             sucursalId: existing.sucursalId,
             refTipo: "egreso",
@@ -998,6 +1024,8 @@ export async function marcarLiquidacionPagada(
         .set({
           estado: "pagada",
           mpId: parsed.data.mp_id,
+          mp2Id: parsed.data.mp2_id ?? null,
+          valor2: parsed.data.mp2_id ? (Number(parsed.data.valor2) || 0) : null,
           fechaPago: ahora,
           observacion: parsed.data.observacion ?? null,
           egresoId: egresoIdFinal,

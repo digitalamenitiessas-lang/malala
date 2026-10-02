@@ -210,6 +210,7 @@ export default async function LiquidacionDetallePage({
             <MarcarPagadaForm
               liquidacionId={liquidacion.id}
               mediosPago={mediosPagoActivos}
+              totalPagar={liquidacion.total_pagar}
             />
           ) : (
             <section className="bg-card border border-border rounded-md p-5 space-y-2 text-sm">

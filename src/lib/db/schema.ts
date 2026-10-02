@@ -1026,6 +1026,10 @@ export const liquidaciones = pgTable(
     totalPagar: doublePrecision("total_pagar").notNull().default(0),
     estado: liquidacionEstadoEnum("estado").notNull().default("pendiente"),
     mpId: text("mp_id").references(() => mediosPago.id),
+    // Segundo medio: parte en efectivo y parte por transferencia es como se
+    // paga de verdad cuando la caja no tiene todo el sueldo. Ver drizzle/0054.
+    mp2Id: text("mp2_id").references(() => mediosPago.id),
+    valor2: doublePrecision("valor2"),
     fechaPago: timestamp("fecha_pago", { withTimezone: true }),
     observacion: text("observacion"),
     egresoId: text("egreso_id"),

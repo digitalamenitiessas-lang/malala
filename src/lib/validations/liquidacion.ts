@@ -35,10 +35,38 @@ export const liquidacionCreateSchema = liquidacionPreviewSchema.extend({
 
 export const liquidacionPagoSchema = z.object({
   mp_id: z.string().min(1, "Medio de pago requerido"),
+  /**
+   * Segundo medio, opcional: parte en efectivo y parte por transferencia es
+   * como se paga cuando la caja no tiene todo el sueldo.
+   *
+   * valor2 es lo que se paga con ESTE medio; el resto va por el primero. Se
+   * guarda así, y no los dos montos, porque el total ya está fijado por la
+   * liquidación: pedir los dos permitiría que sumen otra cosa.
+   */
+  mp2_id: z
+    .string()
+    .nullish()
+    .transform((s) => (s ? s : undefined)),
+  valor2: z.coerce.number().optional(),
   observacion: z
     .string()
     .optional()
     .transform((s) => (s ?? "").trim() || undefined),
+}).superRefine((data, ctx) => {
+  if (data.mp2_id && data.mp2_id === data.mp_id) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["mp2_id"],
+      message: "Es el mismo medio que el primero",
+    });
+  }
+  if (data.mp2_id && !(Number(data.valor2) > 0)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["valor2"],
+      message: "Poné cuánto se paga con el segundo medio",
+    });
+  }
 });
 
 export type LiquidacionPreviewInput = z.infer<typeof liquidacionPreviewSchema>;
