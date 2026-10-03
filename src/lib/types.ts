@@ -361,6 +361,13 @@ export interface MedioPago {
   activo: boolean;
   cuenta_id?: ID;
   recargo_pct: number; // 0-100, recargo automático al cobrar con este medio
+  /**
+   * Moneda en la que se cobra con este medio. "ARS" en todos menos USD.
+   *
+   * Cuando no es ARS, la caja pide el importe en esa moneda y la cotización, y
+   * lo que se guarda son PESOS al cambio del momento. Ver drizzle/0055.
+   */
+  moneda: string;
 }
 
 export type TipoCuenta = "banco" | "efectivo";

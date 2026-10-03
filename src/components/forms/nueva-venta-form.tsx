@@ -291,6 +291,12 @@ export function NuevaVentaForm({
   const [mp2CuentaId, setMp2CuentaId] = useState("");
 
   // Qué tarjeta se canjea en cada tramo, cuando el medio es GIFT.
+  // Cotización del día, la carga quien cobra. El salón la toma del tipo de
+  // cambio venta de su banco y cambia todos los días, así que no se guarda
+  // configurada en ningún lado: se escribe en el momento y queda en la venta.
+  const [cotizacion, setCotizacion] = useState(0);
+  /** Lo que entregó la clienta en esa moneda. */
+  const [moneda, setMoneda] = useState(0);
   const [giftCard1Id, setGiftCard1Id] = useState("");
   const [giftCard2Id, setGiftCard2Id] = useState("");
 
@@ -386,6 +392,15 @@ export function NuevaVentaForm({
   // Recargo automático por medio de pago (ej. tarjeta de crédito).
   const mp1 = mediosPago.find((m) => m.id === mp1Id);
   const mp2 = mp2Id ? mediosPago.find((m) => m.id === mp2Id) : undefined;
+  // Cobro en moneda extranjera. Lo que se guarda siempre son PESOS: la caja,
+  // las comisiones y los reportes son en pesos y no tiene sentido mezclarlos.
+  // Lo que cambia es de dónde sale ese número — acá de dólares por cotización
+  // en vez de tipearlo a mano, que es como lo venían haciendo con la
+  // calculadora y sin que quedara registrado a qué cambio.
+  const mp1Moneda = mp1 && mp1.moneda !== "ARS" ? mp1.moneda : null;
+  const mp2Moneda = mp2 && mp2.moneda !== "ARS" ? mp2.moneda : null;
+  const usaMonedaExtranjera = !!mp1Moneda || !!mp2Moneda;
+
   const recargo1 = (Number(valor1) || 0) * ((mp1?.recargo_pct ?? 0) / 100);
   const recargo2 = mp2 ? (Number(valor2) || 0) * ((mp2.recargo_pct ?? 0) / 100) : 0;
   const recargoTotal = recargo1 + recargo2;
@@ -780,6 +795,7 @@ export function NuevaVentaForm({
       );
       formData.set("gift_card_2_id", mp2EsGift ? giftCard2Id : "");
     }
+    formData.set("cotizacion", usaMonedaExtranjera ? String(cotizacion) : "");
     formData.set("observacion", observacion);
     formData.set("cliente_satisfecho", clienteSatisfecho ? "true" : "false");
     formData.set(
@@ -1346,8 +1362,85 @@ export function NuevaVentaForm({
                 + recargo {mp1?.recargo_pct}% = {formatARS(valor1 + recargo1)} a cobrar
               </p>
             )}
+            {/* En moneda extranjera el campo de arriba sigue siendo pesos —es
+                lo que se guarda— y acá abajo se escribe lo que la clienta
+                entregó. Al revés seria peor: el importe en dolares cambiaria
+                de valor solo si alguien toca la cotizacion despues. */}
+            {mp1Moneda && (
+              <p className="text-[10px] text-muted-foreground tabular-nums">
+                {valor1 > 0 && cotizacion > 0
+                  ? `= ${(valor1 / cotizacion).toFixed(2)} ${mp1Moneda} a $${cotizacion}`
+                  : `Poné los ${mp1Moneda} abajo y se calculan los pesos.`}
+              </p>
+            )}
           </div>
         </div>
+
+        {/* Conversión. Vive fuera de los medios porque la cotización es una
+            sola para el ticket: nadie paga con dólares a dos cambios distintos
+            en la misma venta. */}
+        {usaMonedaExtranjera && (
+          <div className="rounded-md border border-border bg-cream/30 p-3 space-y-2">
+            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+              Cobro en {mp1Moneda ?? mp2Moneda}
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+              <div className="space-y-1">
+                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Cuántos {mp1Moneda ?? mp2Moneda}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={moneda > 0 ? moneda : ""}
+                  onChange={(e) => {
+                    const v = Number(e.target.value) || 0;
+                    setMoneda(v);
+                    const pesos = Math.round(v * cotizacion);
+                    if (cotizacion > 0) {
+                      if (mp1Moneda) {
+                        setValor1(pesos);
+                        if (mp2Id) setValor2(Math.max(0, total - pesos));
+                      } else setValor2(pesos);
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Cotización
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={cotizacion > 0 ? cotizacion : ""}
+                  onChange={(e) => {
+                    const c = Number(e.target.value) || 0;
+                    setCotizacion(c);
+                    const pesos = Math.round(moneda * c);
+                    if (moneda > 0) {
+                      if (mp1Moneda) {
+                        setValor1(pesos);
+                        if (mp2Id) setValor2(Math.max(0, total - pesos));
+                      } else setValor2(pesos);
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <p className="text-sm tabular-nums pb-2">
+                = <strong>{formatARS(Math.round(moneda * cotizacion))}</strong>
+              </p>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Se guarda el importe en pesos y queda anotada la cotización que
+              usaste, para poder explicarlo después.
+            </p>
+          </div>
+        )}
 
         {usaCuentaBanco(mp1) && (
           <BancoSelector

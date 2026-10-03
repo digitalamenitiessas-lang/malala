@@ -133,12 +133,12 @@ export function seed(): Store {
   };
 
   // Medios de pago
-  const mpEF = { id: uid(), sucursal_id: sucCentro.id, codigo: "EF", nombre: "Efectivo", activo: true, recargo_pct: 0 };
-  const mpTR = { id: uid(), sucursal_id: sucCentro.id, codigo: "TR", nombre: "Transferencia", activo: true, recargo_pct: 0 };
-  const mpTC = { id: uid(), sucursal_id: sucCentro.id, codigo: "TC", nombre: "Tarjeta credito", activo: true, recargo_pct: 0 };
-  const mpTD = { id: uid(), sucursal_id: sucCentro.id, codigo: "TD", nombre: "Tarjeta debito", activo: true, recargo_pct: 0 };
-  const mpMP = { id: uid(), sucursal_id: sucCentro.id, codigo: "MP", nombre: "Mercado Pago", activo: true, recargo_pct: 0 };
-  const mpCC = { id: uid(), sucursal_id: sucCentro.id, codigo: "CC", nombre: "Cuenta corriente", activo: true, recargo_pct: 0 };
+  const mpEF = { id: uid(), sucursal_id: sucCentro.id, codigo: "EF", nombre: "Efectivo", activo: true, recargo_pct: 0, moneda: "ARS" };
+  const mpTR = { id: uid(), sucursal_id: sucCentro.id, codigo: "TR", nombre: "Transferencia", activo: true, recargo_pct: 0, moneda: "ARS" };
+  const mpTC = { id: uid(), sucursal_id: sucCentro.id, codigo: "TC", nombre: "Tarjeta credito", activo: true, recargo_pct: 0, moneda: "ARS" };
+  const mpTD = { id: uid(), sucursal_id: sucCentro.id, codigo: "TD", nombre: "Tarjeta debito", activo: true, recargo_pct: 0, moneda: "ARS" };
+  const mpMP = { id: uid(), sucursal_id: sucCentro.id, codigo: "MP", nombre: "Mercado Pago", activo: true, recargo_pct: 0, moneda: "ARS" };
+  const mpCC = { id: uid(), sucursal_id: sucCentro.id, codigo: "CC", nombre: "Cuenta corriente", activo: true, recargo_pct: 0, moneda: "ARS" };
 
   // Rubros de gasto
   const rgInsumos = { id: uid(), rubro: "Insumos", subrubro: "Compra", activo: true };

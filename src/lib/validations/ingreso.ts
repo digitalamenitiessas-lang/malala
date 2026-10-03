@@ -90,6 +90,17 @@ export const ingresoSchema = z
       .string()
       .nullish()
       .transform((s) => (s ? s : undefined)),
+    /**
+     * Cotización usada cuando se cobró en otra moneda.
+     *
+     * Se guarda para poder explicar después de dónde salió el importe en
+     * pesos. La carga quien cobra, en el momento, porque cambia todos los días
+     * y el salón toma el tipo de cambio venta de su banco.
+     *
+     * Una sola por ticket: nadie paga con dólares a dos cambios distintos en
+     * la misma venta.
+     */
+    cotizacion: z.coerce.number().optional(),
     // Qué tarjeta se canjea, cuando el medio de pago es GIFT. Va por tramo
     // porque una venta puede pagarse parte con gift card y parte con otra cosa.
     gift_card_1_id: z
@@ -191,6 +202,7 @@ export function ingresoDesdeFormData(
     mp2_id: formData.get("mp2_id"),
     valor2: formData.get("valor2"),
     mp2_cuenta_id: formData.get("mp2_cuenta_id"),
+    cotizacion: formData.get("cotizacion"),
     gift_card_1_id: formData.get("gift_card_1_id"),
     gift_card_2_id: formData.get("gift_card_2_id"),
     observacion: formData.get("observacion"),

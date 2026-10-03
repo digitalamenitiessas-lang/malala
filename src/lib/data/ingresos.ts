@@ -130,6 +130,7 @@ function mapMedioPago(row: typeof mediosPagoTable.$inferSelect): MedioPago {
     activo: row.activo,
     cuenta_id: row.cuentaId ?? undefined,
     recargo_pct: row.recargoPct,
+    moneda: row.moneda,
   };
 }
 
@@ -591,6 +592,20 @@ export async function createIngreso(
     };
   }
 
+  // Cobro en otra moneda: sin la cotización el importe en pesos no se puede
+  // explicar ni rehacer. Es el dato que hoy se perdía, porque la sacaban con la
+  // calculadora y cargaban sólo el resultado.
+  const monedaById = new Map(mediosRows.map((m) => [m.id, m.moneda]));
+  const usaOtraMoneda =
+    monedaById.get(data.mp1_id) !== "ARS" ||
+    (!!data.mp2_id && monedaById.get(data.mp2_id) !== "ARS");
+  if (usaOtraMoneda && !(Number(data.cotizacion) > 0)) {
+    return {
+      ok: false,
+      errors: { cotizacion: ["Poné la cotización que usaste"] },
+    };
+  }
+
   const { valor1Cobrado, valor2Cobrado, total } =
     computeRecargos({
       totalNeto,
@@ -730,6 +745,7 @@ export async function createIngreso(
         mp2Id: data.mp2_id ?? null,
         valor2: valor2Cobrado,
         mp2CuentaId: data.mp2_cuenta_id ?? null,
+        cotizacion: usaOtraMoneda ? (Number(data.cotizacion) || null) : null,
         observacion: data.observacion ?? null,
         usuarioId: user.id,
         anulado: false,

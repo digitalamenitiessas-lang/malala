@@ -451,6 +451,8 @@ export const mediosPago = pgTable("medios_pago", {
   activo: boolean("activo").notNull().default(true),
   cuentaId: text("cuenta_id").references(() => cuentasBancarias.id),
   recargoPct: doublePrecision("recargo_pct").notNull().default(0),
+  // "ARS" salvo USD. Ver drizzle/0055.
+  moneda: text("moneda").notNull().default("ARS"),
 });
 
 export const movimientosBancarios = pgTable(
@@ -689,6 +691,10 @@ export const ingresos = pgTable("ingresos", {
   mp2Id: text("mp2_id").references(() => mediosPago.id),
   valor2: doublePrecision("valor2"),
   mp2CuentaId: text("mp2_cuenta_id").references(() => cuentasBancarias.id),
+  // Cotización usada si se cobró en otra moneda. Lo guardado en valor1/valor2
+  // siempre son PESOS; esto es lo que permite explicar de dónde salieron.
+  // Ver drizzle/0055.
+  cotizacion: doublePrecision("cotizacion"),
   observacion: text("observacion"),
   usuarioId: uuid("usuario_id")
     .notNull()
