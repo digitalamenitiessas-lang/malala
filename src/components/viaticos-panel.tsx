@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Sandwich, Plus, Trash2 } from "lucide-react";
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyInput } from "@/components/forms/currency-input";
@@ -20,7 +20,11 @@ interface Props {
   empleadoNombre: string;
   viaticos: Viatico[];
   mediosPago: MedioPago[];
+  /** Dias de la semana que trabaja (0=domingo). Acotan el rango. */
+  diasTrabajo: number[];
 }
+
+const DIA_CORTO = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 
 function fmtFecha(ymd: string): string {
   const [y, m, d] = ymd.split("-");
@@ -32,6 +36,7 @@ export function ViaticosPanel({
   empleadoNombre,
   viaticos,
   mediosPago,
+  diasTrabajo,
 }: Props) {
   const { pending, run } = useTransitionFeedback();
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +51,25 @@ export function ViaticosPanel({
   const [pagado, setPagado] = useState(true);
   const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
   const [observacion, setObservacion] = useState("");
+  /** Días del rango que la encargada sacó a mano. */
+  const [excluidas, setExcluidas] = useState<string[]>([]);
+
+  // Los días del rango en los que ella trabaja. Es la misma cuenta que hace el
+  // servidor; acá se repite para poder mostrarlos y dejar destildar.
+  const diasDelRango = useMemo(() => {
+    if (modo !== "rango" || !fecha || !hastaFecha || hastaFecha < fecha) return [];
+    const trabaja = new Set(diasTrabajo);
+    const out: string[] = [];
+    const cur = new Date(`${fecha}T12:00:00Z`);
+    const fin = new Date(`${hastaFecha}T12:00:00Z`);
+    while (cur <= fin && out.length <= 60) {
+      if (trabaja.has(cur.getUTCDay())) out.push(cur.toISOString().slice(0, 10));
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return out;
+  }, [modo, fecha, hastaFecha, diasTrabajo]);
+
+  const diasElegidos = diasDelRango.filter((d) => !excluidas.includes(d));
 
   const pendientes = viaticos.filter((v) => !v.liquidacion_id);
   const totalPendiente = pendientes.reduce((s, v) => s + v.monto, 0);
@@ -88,6 +112,7 @@ export function ViaticosPanel({
     if (modo === "rango") {
       fd.set("desde", fecha);
       fd.set("hasta", hastaFecha);
+      fd.set("fechas", diasElegidos.join(","));
     }
 
     run(
@@ -255,6 +280,47 @@ export function ViaticosPanel({
                 />
                 <p className="text-xs text-muted-foreground">
                   Los días que ya tengan viático cargado se saltean.
+                </p>
+              </div>
+            )}
+            {/* Los días que trabaja no son los días que cobra viático: hay
+                chicas que trabajan cinco y cobran dos, según cómo se mueven.
+                Vienen todos marcados —que es lo de antes— y se destildan los
+                que no corresponden. */}
+            {modo === "rango" && diasDelRango.length > 0 && (
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Qué días le corresponde
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {diasDelRango.map((d) => {
+                    const puesto = !excluidas.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() =>
+                          setExcluidas((prev) =>
+                            prev.includes(d)
+                              ? prev.filter((x) => x !== d)
+                              : [...prev, d],
+                          )
+                        }
+                        className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                          puesto
+                            ? "border-ink bg-ink text-white"
+                            : "border-border bg-card text-muted-foreground line-through"
+                        }`}
+                      >
+                        {DIA_CORTO[new Date(`${d}T12:00:00Z`).getUTCDay()]}{" "}
+                        {fmtFecha(d).slice(0, 5)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {diasElegidos.length} día{diasElegidos.length !== 1 ? "s" : ""}{" "}
+                  · tocá para sacar los que no cobra.
                 </p>
               </div>
             )}

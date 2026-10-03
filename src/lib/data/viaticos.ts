@@ -388,16 +388,32 @@ export async function registrarViaticosEnRango(
   }
 
   // Mediodía UTC para que el corrimiento de zona no mueva el día de la semana.
-  const fechas: string[] = [];
+  const candidatas: string[] = [];
   const cur = new Date(`${desde}T12:00:00Z`);
   const fin = new Date(`${hasta}T12:00:00Z`);
   while (cur <= fin) {
     if (diasQueTrabaja.has(cur.getUTCDay())) {
-      fechas.push(cur.toISOString().slice(0, 10));
+      candidatas.push(cur.toISOString().slice(0, 10));
     }
     cur.setUTCDate(cur.getUTCDate() + 1);
-    if (fechas.length > 200) break; // cota de seguridad contra un rango absurdo
+    if (candidatas.length > 200) break; // cota contra un rango absurdo
   }
+
+  // Los días que trabaja NO son los días que cobra viático: hay chicas que
+  // trabajan cinco días y cobran viático dos, según cómo se mueven. Antes el
+  // rango cargaba todos los días trabajados y había que borrar los que
+  // sobraban, así que terminaban cargando de a uno.
+  //
+  // Si vienen días elegidos se usan esos, acotados a los que trabaja para que
+  // no se cuele un domingo. Si no viene ninguno, se cargan todos los del rango,
+  // que es como funcionaba.
+  const elegidas = String(formData.get("fechas") ?? "")
+    .split(",")
+    .map((f) => f.trim())
+    .filter((f) => YMD.test(f));
+  const fechas = elegidas.length
+    ? candidatas.filter((f) => elegidas.includes(f))
+    : candidatas;
   if (fechas.length === 0) {
     return {
       ok: false,

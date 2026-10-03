@@ -196,6 +196,7 @@ export default async function EditarEmpleadoPage({
         empleadoNombre={empleado.nombre}
         viaticos={viaticos}
         mediosPago={mediosPago}
+        diasTrabajo={empleado.dias_trabajo}
       />
 
       <div className="border-t border-border pt-6">
