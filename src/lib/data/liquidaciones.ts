@@ -33,12 +33,14 @@ import type {
   LiquidacionLinea,
   MedioPago,
   Sucursal,
+  TipoComision,
 } from "@/lib/types";
 import {
   liquidacionCreateSchema,
   liquidacionPagoSchema,
 } from "@/lib/validations/liquidacion";
 import { fieldErrors, requireRole } from "./_helpers";
+import { calcularLiquidacion } from "@/lib/liquidacion-formula";
 import {
   deleteMovimientosByRefTx,
   emitMovimientoBancarioTx,
@@ -152,6 +154,8 @@ export interface LiquidacionPreview {
   total_servicios: number;
   dias_trabajados: number;
   valor_hora: number;
+  /** Define como se paga: la mayor, horas + comision, o todo sumado. */
+  tipo_comision: TipoComision;
   horas_sugeridas: number;
   sueldo_basico_sugerido: number;
   viaticos: LiquidacionPreviewViatico[];
@@ -245,6 +249,7 @@ async function fetchValorHoraYAnticipos(args: {
   hasta: string;
 }): Promise<{
   valorHora: number;
+  tipoComision: TipoComision;
   sueldoBasicoSugerido: number;
   horasSugeridas: number;
   viaticoPorDia: number;
@@ -255,6 +260,7 @@ async function fetchValorHoraYAnticipos(args: {
   const [empleado] = await db
     .select({
       valorHora: empleadosTable.valorHora,
+      tipoComision: empleadosTable.tipoComision,
       sueldoBasicoSemanal: empleadosTable.sueldoBasicoSemanal,
       viaticoPorDia: empleadosTable.viaticoPorDia,
       horasPorSemana: empleadosTable.horasPorSemana,
@@ -337,6 +343,7 @@ async function fetchValorHoraYAnticipos(args: {
 
   return {
     valorHora: empleado?.valorHora ?? 0,
+    tipoComision: (empleado?.tipoComision ?? "porcentaje") as TipoComision,
     sueldoBasicoSugerido,
     horasSugeridas,
     viaticoPorDia: empleado?.viaticoPorDia ?? 0,
@@ -462,7 +469,7 @@ export async function previewLiquidacion(input: {
   const dias = new Set(lineas.map((l) => l.fecha));
   const totalComision = lineas.reduce((s, l) => s + l.comision_monto, 0);
 
-  const { valorHora, horasSugeridas, sueldoBasicoSugerido, anticipos } =
+  const { valorHora, tipoComision, horasSugeridas, sueldoBasicoSugerido, anticipos } =
     await fetchValorHoraYAnticipos({
       empleadoId: parsed.data.empleado_id,
       sucursalId: parsed.data.sucursal_id,
@@ -499,6 +506,7 @@ export async function previewLiquidacion(input: {
       total_servicios: lineas.length,
       dias_trabajados: dias.size,
       valor_hora: valorHora,
+      tipo_comision: tipoComision,
       horas_sugeridas: horasSugeridas,
       sueldo_basico_sugerido: sueldoBasicoSugerido,
       viaticos: viaticosPeriodo.map((v) => ({
@@ -576,7 +584,7 @@ export async function createLiquidacion(
     };
   }
 
-  const { valorHora, viaticoPorDia, anticipos } = await fetchValorHoraYAnticipos({
+  const { valorHora, tipoComision, viaticoPorDia, anticipos } = await fetchValorHoraYAnticipos({
     empleadoId: parsed.data.empleado_id,
     sucursalId: parsed.data.sucursal_id,
     desde: parsed.data.periodo_desde,
@@ -615,8 +623,17 @@ export async function createLiquidacion(
     .reduce((s, v) => s + v.monto, 0);
 
   const totalAnticipos = anticipos.reduce((s, a) => s + a.monto, 0);
-  const totalPagar =
-    totalComision + sueldoHoras + sueldoBasico + viaticoAPagar - totalAnticipos;
+  // Tres arreglos distintos, tres cuentas distintas: ver liquidacion-formula.
+  // Antes esto sumaba los tres conceptos para todo el mundo, asi que a una
+  // profesional le pagaba la comision Y el asegurado en vez de la mayor.
+  const { total: totalPagar } = calcularLiquidacion({
+    tipoComision,
+    totalComision,
+    sueldoHoras,
+    sueldoBasico,
+    viaticoAPagar,
+    totalAnticipos,
+  });
   const liquidacionId = createId();
 
   let solapadaError: ReturnType<typeof errorSolapada> | null = null;

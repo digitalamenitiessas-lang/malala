@@ -11,6 +11,7 @@ import {
 } from "@/lib/data/liquidaciones";
 import type { Empleado, Sucursal } from "@/lib/types";
 import { formatARS } from "@/lib/utils";
+import { calcularLiquidacion } from "@/lib/liquidacion-formula";
 
 interface Props {
   sucursalId: string;
@@ -181,13 +182,20 @@ export function NuevaLiquidacionForm({
   const sueldoHoras = horas * (preview?.valor_hora ?? 0);
   // El viatico ya no se estima: sale de lo cargado dia por dia.
   const totalViatico = preview?.viatico_a_pagar ?? 0;
-  const totalPagar = preview
-    ? preview.total_comision +
-      sueldoHoras +
-      basico +
-      totalViatico -
-      preview.total_anticipos
-    : 0;
+  // La misma cuenta que hace el servidor, no una copia a mano: antes acá se
+  // sumaban los tres conceptos y a una profesional le mostraba la comisión MÁS
+  // el asegurado en vez de la mayor de las dos.
+  const detalle = preview
+    ? calcularLiquidacion({
+        tipoComision: preview.tipo_comision,
+        totalComision: preview.total_comision,
+        sueldoHoras,
+        sueldoBasico: basico,
+        viaticoAPagar: totalViatico,
+        totalAnticipos: preview.total_anticipos,
+      })
+    : null;
+  const totalPagar = detalle?.total ?? 0;
   const puedeGuardar =
     !!preview &&
     (preview.lineas.length > 0 ||
@@ -517,14 +525,28 @@ export function NuevaLiquidacionForm({
 
           {/* Desglose total */}
           <div className="rounded-md border border-border bg-cream/40 p-4 space-y-1.5">
+            {/* En el arreglo de profesional se cobra una de las dos, así que
+                mostrar las dos sumando era lo que hacía parecer que el total
+                estaba mal. Se muestran igual —hacen falta para entender por
+                qué ganó una— pero tachada la que no se paga. */}
             <DesgloseRow
               label="Comisiones"
               value={formatARS(preview.total_comision)}
+              tachado={detalle?.gana === "asegurado"}
             />
             <DesgloseRow
-              label="Sueldo por horas"
+              label={
+                detalle?.gana ? "Asegurado por horas" : "Sueldo por horas"
+              }
               value={formatARS(sueldoHoras)}
+              tachado={detalle?.gana === "comision"}
             />
+            {detalle?.gana && (
+              <p className="text-[11px] text-muted-foreground pt-0.5">
+                Cobra {detalle.gana === "comision" ? "la comisión" : "el asegurado"},
+                que es lo mayor de las dos. No se suman.
+              </p>
+            )}
             {totalViatico > 0 && (
               <DesgloseRow
                 label="Viatico"
@@ -581,15 +603,26 @@ function DesgloseRow({
   label,
   value,
   muted,
+  tachado,
 }: {
   label: string;
   value: string;
   muted?: boolean;
+  /** Se muestra para explicar el total, pero no se paga. */
+  tachado?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between text-sm">
+    <div
+      className={`flex items-center justify-between text-sm ${
+        tachado ? "opacity-50" : ""
+      }`}
+    >
       <span className="text-muted-foreground">{label}</span>
-      <span className={`tabular-nums ${muted ? "text-warning" : ""}`}>
+      <span
+        className={`tabular-nums ${muted ? "text-warning" : ""} ${
+          tachado ? "line-through" : ""
+        }`}
+      >
         {value}
       </span>
     </div>
