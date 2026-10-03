@@ -49,7 +49,7 @@ import type {
   Receta,
   Servicio,
 } from "@/lib/types";
-import { hoyAr } from "@/lib/fecha-ar";
+import { hoyAr, sumarDiasYmd } from "@/lib/fecha-ar";
 
 export interface IngresoFiltros {
   sucursalId?: string;
@@ -680,7 +680,33 @@ export async function createIngreso(
     });
 
   const ingresoId = createId();
-  const fecha = new Date();
+
+  // Fecha retroactiva: una venta que no se cargó el día que pasó.
+  //
+  // Pedido desde las dos sucursales, que se estaban trabando: cuando un día no
+  // se carga (pasó con el 26/9 en Yerba Buena), esas ventas no existen en
+  // ningún lado —ni en facturación, ni en comisiones, ni en los reportes— y
+  // cargarlas hoy las mete en el día equivocado, que ensucia dos días en vez
+  // de arreglar uno.
+  //
+  // Se acota a 60 días para atrás porque el error de tipeo que importa es el
+  // año: un 2025 en vez de 2026 mandaría la venta a un período ya liquidado.
+  const fechaPedida = (data.fecha ?? "").trim();
+  let fecha = new Date();
+  if (fechaPedida) {
+    if (fechaPedida > hoyAr()) {
+      return { ok: false, errors: { fecha: ["No se puede cargar a futuro"] } };
+    }
+    if (fechaPedida < sumarDiasYmd(hoyAr(), -60)) {
+      return {
+        ok: false,
+        errors: { fecha: ["Esa fecha es de hace más de 60 días. Avisanos y lo cargamos nosotros."] },
+      };
+    }
+    // Mediodía argentino: dentro del día elegido mire desde donde se mire, sin
+    // que el corrimiento de zona lo pase al día anterior o al siguiente.
+    fecha = new Date(`${fechaPedida}T12:00:00-03:00`);
+  }
   // hoyAr y no toISOString: el server corre en UTC y la apertura de caja se
   // guarda con la fecha ARGENTINA (ver caja/apertura). Con toISOString, a partir
   // de las 21:00 hora argentina esto devolvía la fecha de MAÑANA, así que la
@@ -688,7 +714,11 @@ export async function createIngreso(
   // de hoy" aunque estuviera abierta — todas las noches, en el horario en que un
   // salón justamente cierra. Y de paso el chequeo de caja cerrada tampoco
   // encontraba el cierre de hoy, o sea que dejaba vender sobre un día cerrado.
-  const hoyYmd = hoyAr();
+  // El dia de la venta, que ya no es necesariamente hoy. Todo lo que sigue
+  // —caja abierta, caja cerrada, el movimiento bancario— se cuelga de aca, asi
+  // que una venta retroactiva cae en el arqueo del dia que corresponde.
+  const hoyYmd = fechaPedida || hoyAr();
+  const esRetroactiva = hoyYmd !== hoyAr();
   const warnings: string[] = [];
 
   try {
@@ -706,7 +736,9 @@ export async function createIngreso(
 
       if (cierreDelDia) {
         throw new Error(
-          "La caja de hoy ya esta cerrada para esta sucursal. Reabri el cierre para registrar mas ventas.",
+          esRetroactiva
+            ? `La caja del  ya esta cerrada. Reabri ese cierre desde Caja para poder cargar esta venta.`
+            : "La caja de hoy ya esta cerrada para esta sucursal. Reabri el cierre para registrar mas ventas.",
         );
       }
 

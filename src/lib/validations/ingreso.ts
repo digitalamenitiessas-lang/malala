@@ -91,6 +91,18 @@ export const ingresoSchema = z
       .nullish()
       .transform((s) => (s ? s : undefined)),
     /**
+     * Día de la venta, cuando no es hoy.
+     *
+     * Vacío es el caso normal y significa ahora. Se usa para cargar un día que
+     * quedó sin registrar: sin esto, esas ventas o no existen o caen en el día
+     * equivocado, que ensucia dos días en vez de arreglar uno.
+     */
+    fecha: z
+      .string()
+      .nullish()
+      .transform((s) => (s ? s : undefined))
+      .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s), "Fecha inválida"),
+    /**
      * Cotización usada cuando se cobró en otra moneda.
      *
      * Se guarda para poder explicar después de dónde salió el importe en
@@ -202,6 +214,7 @@ export function ingresoDesdeFormData(
     mp2_id: formData.get("mp2_id"),
     valor2: formData.get("valor2"),
     mp2_cuenta_id: formData.get("mp2_cuenta_id"),
+    fecha: formData.get("fecha"),
     cotizacion: formData.get("cotizacion"),
     gift_card_1_id: formData.get("gift_card_1_id"),
     gift_card_2_id: formData.get("gift_card_2_id"),

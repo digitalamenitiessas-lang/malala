@@ -27,6 +27,7 @@ import { formatARS } from "@/lib/utils";
 import { CurrencyInput } from "@/components/forms/currency-input";
 import { ClienteCombobox } from "@/components/forms/cliente-combobox";
 import { expandirLineas } from "@/lib/ventas/reparto-comision";
+import { sumarDiasYmd } from "@/lib/fecha-ar";
 
 type LineaServicioForm = {
   tempId: string;
@@ -294,6 +295,8 @@ export function NuevaVentaForm({
   // Cotización del día, la carga quien cobra. El salón la toma del tipo de
   // cambio venta de su banco y cambia todos los días, así que no se guarda
   // configurada en ningún lado: se escribe en el momento y queda en la venta.
+  /** Dia de la venta cuando no es hoy. Vacio = ahora. */
+  const [fechaVenta, setFechaVenta] = useState("");
   const [cotizacion, setCotizacion] = useState(0);
   /** Lo que entregó la clienta en esa moneda. */
   const [moneda, setMoneda] = useState(0);
@@ -795,6 +798,7 @@ export function NuevaVentaForm({
       );
       formData.set("gift_card_2_id", mp2EsGift ? giftCard2Id : "");
     }
+    formData.set("fecha", fechaVenta);
     formData.set("cotizacion", usaMonedaExtranjera ? String(cotizacion) : "");
     formData.set("observacion", observacion);
     formData.set("cliente_satisfecho", clienteSatisfecho ? "true" : "false");
@@ -909,6 +913,47 @@ export function NuevaVentaForm({
             </div>
           </div>
         </div>
+
+        {/* Día de la venta. Arranca vacío = hoy, que es el 99% de las veces.
+            Está para cargar un día que quedó sin registrar: si esas ventas se
+            cargan con la fecha de hoy, se ensucian dos días en vez de
+            arreglar uno. */}
+        {!fechaVenta ? (
+          <button
+            type="button"
+            onClick={() => setFechaVenta(sumarDiasYmd(hoyAr(), -1))}
+            className="text-[11px] text-muted-foreground hover:text-ink underline underline-offset-2"
+          >
+            + Es de otro día
+          </button>
+        ) : (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Venta de otro día
+              </span>
+              <button
+                type="button"
+                onClick={() => setFechaVenta("")}
+                className="text-[11px] text-muted-foreground hover:text-destructive"
+              >
+                Es de hoy
+              </button>
+            </div>
+            <input
+              type="date"
+              value={fechaVenta}
+              max={hoyAr()}
+              min={sumarDiasYmd(hoyAr(), -60)}
+              onChange={(e) => setFechaVenta(e.target.value)}
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="text-[10px] text-brown-700">
+              La venta va a entrar en la caja de ese día, no en la de hoy. Esa
+              caja tiene que estar abierta y sin cerrar.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Líneas */}
