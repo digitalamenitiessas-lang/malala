@@ -7,6 +7,7 @@ const linea = (o: Partial<LineaRepartible> = {}): LineaRepartible => ({
   tempId: "l1",
   empleado_id: "emp-a",
   precio: 30000,
+  cantidad: 1,
   comision_pct: 30,
   ...o,
 });
@@ -24,87 +25,92 @@ describe("expandirLineas", () => {
     expect(expandirLineas([l])).toHaveLength(1);
   });
 
-  it("parte el porcentaje, que es lo que define la comisión", () => {
+  it("parte la cantidad y deja el precio y el porcentaje intactos", () => {
     const [a, b] = expandirLineas([
       linea({ reparto: { empleado_id: "emp-b", parte: 50 } }),
     ]);
-    expect(a.comision_pct).toBe(15);
-    expect(b.comision_pct).toBe(15);
+    expect(a.cantidad).toBe(0.5);
+    expect(b.cantidad).toBe(0.5);
+    expect(a.precio).toBe(30000);
+    expect(b.precio).toBe(30000);
+    expect(a.comision_pct).toBe(30);
+    expect(b.comision_pct).toBe(30);
     expect(a.empleado_id).toBe("emp-a");
     expect(b.empleado_id).toBe("emp-b");
-    expect(a.reparto).toBeUndefined();
-    expect(b.reparto).toBeUndefined();
   });
 
-  it("las dos partes suman el precio original, aunque sea impar", () => {
-    const [a, b] = expandirLineas([
-      linea({ precio: 10001, reparto: { empleado_id: "emp-b", parte: 50 } }),
-    ]);
-    expect(a.precio + b.precio).toBe(10001);
+  it("las dos partes suman la cantidad original, también desparejo", () => {
+    for (const parte of [50, 70, 33, 1, 99]) {
+      const [a, b] = expandirLineas([
+        linea({ reparto: { empleado_id: "emp-b", parte } }),
+      ]);
+      expect(a.cantidad + b.cantidad).toBeCloseTo(1, 10);
+    }
   });
 
-  it("reparte desparejo según la parte elegida", () => {
+  it("respeta una cantidad mayor a uno", () => {
     const [a, b] = expandirLineas([
-      linea({ reparto: { empleado_id: "emp-b", parte: 70 } }),
+      linea({ cantidad: 3, reparto: { empleado_id: "emp-b", parte: 50 } }),
     ]);
-    expect(a.comision_pct).toBeCloseTo(21);
-    expect(b.comision_pct).toBeCloseTo(9);
-    expect(a.precio + b.precio).toBe(30000);
+    expect(a.cantidad).toBe(1.5);
+    expect(b.cantidad).toBe(1.5);
   });
 });
 
 /**
- * Lo único que de verdad importa: repartir cambia A QUIÉN se le paga, nunca
- * CUÁNTO. Si estos tests se ponen rojos, el salón está pagando distinto por el
- * mismo servicio según cómo se cargó.
+ * Repartir cambia A QUIÉN se le paga, nunca CUÁNTO, y tampoco cuánto insumo
+ * salió del depósito.
  *
- * El caso que motivó todo esto es el último: partir el precio y dejar el
- * porcentaje entero paga el doble, porque la comisión no sale del precio de la
- * línea sino del precio de catálogo.
+ * Lo segundo se aprendió caro. La primera versión partía el PRECIO y dejaba dos
+ * líneas de cantidad 1, así que el sistema creía que el servicio se había hecho
+ * dos veces: cobraba bien pero descontaba el doble de stock y reportaba el
+ * doble de costo. Apareció en producción como un ticket de $216.000 con
+ * $83.188 de insumos.
  */
-describe("repartir no cambia la plata", () => {
+describe("repartir no cambia la plata ni el consumo", () => {
   const PRECIO_EFECTIVO = 30000;
-  const comision = (precio: number, pct: number, cantidad = 1, descuento = 0) =>
+  const comision = (l: LineaRepartible, descuento = 0) =>
     comisionMontoServicio({
-      precioCobrado: precio * cantidad,
-      precioEfectivoServicio: PRECIO_EFECTIVO * cantidad,
+      precioCobrado: l.precio * l.cantidad,
+      precioEfectivoServicio: PRECIO_EFECTIVO * l.cantidad,
       esDePromo: false,
-      comisionPct: pct,
+      comisionPct: l.comision_pct,
       soportaDescuento: true,
-      subtotal: 30000 * cantidad,
+      subtotal: 30000,
       descuentoMonto: descuento,
     });
 
-  const totalDe = (ls: LineaRepartible[], cantidad = 1, descuento = 0) =>
-    expandirLineas(ls).reduce(
-      (acc, l) => acc + comision(l.precio, l.comision_pct, cantidad, descuento),
-      0,
-    );
+  const totalComision = (ls: LineaRepartible[], descuento = 0) =>
+    expandirLineas(ls).reduce((acc, l) => acc + comision(l, descuento), 0);
+
+  /** Lo que gasta de receta: proporcional a la cantidad de cada línea. */
+  const consumo = (ls: LineaRepartible[]) =>
+    expandirLineas(ls).reduce((acc, l) => acc + l.cantidad, 0);
+
+  /** Lo que se le cobra a la clienta. */
+  const subtotal = (ls: LineaRepartible[]) =>
+    expandirLineas(ls).reduce((acc, l) => acc + l.precio * l.cantidad, 0);
 
   it("la comisión total es la misma repartida que entera", () => {
-    const entera = totalDe([linea()]);
-    const partida = totalDe([
-      linea({ reparto: { empleado_id: "emp-b", parte: 50 } }),
-    ]);
-    expect(partida).toBeCloseTo(entera);
-    expect(entera).toBe(9000);
+    expect(totalComision([linea({ reparto: { empleado_id: "emp-b", parte: 50 } })]))
+      .toBeCloseTo(totalComision([linea()]));
+    expect(totalComision([linea()])).toBe(9000);
   });
 
-  it("tampoco cambia con descuento, cantidad ni reparto desparejo", () => {
-    const entera = totalDe([linea()], 2, 12000);
-    const partida = totalDe(
-      [linea({ reparto: { empleado_id: "emp-b", parte: 70 } })],
-      2,
-      12000,
-    );
-    expect(partida).toBeCloseTo(entera);
+  it("el ticket cobra lo mismo", () => {
+    expect(subtotal([linea({ reparto: { empleado_id: "emp-b", parte: 70 } })]))
+      .toBeCloseTo(30000);
   });
 
-  it("partir el precio SIN partir el porcentaje pagaría el doble", () => {
-    // Esto no es lo que hace expandirLineas: es lo que haría alguien a mano, y
-    // es la razón de ser de esta función.
-    const aMano = comision(15000, 30) + comision(15000, 30);
-    expect(aMano).toBe(18000);
-    expect(aMano).toBe(totalDe([linea()]) * 2);
+  it("gasta UNA receta, no dos: es el bug que llegó a producción", () => {
+    expect(consumo([linea()])).toBe(1);
+    expect(consumo([linea({ reparto: { empleado_id: "emp-b", parte: 50 } })])).toBe(1);
+    expect(consumo([linea({ reparto: { empleado_id: "emp-b", parte: 70 } })]))
+      .toBeCloseTo(1, 10);
+  });
+
+  it("con descuento y reparto desparejo tampoco cambia nada", () => {
+    expect(totalComision([linea({ reparto: { empleado_id: "emp-b", parte: 70 } })], 6000))
+      .toBeCloseTo(totalComision([linea()], 6000));
   });
 });
