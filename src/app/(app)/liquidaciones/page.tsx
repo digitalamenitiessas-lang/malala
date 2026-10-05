@@ -4,7 +4,9 @@ import { TableActionLink } from "@/components/table-action-link";
 import { redirect } from "next/navigation";
 import { buildAccessScope, clampSucursalId } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
-import { listLiquidaciones } from "@/lib/data/liquidaciones";
+import { getProyeccionSemanal, listLiquidaciones } from "@/lib/data/liquidaciones";
+import { hoyAr, sumarDiasYmd } from "@/lib/fecha-ar";
+import { ProyeccionSemanal } from "./proyeccion-semanal";
 import { listSucursales } from "@/lib/data/sucursales";
 import { formatARS } from "@/lib/utils";
 import type { LiquidacionEstado } from "@/lib/types";
@@ -53,6 +55,16 @@ export default async function LiquidacionesPage({
     sucursalId: sucursal.id,
     estado: estadoFiltro,
     limit: 100,
+  });
+
+  // La semana que termina hoy: si se liquida el día de pago, eso es su semana
+  // (Centro los viernes, YB los sábados). Mismo criterio que el período que
+  // propone la nueva liquidación.
+  const hoy = hoyAr();
+  const proyeccion = await getProyeccionSemanal({
+    sucursalId: sucursal.id,
+    desde: sumarDiasYmd(hoy, -6),
+    hasta: hoy,
   });
 
   return (
@@ -109,6 +121,7 @@ export default async function LiquidacionesPage({
           </Link>
         </div>
       </header>
+n      <ProyeccionSemanal data={proyeccion} />
 
       {items.length === 0 ? (
         <div className="rounded-md border border-border bg-card p-8 text-center text-sm text-muted-foreground">
