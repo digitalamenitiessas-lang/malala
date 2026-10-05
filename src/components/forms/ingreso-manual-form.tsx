@@ -68,7 +68,8 @@ export function IngresoManualForm({
         </h2>
         <p className="text-xs text-muted-foreground mt-1">
           Plata que entra y no es una venta: una comisión que les transfieren,
-          algo que les devuelven, un aporte. No factura ni genera comisión.
+          algo que les devuelven, un aporte. Si entró en efectivo, elegí Caja
+          Efectivo. No factura ni genera comisión.
         </p>
       </div>
 

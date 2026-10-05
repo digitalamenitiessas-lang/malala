@@ -163,6 +163,18 @@ export default async function CajaPage({
               ¿Buscás los saldos de las cuentas? →
             </Link>
           </p>
+          {/* La plata que entra y no es una venta se registra en Cuentas y
+              saldos, eligiendo Caja Efectivo. Es correcto —esa pantalla tiene
+              todas las cuentas, no sólo los bancos— pero nadie lo busca ahí
+              cuando la plata entró al cajón. Preguntado tal cual desde el
+              mostrador: "ingresan a la caja en efectivo, ¿no debería ser desde
+              bancos?". */}
+          <p className="text-sm text-muted-foreground">
+            ¿Entró plata que no es una venta?{" "}
+            <Link href="/bancos" className="underline hover:text-foreground">
+              Registrala acá y elegí Caja Efectivo →
+            </Link>
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
