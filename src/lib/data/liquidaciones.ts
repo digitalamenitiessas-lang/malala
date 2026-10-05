@@ -41,6 +41,8 @@ import {
 } from "@/lib/validations/liquidacion";
 import { fieldErrors, requireRole } from "./_helpers";
 import { calcularLiquidacion } from "@/lib/liquidacion-formula";
+import { listEmpleados } from "./empleados";
+import { listSaldos } from "./cuentas-bancarias";
 import {
   deleteMovimientosByRefTx,
   emitMovimientoBancarioTx,
@@ -1338,4 +1340,142 @@ export async function getEmpleadosInactivosConDeuda(
   return filas
     .map((f) => f.empleadoId)
     .filter((id): id is string => id != null);
+}
+
+export interface ProyeccionEmpleado {
+  empleadoId: string;
+  nombre: string;
+  comision: number;
+  sueldoHoras: number;
+  sueldoBasico: number;
+  viatico: number;
+  anticipos: number;
+  total: number;
+  /** Para una profesional: si hoy gana por comisión o por el asegurado. */
+  gana: "comision" | "asegurado" | null;
+}
+
+export interface ProyeccionSemanal {
+  desde: string;
+  hasta: string;
+  empleados: ProyeccionEmpleado[];
+  total: number;
+  /** Lo que hay en la caja de efectivo de la sucursal, ahora. */
+  efectivoDisponible: number;
+}
+
+/**
+ * Cuánto va a haber que pagar esta semana, antes de armar las liquidaciones.
+ *
+ * El salón paga los sueldos EN EFECTIVO, así que durante la semana necesita ir
+ * viendo si le va a alcanzar. Pedido así: "hay una manera que sepamos de un
+ * vistazo cuánto tenemos que tener para pagar semanales, porque pagamos en
+ * efectivo y necesitamos ir viendo si nos alcanzará".
+ *
+ * Es una ESTIMACIÓN y no puede ser otra cosa: las horas reales se cargan recién
+ * al liquidar, así que acá se usan las de la ficha. Lo demás —comisiones,
+ * viáticos, anticipos— sale de lo que ya está cargado y es firme.
+ *
+ * Usa la misma fórmula que la liquidación de verdad (ver liquidacion-formula),
+ * no una cuenta parecida: si el numero de acá no es el que despues se paga, no
+ * sirve para decidir si alcanza.
+ */
+export async function getProyeccionSemanal(args: {
+  sucursalId: string;
+  desde: string;
+  hasta: string;
+}): Promise<ProyeccionSemanal> {
+  const user = await requireUser();
+  const scope = buildAccessScope(user);
+  if (!scope.puedeVerReportes || !isSucursalAllowed(scope, args.sucursalId)) {
+    return {
+      desde: args.desde,
+      hasta: args.hasta,
+      empleados: [],
+      total: 0,
+      efectivoDisponible: 0,
+    };
+  }
+
+  const empleados = await listEmpleados({ sucursalId: args.sucursalId });
+
+  const filas: ProyeccionEmpleado[] = [];
+  for (const emp of empleados) {
+    const [lineas, datos] = await Promise.all([
+      fetchLineasPendientes({
+        sucursalId: args.sucursalId,
+        empleadoId: emp.id,
+        desde: args.desde,
+        hasta: args.hasta,
+      }),
+      fetchValorHoraYAnticipos({
+        empleadoId: emp.id,
+        sucursalId: args.sucursalId,
+        desde: args.desde,
+        hasta: args.hasta,
+      }),
+    ]);
+
+    const viaticos = await getDb()
+      .select()
+      .from(viaticosTable)
+      .where(
+        and(
+          eq(viaticosTable.empleadoId, emp.id),
+          eq(viaticosTable.sucursalId, args.sucursalId),
+          gte(viaticosTable.fecha, args.desde),
+          lte(viaticosTable.fecha, args.hasta),
+          isNull(viaticosTable.liquidacionId),
+        ),
+      );
+
+    const comision = lineas.reduce((s, l) => s + l.comision_monto, 0);
+    const sueldoHoras = datos.horasSugeridas * datos.valorHora;
+    const anticipos = datos.anticipos.reduce((s, a) => s + a.monto, 0);
+    // Sólo los que todavía no se entregaron: los que ya se dieron salieron de
+    // la caja en el momento y volver a contarlos seria pagarlos dos veces.
+    const viatico = viaticos
+      .filter((v) => !v.pagado)
+      .reduce((s: number, v) => s + v.monto, 0);
+
+    const detalle = calcularLiquidacion({
+      tipoComision: datos.tipoComision,
+      totalComision: comision,
+      sueldoHoras,
+      sueldoBasico: datos.sueldoBasicoSugerido,
+      viaticoAPagar: viatico,
+      totalAnticipos: anticipos,
+    });
+
+    // Una empleada sin nada en la semana no se muestra: la lista es para ver
+    // cuanto falta juntar, no un padron.
+    if (detalle.total === 0 && comision === 0 && sueldoHoras === 0) continue;
+
+    filas.push({
+      empleadoId: emp.id,
+      nombre: emp.nombre,
+      comision,
+      sueldoHoras,
+      sueldoBasico: datos.sueldoBasicoSugerido,
+      viatico,
+      anticipos,
+      total: detalle.total,
+      gana: detalle.gana,
+    });
+  }
+
+  filas.sort((a, b) => b.total - a.total);
+
+  const saldos = await listSaldos({ sucursalId: args.sucursalId });
+  const efectivoDisponible = saldos
+    .filter((s) => s.cuenta.tipo === "efectivo" && s.cuenta.activo)
+    .reduce((acc, s) => acc + s.saldo, 0);
+
+  return {
+    desde: args.desde,
+    hasta: args.hasta,
+    empleados: filas,
+    total: filas.reduce((s, f) => s + f.total, 0),
+    efectivoDisponible,
+  };
 }

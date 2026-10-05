@@ -43,7 +43,7 @@ function todayYMD(): string {
  */
 function semanaQueTerminaHoy() {
   const hasta = todayYMD();
-  const d = new Date(`T12:00:00Z`);
+  const d = new Date(`${hasta}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() - 6);
   return { desde: d.toISOString().slice(0, 10), hasta };
 }
