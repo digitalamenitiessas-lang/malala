@@ -262,7 +262,21 @@ export async function crearApertura(
           .where(eq(cierresCajaTable.sucursalId, data.sucursal_id)),
       ]);
       const fechasCerradas = new Set(cierres.map((c) => c.fecha));
-      const abierta = aperturas.find((a) => !fechasCerradas.has(a.fecha));
+      // Sólo frena si lo que está abierto es de ese día o POSTERIOR.
+      //
+      // La regla existe para que no se arrastren días sin cerrar, y para eso
+      // sigue sirviendo. Pero tambien impedia abrir un dia viejo que nunca se
+      // abrio —paso con el 26/9 en Yerba Buena— porque la caja de hoy estaba
+      // abierta: habia que cerrar hoy contando la plata, abrir el 26, cargar,
+      // cerrar el 26 y volver a abrir hoy contando otra vez. Dos arqueos de mas
+      // para arreglar un dia viejo.
+      //
+      // Un dia anterior no interfiere: todo lo que cuelga de la caja (el
+      // arqueo, los movimientos, el cierre) esta indexado por fecha, asi que
+      // dos dias abiertos no se pisan.
+      const abierta = aperturas.find(
+        (a) => !fechasCerradas.has(a.fecha) && a.fecha >= data.fecha,
+      );
       if (abierta) throw new CajaAbiertaError(abierta.fecha);
       if (aperturas.some((a) => a.fecha === data.fecha))
         throw new Error("La caja de este día ya está abierta");

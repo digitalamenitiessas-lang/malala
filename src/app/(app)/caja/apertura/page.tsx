@@ -15,14 +15,24 @@ function todayYMD(): string {
   return hoyAr();
 }
 
-export default async function AperturaCajaPage() {
+export default async function AperturaCajaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ fecha?: string }>;
+}) {
   const user = await requireUser();
   if (!esAdmin(user.rol) && user.rol !== "encargada") redirect("/caja");
 
   const sucursal = await getActiveSucursal();
   if (!sucursal) redirect("/dev/login");
 
-  const fecha = todayYMD();
+  // Normalmente hoy, pero se puede abrir un día viejo que quedó sin abrir:
+  // sin eso no hay forma de cargarle las ventas que faltaron, porque vender
+  // exige la caja de ese día abierta. Nunca a futuro.
+  const sp = await searchParams;
+  const pedida = /^\d{4}-\d{2}-\d{2}$/.test(sp.fecha ?? "") ? sp.fecha! : "";
+  const fecha = pedida && pedida <= todayYMD() ? pedida : todayYMD();
+  const esVieja = fecha !== todayYMD();
   const [existente, sugerencias] = await Promise.all([
     getAperturaDeFecha(sucursal.id, fecha),
     getSugerenciasApertura(sucursal.id),
@@ -38,6 +48,48 @@ export default async function AperturaCajaPage() {
         <p className="text-sm text-muted-foreground tabular-nums">
           {sucursal.nombre} · {fecha}
         </p>
+        {/* Abrir un día viejo: hace falta para poder cargarle las ventas que
+            quedaron sin registrar, porque vender exige la caja de ese día
+            abierta. Preguntado tal cual: "¿cómo abrimos una caja vieja?". */}
+        <form method="get" className="flex flex-wrap items-end gap-2 pt-1">
+          <div className="space-y-1">
+            <label
+              htmlFor="fecha"
+              className="block text-[10px] uppercase tracking-wider text-muted-foreground"
+            >
+              Abrir otro día
+            </label>
+            <input
+              id="fecha"
+              name="fecha"
+              type="date"
+              defaultValue={fecha}
+              max={todayYMD()}
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-md border border-border px-3 py-1.5 text-xs uppercase tracking-wider hover:bg-cream"
+          >
+            Ir
+          </button>
+          {esVieja && (
+            <Link
+              href="/caja/apertura"
+              className="text-xs text-muted-foreground underline underline-offset-2 pb-2"
+            >
+              volver a hoy
+            </Link>
+          )}
+        </form>
+        {esVieja && (
+          <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-brown-700">
+            Estás abriendo un día pasado. Lo que declares acá es la plata que
+            había <strong>ese día</strong>, no la de hoy, y las ventas que
+            cargues con esa fecha van a entrar en esa caja.
+          </p>
+        )}
       </header>
 
       {existente ? (
