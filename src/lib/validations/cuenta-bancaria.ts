@@ -34,3 +34,29 @@ export const cuentaImpuestoSchema = z.object({
 });
 
 export type CuentaImpuestoInput = z.infer<typeof cuentaImpuestoSchema>;
+
+/**
+ * Plata que entra y no es una venta.
+ *
+ * El caso que lo pide: el salón cobra una comisión por maquillajes que le
+ * transfieren. Hasta ahora la caja sólo subía por una venta o por un ajuste de
+ * apertura, así que esto se cargaba falseando el ajuste y el motivo se perdía.
+ *
+ * El concepto es obligatorio justamente por eso: un ingreso sin explicación es
+ * indistinguible de un error de arqueo tres semanas después.
+ */
+export const ingresoManualSchema = z.object({
+  cuenta_id: z.string().min(1, "Elegí a qué cuenta entra"),
+  monto: z.coerce.number().positive("El monto debe ser mayor a 0"),
+  concepto: z
+    .string()
+    .min(3, "Escribí de qué es este ingreso")
+    .transform((s) => s.trim()),
+  fecha: z
+    .string()
+    .nullish()
+    .transform((s) => (s ? s : undefined))
+    .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s), "Fecha inválida"),
+});
+
+export type IngresoManualInput = z.infer<typeof ingresoManualSchema>;

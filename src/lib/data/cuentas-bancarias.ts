@@ -2,6 +2,7 @@
 
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { hoyAr } from "@/lib/fecha-ar";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   cuentasBancarias as cuentasBancariasTable,
@@ -12,6 +13,7 @@ import {
 import {
   cuentaBancariaSchema,
   transferenciaSchema,
+  ingresoManualSchema,
 } from "@/lib/validations/cuenta-bancaria";
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
 import { requireUser } from "@/lib/auth/session";
@@ -397,6 +399,78 @@ export async function createTransferencia(
   }
 
   revalidatePath("/bancos");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Registra plata que entra y no es una venta.
+ *
+ * El salón cobra cosas que no pasan por la caja de ventas: una comisión por
+ * maquillajes que le transfieren, plata que alguien devuelve, un aporte. Hasta
+ * ahora la única forma de que la caja subiera era una venta o un ajuste de
+ * apertura, así que esto se cargaba falseando el ajuste — la plata quedaba
+ * bien pero el motivo se perdía, y al mes siguiente nadie sabía de qué era.
+ *
+ * NO es una venta y no pretende serlo: no factura, no genera comisión y no
+ * entra en el reporte por rubro. Mueve el saldo de la cuenta y deja dicho por
+ * qué, que es exactamente lo que faltaba.
+ */
+export async function registrarIngresoManual(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+  const parsed = ingresoManualSchema.safeParse({
+    cuenta_id: formData.get("cuenta_id"),
+    monto: formData.get("monto"),
+    concepto: formData.get("concepto"),
+    fecha: formData.get("fecha"),
+  });
+  if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
+  const data = parsed.data;
+
+  if (data.fecha && data.fecha > hoyAr()) {
+    return { ok: false, errors: { fecha: ["No se puede cargar a futuro"] } };
+  }
+
+  const db = getDb();
+  try {
+    const [cuenta] = await db
+      .select()
+      .from(cuentasBancariasTable)
+      .where(eq(cuentasBancariasTable.id, data.cuenta_id))
+      .limit(1);
+    if (!cuenta) return { ok: false, errors: { cuenta_id: ["La cuenta no existe"] } };
+    if (!isSucursalAllowed(scope, cuenta.sucursalId)) {
+      return { ok: false, errors: { cuenta_id: ["Sin acceso a esa cuenta"] } };
+    }
+
+    await db.insert(movimientosBancariosTable).values({
+      id: createId(),
+      cuentaId: cuenta.id,
+      // Mediodía argentino, igual que las ventas retroactivas: cae dentro del
+      // día elegido mire desde donde se mire.
+      fecha: data.fecha ? new Date(`${data.fecha}T12:00:00-03:00`) : new Date(),
+      tipo: "ingreso",
+      monto: Math.abs(data.monto),
+      sucursalId: cuenta.sucursalId,
+      refTipo: "manual",
+      refId: null,
+      descripcion: data.concepto,
+      usuarioId: user.id,
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      errors: {
+        _: [error instanceof Error ? error.message : "No se pudo registrar"],
+      },
+    };
+  }
+
+  revalidatePath("/bancos");
+  revalidatePath("/caja");
   revalidatePath("/dashboard");
   return { ok: true };
 }

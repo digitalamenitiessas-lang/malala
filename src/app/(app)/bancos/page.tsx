@@ -9,6 +9,7 @@ import { listSucursales } from "@/lib/data/sucursales";
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
 import { CurrencyField } from "@/components/forms/field";
+import { IngresoManualForm } from "@/components/forms/ingreso-manual-form";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -210,6 +211,10 @@ export default async function BancosPage({ searchParams }: PageProps) {
           </div>
         )}
       </section>
+
+      {cuentas.length > 0 && (
+        <IngresoManualForm cuentas={cuentas} sucursales={sucursales} />
+      )}
 
       {cuentas.length >= 2 && (
         <TransferenciaForm
