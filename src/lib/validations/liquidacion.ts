@@ -48,6 +48,17 @@ export const liquidacionPagoSchema = z.object({
     .nullish()
     .transform((s) => (s ? s : undefined)),
   valor2: z.coerce.number().optional(),
+  /**
+   * Día en que se pagó de verdad. Vacío es ahora, que es el caso normal.
+   *
+   * El salón paga el sábado y lo registra el lunes: con la fecha de hoy, esa
+   * plata sale de la caja de hoy y deja corta la del sábado.
+   */
+  fecha: z
+    .string()
+    .nullish()
+    .transform((s) => (s ? s : undefined))
+    .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s), "Fecha inválida"),
   observacion: z
     .string()
     .optional()

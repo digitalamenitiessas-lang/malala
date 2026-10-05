@@ -52,6 +52,7 @@ import {
   finDeDiaArISO,
   hoyAr,
   inicioDeDiaArISO,
+  sumarDiasYmd,
 } from "@/lib/fecha-ar";
 // Mismo cálculo que muestra la ficha de la empleada: el total que la encargada
 // verifica en pantalla y el que se paga acá tienen que ser el mismo número.
@@ -904,6 +905,7 @@ export async function marcarLiquidacionPagada(
   const parsed = liquidacionPagoSchema.safeParse({
     mp_id: formData.get("mp_id"),
     mp2_id: formData.get("mp2_id"),
+    fecha: formData.get("fecha"),
     valor2: formData.get("valor2"),
     observacion: formData.get("observacion"),
   });
@@ -949,9 +951,29 @@ export async function marcarLiquidacionPagada(
     };
   }
 
-  const ahora = new Date();
+  // Fecha del pago. Vacía es ahora, que es el caso normal.
+  //
+  // Hace falta porque el pago se carga después: el salón paga el sábado y el
+  // lunes lo registra. Con la fecha de hoy, esa plata sale de la caja de hoy y
+  // deja corta la del sábado, que es cuando salió de verdad. Pedido así desde
+  // Yerba Buena mientras ponían las comisiones en cero para arrancar limpio.
+  //
+  // El ymd manda sobre el chequeo de caja cerrada de más abajo, así que un pago
+  // retroactivo a un día ya cerrado avisa en vez de ensuciarlo.
+  const fechaPedida = (parsed.data.fecha ?? "").trim();
+  if (fechaPedida) {
+    if (fechaPedida > hoyAr()) {
+      return { ok: false, errors: { fecha: ["No se puede pagar a futuro"] } };
+    }
+    if (fechaPedida < sumarDiasYmd(hoyAr(), -60)) {
+      return { ok: false, errors: { fecha: ["Esa fecha es de hace más de 60 días"] } };
+    }
+  }
+  const ahora = fechaPedida
+    ? new Date(`${fechaPedida}T12:00:00-03:00`)
+    : new Date();
   // Fecha argentina: el cierre de caja se guarda con la fecha local, no UTC.
-  const ymdHoy = hoyAr();
+  const ymdHoy = fechaPedida || hoyAr();
   const egresoId = createId();
   const observacionEgreso =
     `Liquidación ${empleado?.nombre ?? "empleado"} ` +

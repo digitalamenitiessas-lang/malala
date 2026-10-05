@@ -6,6 +6,7 @@ import { LoadingButton } from "./field";
 import { marcarLiquidacionPagada } from "@/lib/data/liquidaciones";
 import type { MedioPago } from "@/lib/types";
 import { formatARS } from "@/lib/utils";
+import { hoyAr } from "@/lib/fecha-ar";
 
 interface Props {
   liquidacionId: string;
@@ -28,6 +29,8 @@ export function MarcarPagadaForm({
   // cerrado porque el caso normal es uno solo.
   const [mp2Id, setMp2Id] = useState("");
   const [valor2, setValor2] = useState(0);
+  /** Dia en que se pago de verdad. Vacio = ahora. */
+  const [fecha, setFecha] = useState("");
 
   // Sólo se pide cuánto va por el SEGUNDO medio: el total ya está fijado por la
   // liquidación, así que el primero es el resto. Pedir los dos montos dejaría
@@ -46,6 +49,7 @@ export function MarcarPagadaForm({
     fd.set("mp_id", mpId);
     fd.set("mp2_id", mp2Id);
     fd.set("valor2", String(monto2));
+    fd.set("fecha", fecha);
     fd.set("observacion", observacion);
     run(
       async () => {
@@ -125,6 +129,25 @@ export function MarcarPagadaForm({
             </p>
           </>
         )}
+      </div>
+      {/* El pago se registra después: pagan el sábado y lo cargan el lunes.
+          Con la fecha de hoy, la plata sale de la caja de hoy y deja corta la
+          del día en que salió de verdad. */}
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Cuándo se pagó
+        </label>
+        <input
+          type="date"
+          value={fecha}
+          max={hoyAr()}
+          onChange={(e) => setFecha(e.target.value)}
+          className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Vacío es hoy. Si la plata salió otro día, poné ese día: tiene que
+          tener la caja abierta y sin cerrar.
+        </p>
       </div>
       <div className="space-y-1.5">
         <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
