@@ -23,6 +23,7 @@ import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import type { GiftCard, GiftCardMovimiento } from "@/lib/types";
 import { esCanjeable, hoyAr } from "@/lib/gift-card-estado";
+import { sumarDiasYmd } from "@/lib/fecha-ar";
 import {
   giftCardAnularSchema,
   giftCardCodigoSchema,
@@ -296,14 +297,39 @@ export async function emitirGiftCard(
     };
   }
 
+  // Mismo criterio que en las ventas: nada a futuro, y un tope para atras que
+  // atrapa el error de tipeo que importa, que es el año.
+  if (parsed.data.fecha_venta) {
+    if (parsed.data.fecha_venta > hoyAr()) {
+      return { ok: false, errors: { fecha_venta: ["No se puede cargar a futuro"] } };
+    }
+    if (
+      parsed.data.origen === "venta" &&
+      parsed.data.fecha_venta < sumarDiasYmd(hoyAr(), -60)
+    ) {
+      return {
+        ok: false,
+        errors: {
+          fecha_venta: [
+            "Esa fecha es de hace mas de 60 dias. Si es una tarjeta vieja, marcala como vendida antes del sistema.",
+          ],
+        },
+      };
+    }
+  }
+
   const db = getDb();
   const giftCardId = createId();
-  // Las de antes del sistema llevan la fecha en que se vendieron de verdad, no
-  // la de hoy: es lo que permite entender despues de cuando viene cada una.
-  const fecha =
-    parsed.data.origen === "pre_sistema" && parsed.data.fecha_venta
-      ? new Date(`${parsed.data.fecha_venta}T12:00:00-03:00`)
-      : new Date();
+  // La fecha en que se vendio de verdad, no la de hoy.
+  //
+  // Antes esto solo valia para las de antes del sistema, que no mueven plata.
+  // Pero tambien pasa que un pack se vendio hace tres dias y se cargo recien
+  // hoy: ahi la plata entro el dia de la venta, y meter el movimiento con la
+  // fecha de hoy infla la caja de hoy y deja corta la de ese dia. Reportado
+  // desde el mostrador con un pack de 4 sesiones del que ya se habia usado una.
+  const fecha = parsed.data.fecha_venta
+    ? new Date(`${parsed.data.fecha_venta}T12:00:00-03:00`)
+    : new Date();
   let aviso: string | undefined;
 
   try {

@@ -5,6 +5,7 @@ import { CrudForm } from "./crud-form";
 import { CurrencyField, Field } from "./field";
 import type { CuentaBancaria, MedioPago } from "@/lib/types";
 import type { ActionResult } from "@/lib/data/_helpers";
+import { hoyAr } from "@/lib/fecha-ar";
 
 interface Props {
   sucursalId: string;
@@ -133,7 +134,11 @@ export function GiftCardForm({
                 </span>
               </label>
             ))}
-            {origen === "pre_sistema" && (
+            {/* La fecha vale para los tres casos, no solo para las viejas.
+                Una tarjeta o un pack que se vendio hace unos dias y se carga
+                recien hoy cobró ese dia: con la fecha de hoy, la plata entra
+                en la caja equivocada. */}
+            {origen !== "cortesia" && (
               <div className="space-y-1.5">
                 <label
                   htmlFor="fecha_venta"
@@ -145,8 +150,14 @@ export function GiftCardForm({
                   id="fecha_venta"
                   name="fecha_venta"
                   type="date"
+                  max={hoyAr()}
                   className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
+                <p className="text-xs text-muted-foreground">
+                  {cobraHoy
+                    ? "Dejalo vacio si se vende hoy. Si se vendio otro dia, la plata entra en la caja de ese dia."
+                    : "El dia en que se vendio de verdad, para saber de cuando viene."}
+                </p>
               </div>
             )}
           </div>
