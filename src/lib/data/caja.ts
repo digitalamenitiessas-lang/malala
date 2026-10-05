@@ -1154,7 +1154,8 @@ export async function createCierre(
   // Arqueo por cuenta: lo esperado es el saldo actual de cada cuenta; lo contado
   // lo carga el usuario (form: contado_<cuentaId>). Si no lo carga, se asume que
   // coincide con lo esperado. La diferencia se guarda como dato; no toca saldos.
-  const saldosCuentas = await getSugerenciasApertura(data.sucursal_id);
+  // Idem: el arqueo del cierre se mide contra el saldo del dia que se cierra.
+  const saldosCuentas = await getSugerenciasApertura(data.sucursal_id, data.fecha);
 
   try {
     await db.transaction(async (tx) => {

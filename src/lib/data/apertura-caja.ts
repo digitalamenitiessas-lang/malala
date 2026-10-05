@@ -1,6 +1,7 @@
 "use server";
 
 import { and, desc, eq } from "drizzle-orm";
+import { hoyAr } from "@/lib/fecha-ar";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
@@ -96,12 +97,25 @@ export interface AperturaCuentaSugerida {
  */
 export async function getSugerenciasApertura(
   sucursalId: string,
+  /**
+   * Día que se está abriendo. Vacío es hoy.
+   *
+   * Importa al abrir un día pasado: ahí el esperado tiene que ser el saldo al
+   * final de ESE día, no el de ahora. Con el de ahora, la diferencia contra lo
+   * declarado sale calculada contra el número equivocado y el ajuste que se
+   * emite queda mal.
+   */
+  fecha?: string,
 ): Promise<AperturaCuentaSugerida[]> {
   const user = await requireUser();
   const scope = buildAccessScope(user);
   if (!scope.puedeVerCaja || !isSucursalAllowed(scope, sucursalId)) return [];
 
-  const saldos = await listSaldos({ sucursalId });
+  const esPasada = !!fecha && fecha < hoyAr();
+  const saldos = await listSaldos({
+    sucursalId,
+    hasta: esPasada ? fecha : undefined,
+  });
 
   // Lo contado en el último cierre: es con lo que arranca el día de verdad,
   // porque es la plata que quedó en el cajón. El esperado puede diferir y esa
@@ -237,7 +251,8 @@ export async function crearApertura(
 
   const db = getDb();
 
-  const sugerencias = await getSugerenciasApertura(data.sucursal_id);
+  // Con la fecha: el ajuste se calcula contra el saldo de ESE dia, no el de hoy.
+  const sugerencias = await getSugerenciasApertura(data.sucursal_id, data.fecha);
   if (sugerencias.length === 0) {
     return {
       ok: false,

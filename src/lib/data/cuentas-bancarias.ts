@@ -2,7 +2,7 @@
 
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { hoyAr } from "@/lib/fecha-ar";
+import { finDeDiaArISO, hoyAr } from "@/lib/fecha-ar";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   cuentasBancarias as cuentasBancariasTable,
@@ -105,11 +105,34 @@ export interface SaldoCuenta {
 }
 
 export async function listSaldos(
-  opts: { sucursalId?: string } = {},
+  opts: {
+    sucursalId?: string;
+    /**
+     * Saldo al final de ese día, no el de ahora (YYYY-MM-DD).
+     *
+     * Hace falta para abrir la caja de un día pasado: ahí el esperado tiene
+     * que ser lo que había ESE día. Con el saldo de hoy, la diferencia contra
+     * lo que se declara sale calculada contra el número equivocado y el ajuste
+     * queda mal.
+     */
+    hasta?: string;
+  } = {},
 ): Promise<SaldoCuenta[]> {
   const db = getDb();
   const cuentas = await listCuentas(opts);
   if (cuentas.length === 0) return [];
+
+  const filtros = [
+    inArray(
+      movimientosBancariosTable.cuentaId,
+      cuentas.map((c) => c.id),
+    ),
+  ];
+  if (opts.hasta) {
+    filtros.push(
+      lte(movimientosBancariosTable.fecha, new Date(finDeDiaArISO(opts.hasta))),
+    );
+  }
 
   const rows = await db
     .select({
@@ -117,12 +140,7 @@ export async function listSaldos(
       total: sql<number>`coalesce(sum(${movimientosBancariosTable.monto}), 0)`,
     })
     .from(movimientosBancariosTable)
-    .where(
-      inArray(
-        movimientosBancariosTable.cuentaId,
-        cuentas.map((c) => c.id),
-      ),
-    )
+    .where(and(...filtros))
     .groupBy(movimientosBancariosTable.cuentaId);
 
   const saldoById = new Map(rows.map((r) => [r.cuentaId, Number(r.total)]));

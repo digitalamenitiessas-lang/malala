@@ -35,7 +35,7 @@ export default async function AperturaCajaPage({
   const esVieja = fecha !== todayYMD();
   const [existente, sugerencias] = await Promise.all([
     getAperturaDeFecha(sucursal.id, fecha),
-    getSugerenciasApertura(sucursal.id),
+    getSugerenciasApertura(sucursal.id, fecha),
   ]);
   const cuentaById = new Map(sugerencias.map((s) => [s.cuenta.id, s.cuenta]));
 
