@@ -28,28 +28,24 @@ function todayYMD(): string {
   return `${y}-${m}-${day}`;
 }
 
-function firstHalfOfThisMonth() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return { desde: `${y}-${m}-01`, hasta: `${y}-${m}-15` };
-}
-
-function secondHalfOfThisMonth() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = d.getMonth();
-  const mm = String(m + 1).padStart(2, "0");
-  const lastDay = new Date(y, m + 1, 0).getDate();
-  return {
-    desde: `${y}-${mm}-16`,
-    hasta: `${y}-${mm}-${String(lastDay).padStart(2, "0")}`,
-  };
-}
-
-function quincenaActual() {
-  const day = new Date().getDate();
-  return day <= 15 ? firstHalfOfThisMonth() : secondHalfOfThisMonth();
+/**
+ * La semana que termina hoy.
+ *
+ * Antes proponia la QUINCENA, y el salon liquida por semana: Centro los
+ * viernes, Yerba Buena los sabados. Si se liquida el dia de pago, los ultimos
+ * siete dias son exactamente su semana —domingo a sabado en YB, sabado a
+ * viernes en Centro— sin tener que configurar el dia de pago en ningun lado.
+ *
+ * No es cosmetico: con la quincena, una liquidacion del 5 arrancaba el dia 1 y
+ * se llevaba puestos los anticipos de la semana ANTERIOR, que ya se habian
+ * descontado al pagar. Reportado asi: "se fueron cargando anticipos en algunas
+ * de las chicas que ya son de la semana pasada".
+ */
+function semanaQueTerminaHoy() {
+  const hasta = todayYMD();
+  const d = new Date(`T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 6);
+  return { desde: d.toISOString().slice(0, 10), hasta };
 }
 
 /** No tiene sentido liquidar a futuro: topamos cualquier fecha a hoy. */
@@ -78,7 +74,7 @@ export function NuevaLiquidacionForm({
   const [sucursalId, setSucursalId] = useState(initialSucursal);
   const [empleadoId, setEmpleadoId] = useState("");
 
-  const q = clampRange(quincenaActual());
+  const q = clampRange(semanaQueTerminaHoy());
   const [desde, setDesde] = useState(q.desde);
   const [hasta, setHasta] = useState(q.hasta);
 
