@@ -57,6 +57,14 @@ export function ProyeccionSemanal({ data }: { data: ProyeccionSemanal }) {
                     cobra {e.gana === "comision" ? "comisión" : "el asegurado"}
                   </span>
                 )}
+                {/* Si no se dice, el número de una encargada parece incompleto
+                    —y lo es a propósito: su sueldo no se junta semana a
+                    semana. */}
+                {e.fijoMensual && (
+                  <span className="block text-[10px] text-muted-foreground">
+                    sólo comisión por productos · su fijo va aparte
+                  </span>
+                )}
               </td>
               <td
                 className={`px-4 py-2.5 text-right tabular-nums ${
@@ -109,7 +117,8 @@ export function ProyeccionSemanal({ data }: { data: ProyeccionSemanal }) {
         <p className="text-[10px] text-muted-foreground pt-1">
           Estimado: las comisiones, los viáticos y los anticipos son los que ya
           están cargados; las horas salen de la ficha de cada una y se ajustan al
-          liquidar.
+          liquidar. No incluye los sueldos fijos mensuales de las encargadas,
+          que no se juntan semana a semana.
         </p>
       </div>
     </section>

@@ -1354,6 +1354,8 @@ export interface ProyeccionEmpleado {
   total: number;
   /** Para una profesional: si hoy gana por comisión o por el asegurado. */
   gana: "comision" | "asegurado" | null;
+  /** Cobra un fijo mensual aparte: acá sólo se muestra lo que varía. */
+  fijoMensual: boolean;
 }
 
 export interface ProyeccionSemanal {
@@ -1475,10 +1477,23 @@ export async function getProyeccionSemanal(args: {
       .filter((v) => !v.pagado)
       .reduce((s: number, v) => s + v.monto, 0);
 
+    // Las encargadas cobran un fijo mensual, y acá no va.
+    //
+    // Este panel contesta una sola pregunta: cuánta plata hay que juntar esta
+    // semana. El fijo de una encargada no se junta semana a semana —se paga por
+    // mes y ya se sabe cuánto es—, así que mostrarlo acá infla el total con
+    // algo que no se paga el sábado. Lo único suyo que varía, y que por lo
+    // tanto hay que mirar, es la comisión por venta de productos.
+    //
+    // Lo pidieron así, y además era inconsistente: Eliana aparecía con sus
+    // $432.000 y Jo no, sólo porque Jo tiene las horas en cero en su ficha.
+    // "Entonces por qué no pasa con Jo, ambas tenemos fijos... preferible que
+    // eso no aparezca, sólo comisiones por venta de producto."
+    const esFijoMensual = datos.tipoComision === "sueldo_fijo";
     const detalle = calcularLiquidacion({
       tipoComision: datos.tipoComision,
       totalComision: comision,
-      sueldoHoras,
+      sueldoHoras: esFijoMensual ? 0 : sueldoHoras,
       sueldoBasico: datos.sueldoBasicoSugerido,
       viaticoAPagar: viatico,
       totalAnticipos: anticipos,
@@ -1492,12 +1507,13 @@ export async function getProyeccionSemanal(args: {
       empleadoId: emp.id,
       nombre: emp.nombre,
       comision,
-      sueldoHoras,
+      sueldoHoras: esFijoMensual ? 0 : sueldoHoras,
       sueldoBasico: datos.sueldoBasicoSugerido,
       viatico,
       anticipos,
       total: detalle.total,
       gana: detalle.gana,
+      fijoMensual: esFijoMensual,
     });
   }
 
