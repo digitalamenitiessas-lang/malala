@@ -1319,3 +1319,40 @@ export const schema = {
   giftCards,
   giftCardMovimientos,
 };
+
+/**
+ * Pagos a cuenta de un proveedor.
+ *
+ * El salón nunca paga una factura entera: paga montos sueltos todas las
+ * semanas. Las facturas impagas suman deuda y estos pagos la bajan, sin tener
+ * que decir a qué factura va cada uno. Ver drizzle/0058.
+ */
+export const pagosProveedor = pgTable(
+  "pagos_proveedor",
+  {
+    id: text("id").primaryKey(),
+    proveedorId: text("proveedor_id")
+      .notNull()
+      .references(() => proveedores.id, { onDelete: "cascade" }),
+    sucursalId: text("sucursal_id")
+      .notNull()
+      .references(() => sucursales.id),
+    fecha: timestamp("fecha", { withTimezone: true }).notNull(),
+    monto: doublePrecision("monto").notNull(),
+    mpId: text("mp_id").references(() => mediosPago.id),
+    mpCuentaId: text("mp_cuenta_id").references(() => cuentasBancarias.id),
+    observacion: text("observacion"),
+    // Un pago mueve plata, así que no se borra: se anula y se revierte.
+    anulado: boolean("anulado").notNull().default(false),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => profiles.userId),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    provFechaIdx: index("pagos_proveedor_prov_idx").on(
+      table.proveedorId,
+      table.fecha,
+    ),
+  }),
+);

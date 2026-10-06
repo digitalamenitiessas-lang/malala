@@ -10,6 +10,8 @@ import {
 } from "@/lib/data/proveedores";
 import { listEgresos } from "@/lib/data/egresos";
 import { listMediosPago } from "@/lib/data/medios-pago";
+import { listSucursales } from "@/lib/data/sucursales";
+import { PagoProveedorForm } from "./pago-proveedor-form";
 import { TogglePagadoButton } from "@/app/(app)/egresos/toggle-pagado-button";
 import { listInsumosByProveedor } from "@/lib/data/insumos";
 import { requireUser } from "@/lib/auth/session";
@@ -57,11 +59,12 @@ export default async function EditarProveedorPage({
   const rango = sp.rango ?? "3meses";
   const { desde, hasta } = rangoToFechas(rango);
 
-  const [proveedor, egresos, insumosDelProveedor, mediosPago] = await Promise.all([
+  const [proveedor, egresos, insumosDelProveedor, mediosPago, sucursales] = await Promise.all([
     getProveedor(id),
     listEgresos({ proveedorId: id, desde, hasta }),
     listInsumosByProveedor(id),
     listMediosPago({ soloActivos: true, excluirGiftCard: true }),
+    listSucursales({ soloActivas: true }),
   ]);
   if (!proveedor) notFound();
 
@@ -300,6 +303,17 @@ export default async function EditarProveedorPage({
             </table>
           </div>
         </section>
+      )}
+
+      {puedeRegistrarCompra && proveedor.deuda_pendiente !== 0 && (
+        <PagoProveedorForm
+          proveedorId={proveedor.id}
+          deuda={proveedor.deuda_pendiente}
+          mediosPago={mediosPago}
+          sucursales={sucursales.filter((s) =>
+            scope.sucursalIdsPermitidas.includes(s.id),
+          )}
+        />
       )}
 
       {/* Histórico */}
