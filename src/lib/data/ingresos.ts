@@ -756,8 +756,17 @@ export async function createIngreso(
         .limit(1);
 
       if (!aperturaDelDia) {
+        // Nombrar el día, no decir "hoy".
+        //
+        // En una venta retroactiva el chequeo es sobre la caja de ESE día, pero
+        // el mensaje decía "la caja de hoy" — y hoy casi siempre está abierta,
+        // así que la frase era incomprensible justo cuando el sistema tenía
+        // razón. Pasó en Centro cargando ventas del 26/09: "y la caja está
+        // abierta porque acabo de grabar una venta".
         throw new Error(
-          "Tenés que abrir la caja de hoy antes de registrar ventas.",
+          esRetroactiva
+            ? `Esa venta es del ${hoyYmd} y la caja de ese día nunca se abrió. Abrila desde Caja → Abrir caja, con el selector "Abrir otro día".`
+            : "Tenés que abrir la caja de hoy antes de registrar ventas.",
         );
       }
 
