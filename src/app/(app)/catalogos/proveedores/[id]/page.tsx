@@ -9,6 +9,8 @@ import {
   updateProveedor,
 } from "@/lib/data/proveedores";
 import { listEgresos } from "@/lib/data/egresos";
+import { listMediosPago } from "@/lib/data/medios-pago";
+import { TogglePagadoButton } from "@/app/(app)/egresos/toggle-pagado-button";
 import { listInsumosByProveedor } from "@/lib/data/insumos";
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope, esAdmin } from "@/lib/auth/access";
@@ -55,10 +57,11 @@ export default async function EditarProveedorPage({
   const rango = sp.rango ?? "3meses";
   const { desde, hasta } = rangoToFechas(rango);
 
-  const [proveedor, egresos, insumosDelProveedor] = await Promise.all([
+  const [proveedor, egresos, insumosDelProveedor, mediosPago] = await Promise.all([
     getProveedor(id),
     listEgresos({ proveedorId: id, desde, hasta }),
     listInsumosByProveedor(id),
+    listMediosPago({ soloActivos: true, excluirGiftCard: true }),
   ]);
   if (!proveedor) notFound();
 
@@ -375,12 +378,27 @@ export default async function EditarProveedorPage({
                           Pagado
                         </span>
                       ) : (
-                        <span
-                          className="text-xs uppercase tracking-wider"
-                          style={{ color: "var(--danger)" }}
-                        >
-                          Pendiente
-                        </span>
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span
+                            className="text-xs uppercase tracking-wider"
+                            style={{ color: "var(--danger)" }}
+                          >
+                            Pendiente
+                          </span>
+                          {/* El botón de pagar vivía sólo en Gastos, así que
+                              quien venía a la ficha del proveedor a saldar una
+                              factura veía la deuda y no tenía con qué pagarla.
+                              Reportado tal cual: "fui a cargarlo por
+                              Proveedores y no puedo seguir desde ahí". */}
+                          {puedeRegistrarCompra && !row.egreso.anulado && (
+                            <TogglePagadoButton
+                              egresoId={row.egreso.id}
+                              pagado={false}
+                              tieneMedio={!!row.egreso.mp_id}
+                              mediosPago={mediosPago}
+                            />
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
