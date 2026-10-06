@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 
@@ -1400,19 +1400,55 @@ export async function getProyeccionSemanal(args: {
 
   const empleados = await listEmpleados({ sucursalId: args.sucursalId });
 
+  // Desde cuándo se le debe a cada una: el día siguiente a su última
+  // liquidación.
+  //
+  // No puede ser una ventana fija de siete días. Las comisiones ya liquidadas
+  // salen solas (quedan enganchadas a su liquidación), pero las HORAS no: se
+  // calculan por los días del rango. Con una ventana fija, a alguien que cobró
+  // el viernes se le contaban de nuevo las horas de toda la semana contra las
+  // comisiones de los dos días que van, así que el asegurado ganaba siempre y
+  // el total no significaba nada. Lo marcaron desde el mostrador: "eso se
+  // supone que es lo acumulado desde ayer lunes a hoy martes y no es correcto".
+  const ultimas = await getDb()
+    .select({
+      empleadoId: liquidacionesTable.empleadoId,
+      hasta: sql<string>`max(${liquidacionesTable.periodoHasta})`,
+    })
+    .from(liquidacionesTable)
+    .where(
+      and(
+        eq(liquidacionesTable.sucursalId, args.sucursalId),
+        ne(liquidacionesTable.estado, "anulada"),
+      ),
+    )
+    .groupBy(liquidacionesTable.empleadoId);
+  const ultimaPorEmpleado = new Map(ultimas.map((u) => [u.empleadoId, u.hasta]));
+
   const filas: ProyeccionEmpleado[] = [];
+  let desdeReal = args.hasta;
   for (const emp of empleados) {
+    const ultima = ultimaPorEmpleado.get(emp.id);
+    // El piso de args.desde es para quien nunca cobró: sin él, la primera
+    // proyección arrastraría meses de historia.
+    // max() sobre una columna `date` vuelve como objeto Date, no como texto,
+    // asi que no se le puede pedir .slice sin romper la pagina entera. Se
+    // normaliza a YYYY-MM-DD aguantando las dos formas.
+    const desde = ultima ? sumarDiasYmd(aYmd(ultima), 1) : args.desde;
+    if (desde > args.hasta) continue; // ya está paga hasta hoy
+    if (desde < desdeReal) desdeReal = desde;
+
     const [lineas, datos] = await Promise.all([
       fetchLineasPendientes({
         sucursalId: args.sucursalId,
         empleadoId: emp.id,
-        desde: args.desde,
+        desde,
         hasta: args.hasta,
       }),
       fetchValorHoraYAnticipos({
         empleadoId: emp.id,
         sucursalId: args.sucursalId,
-        desde: args.desde,
+        desde,
         hasta: args.hasta,
       }),
     ]);
@@ -1424,7 +1460,7 @@ export async function getProyeccionSemanal(args: {
         and(
           eq(viaticosTable.empleadoId, emp.id),
           eq(viaticosTable.sucursalId, args.sucursalId),
-          gte(viaticosTable.fecha, args.desde),
+          gte(viaticosTable.fecha, desde),
           lte(viaticosTable.fecha, args.hasta),
           isNull(viaticosTable.liquidacionId),
         ),
@@ -1473,10 +1509,33 @@ export async function getProyeccionSemanal(args: {
     .reduce((acc, s) => acc + s.saldo, 0);
 
   return {
-    desde: args.desde,
+    // El rango REAL: desde el dia siguiente al ultimo pago, no una ventana
+    // fija. Es lo que hay que mostrar arriba, porque es el periodo que se esta
+    // acumulando. Lo marcaron: "la fecha de arriba a la derecha no es la que
+    // nos sirve realmente".
+    desde: desdeReal,
     hasta: args.hasta,
     empleados: filas,
     total: filas.reduce((s, f) => s + f.total, 0),
     efectivoDisponible,
   };
+}
+
+/**
+ * Normaliza a YYYY-MM-DD lo que vuelve de una columna `date`.
+ *
+ * El driver la devuelve como Date y no como texto, asi que pedirle .slice a eso
+ * tira "slice is not a function" y se cae la pagina entera del lado del
+ * servidor. Pasó exactamente eso.
+ */
+function aYmd(v: unknown): string {
+  if (v instanceof Date) {
+    // UTC: la fecha ya viene sin hora, y toISOString local la correria un dia.
+    return new Date(
+      Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()),
+    )
+      .toISOString()
+      .slice(0, 10);
+  }
+  return String(v).slice(0, 10);
 }

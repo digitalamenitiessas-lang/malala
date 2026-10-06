@@ -30,7 +30,8 @@ export function ProyeccionSemanal({ data }: { data: ProyeccionSemanal }) {
           Lo que hay que pagar esta semana
         </h2>
         <span className="text-[11px] text-muted-foreground tabular-nums">
-          {fmtYMD(data.desde)} al {fmtYMD(data.hasta)} · estimado
+          desde el último pago · {fmtYMD(data.desde)} al {fmtYMD(data.hasta)} ·
+          estimado
         </span>
       </div>
 
