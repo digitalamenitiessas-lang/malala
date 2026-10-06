@@ -10,8 +10,10 @@ import {
 } from "@/lib/data/proveedores";
 import { listEgresos } from "@/lib/data/egresos";
 import { listMediosPago } from "@/lib/data/medios-pago";
+import { listPagosProveedor } from "@/lib/data/proveedores";
 import { listSucursales } from "@/lib/data/sucursales";
 import { PagoProveedorForm } from "./pago-proveedor-form";
+import { PagosHistorial } from "./pagos-historial";
 import { TogglePagadoButton } from "@/app/(app)/egresos/toggle-pagado-button";
 import { listInsumosByProveedor } from "@/lib/data/insumos";
 import { requireUser } from "@/lib/auth/session";
@@ -59,12 +61,14 @@ export default async function EditarProveedorPage({
   const rango = sp.rango ?? "3meses";
   const { desde, hasta } = rangoToFechas(rango);
 
-  const [proveedor, egresos, insumosDelProveedor, mediosPago, sucursales] = await Promise.all([
+  const [proveedor, egresos, insumosDelProveedor, mediosPago, sucursales, pagos] =
+    await Promise.all([
     getProveedor(id),
     listEgresos({ proveedorId: id, desde, hasta }),
     listInsumosByProveedor(id),
     listMediosPago({ soloActivos: true, excluirGiftCard: true }),
     listSucursales({ soloActivas: true }),
+    listPagosProveedor(id),
   ]);
   if (!proveedor) notFound();
 
@@ -81,6 +85,11 @@ export default async function EditarProveedorPage({
   }
 
   const { totales, porInsumo } = computarHistorial(egresos);
+  // Lo pagado a cuenta: es lo que explica por que el saldo no coincide con la
+  // suma de las facturas marcadas pendientes.
+  const totalPagos = pagos
+    .filter((p) => !p.anulado)
+    .reduce((s, p) => s + p.monto, 0);
 
   return (
     <div className="space-y-10 max-w-5xl">
@@ -153,11 +162,20 @@ export default async function EditarProveedorPage({
             value={formatARS(totales.pagado)}
             color="sage-700"
           />
+          {/* El saldo es lo que importa y por eso dice de dónde sale: las
+              facturas suman y los pagos restan. Sin eso, ver dos facturas
+              marcadas "Pendiente" después de pagar se lee como que el pago no
+              entró. Pasó: "se redujo esa plata de mi caja pero sigue
+              apareciendo la misma deuda". */}
           <Kpi
-            label="Deuda pendiente"
+            label="Saldo a favor del proveedor"
             value={formatARS(proveedor.deuda_pendiente)}
             color={proveedor.deuda_pendiente > 0 ? "danger" : undefined}
-            hint="Total histórico, no por rango"
+            hint={
+              totalPagos > 0
+                ? `Facturas menos ${formatARS(totalPagos)} ya pagados`
+                : "Total histórico, no por rango"
+            }
           />
         </div>
       </section>
@@ -316,6 +334,8 @@ export default async function EditarProveedorPage({
         />
       )}
 
+      <PagosHistorial pagos={pagos} />
+
       {/* Histórico */}
       <section className="space-y-3">
         <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
@@ -393,11 +413,15 @@ export default async function EditarProveedorPage({
                         </span>
                       ) : (
                         <div className="flex flex-col items-center gap-1.5">
+                          {/* "En cuenta" y no "Pendiente": el salón no paga
+                              facturas una por una, paga montos a cuenta. Una
+                              factura que sigue diciendo Pendiente después de
+                              haber pagado se lee como que el pago no entró. */}
                           <span
                             className="text-xs uppercase tracking-wider"
-                            style={{ color: "var(--danger)" }}
+                            style={{ color: "var(--warning)" }}
                           >
-                            Pendiente
+                            En cuenta
                           </span>
                           {/* El botón de pagar vivía sólo en Gastos, así que
                               quien venía a la ficha del proveedor a saldar una
