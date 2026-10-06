@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth/session";
 import { getProyeccionSemanal, listLiquidaciones } from "@/lib/data/liquidaciones";
 import { hoyAr, sumarDiasYmd } from "@/lib/fecha-ar";
 import { ProyeccionSemanal } from "./proyeccion-semanal";
+import { CargarViaticosButton } from "./cargar-viaticos-button";
 import { listSucursales } from "@/lib/data/sucursales";
 import { formatARS } from "@/lib/utils";
 import type { LiquidacionEstado } from "@/lib/types";
@@ -121,7 +122,15 @@ export default async function LiquidacionesPage({
           </Link>
         </div>
       </header>
-n      <ProyeccionSemanal data={proyeccion} />
+n      <div className="flex flex-wrap items-center justify-between gap-3">
+        <CargarViaticosButton
+          sucursalId={sucursal.id}
+          desde={sumarDiasYmd(hoy, -6)}
+          hasta={hoy}
+        />
+      </div>
+
+      <ProyeccionSemanal data={proyeccion} />
 
       {items.length === 0 ? (
         <div className="rounded-md border border-border bg-card p-8 text-center text-sm text-muted-foreground">

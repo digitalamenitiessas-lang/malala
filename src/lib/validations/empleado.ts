@@ -12,6 +12,14 @@ export const empleadoSchema = z.object({
     .array(z.coerce.number().int().min(0).max(6))
     .default([])
     .transform((arr) => Array.from(new Set(arr)).sort((a, b) => a - b)),
+  /**
+   * Días en que le corresponde viático. Aparte de los de trabajo: hay chicas
+   * que trabajan cinco días y cobran viático dos.
+   */
+  dias_viatico: z
+    .array(z.coerce.number().int().min(0).max(6))
+    .default([])
+    .transform((arr) => Array.from(new Set(arr)).sort((a, b) => a - b)),
   observacion: z
     .string()
     .optional()

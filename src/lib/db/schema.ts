@@ -132,6 +132,13 @@ export const empleados = pgTable("empleados", {
   // Jornada: horas por día y días de la semana que trabaja (0=domingo … 6=sábado).
   horasPorSemana: doublePrecision("horas_por_semana").notNull().default(0),
   diasTrabajo: jsonb("dias_trabajo").$type<number[]>().notNull().default([]),
+  /**
+   * Dias de la semana en que le corresponde viatico (0=domingo).
+   *
+   * Aparte de dias_trabajo a proposito: hay chicas que trabajan cinco dias y
+   * cobran viatico dos. El monto es viaticoPorDia. Ver drizzle/0057.
+   */
+  diasViatico: jsonb("dias_viatico").$type<number[]>().notNull().default([]),
   observacion: text("observacion"),
 });
 

@@ -445,3 +445,110 @@ export async function registrarViaticosEnRango(
 
   return { ok: true, creados, salteados };
 }
+
+/**
+ * Carga los viáticos de toda la semana, para toda la sucursal, de una.
+ *
+ * Elu: "quiero cargar UNA SOLA VEZ los viáticos y que se repliquen
+ * semanalmente... hoy el sistema me pide cargar todas las semanas lo mismo y es
+ * una x una, no nos suma en tiempo".
+ *
+ * Cada empleada tiene configurado en su ficha cuánto y qué días le corresponde
+ * (dias_viatico, aparte de los días que trabaja). Esto los crea para el rango
+ * pedido y listo: el ajuste fino se hace después borrando el día que no va, que
+ * es lo que ella pidió — "si una se enferma, saco ese viático y pago".
+ *
+ * No pisa lo que ya está: si un día ya tiene viático cargado se saltea, así que
+ * se puede correr dos veces sin duplicar.
+ */
+export async function generarViaticosDeLaSemana(args: {
+  sucursalId: string;
+  desde: string;
+  hasta: string;
+}): Promise<ActionResult & { creados?: number; salteados?: number }> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+  if (!isSucursalAllowed(scope, args.sucursalId)) {
+    return { ok: false, errors: { _: ["Sin acceso a esa sucursal"] } };
+  }
+  const YMD = /^\d{4}-\d{2}-\d{2}$/;
+  if (!YMD.test(args.desde) || !YMD.test(args.hasta) || args.hasta < args.desde) {
+    return { ok: false, errors: { _: ["Rango de fechas inválido"] } };
+  }
+
+  const db = getDb();
+  const empleados = await db
+    .select({
+      id: empleadosTable.id,
+      monto: empleadosTable.viaticoPorDia,
+      dias: empleadosTable.diasViatico,
+    })
+    .from(empleadosTable)
+    .where(
+      and(
+        eq(empleadosTable.sucursalPrincipalId, args.sucursalId),
+        eq(empleadosTable.activo, true),
+      ),
+    );
+
+  // Sin monto o sin días configurados no hay nada que generar para esa chica:
+  // es el caso de las que no cobran viático, no un error.
+  const conViatico = empleados.filter(
+    (e) => e.monto > 0 && (e.dias ?? []).length > 0,
+  );
+  if (conViatico.length === 0) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          "Ninguna empleada tiene el viático configurado. Cargalo en su ficha: el monto por día y qué días le corresponde.",
+        ],
+      },
+    };
+  }
+
+  const yaCargados = await db
+    .select({ empleadoId: viaticosTable.empleadoId, fecha: viaticosTable.fecha })
+    .from(viaticosTable)
+    .where(
+      and(
+        eq(viaticosTable.sucursalId, args.sucursalId),
+        gte(viaticosTable.fecha, args.desde),
+        lte(viaticosTable.fecha, args.hasta),
+      ),
+    );
+  const existe = new Set(yaCargados.map((v) => `${v.empleadoId}|${v.fecha}`));
+
+  let creados = 0;
+  let salteados = 0;
+  for (const emp of conViatico) {
+    const dias = new Set(emp.dias ?? []);
+    // Mediodía UTC para que el corrimiento de zona no mueva el día de la semana.
+    const cur = new Date(`${args.desde}T12:00:00Z`);
+    const fin = new Date(`${args.hasta}T12:00:00Z`);
+    while (cur <= fin) {
+      const ymd = cur.toISOString().slice(0, 10);
+      if (dias.has(cur.getUTCDay())) {
+        if (existe.has(`${emp.id}|${ymd}`)) {
+          salteados += 1;
+        } else {
+          await db.insert(viaticosTable).values({
+            id: createId(),
+            empleadoId: emp.id,
+            sucursalId: args.sucursalId,
+            fecha: ymd,
+            monto: emp.monto,
+            pagado: false,
+            usuarioId: user.id,
+          });
+          creados += 1;
+        }
+      }
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+  }
+
+  revalidatePath("/liquidaciones");
+  revalidatePath("/catalogos/empleados");
+  return { ok: true, creados, salteados };
+}

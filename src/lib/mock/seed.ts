@@ -163,7 +163,7 @@ export function seed(): Store {
     valor_hora: 5000,
     viatico_por_dia: 4500,
     horas_por_semana: 8,
-    dias_trabajo: [2, 3, 4, 5, 6],
+    dias_trabajo: [2, 3, 4, 5, 6], dias_viatico: [],
     observacion: "Color y brushing",
   };
   const empCamila = {
@@ -177,7 +177,7 @@ export function seed(): Store {
     valor_hora: 4000,
     viatico_por_dia: 0,
     horas_por_semana: 8,
-    dias_trabajo: [1, 2, 3, 4, 5],
+    dias_trabajo: [1, 2, 3, 4, 5], dias_viatico: [],
     observacion: "Nails artist",
   };
   const empEliana = {
@@ -191,7 +191,7 @@ export function seed(): Store {
     valor_hora: 4000,
     viatico_por_dia: 3000,
     horas_por_semana: 6,
-    dias_trabajo: [3, 4, 5, 6],
+    dias_trabajo: [3, 4, 5, 6], dias_viatico: [],
     observacion: "Nails y pedicuria",
   };
   const empCarolina = {
@@ -205,7 +205,7 @@ export function seed(): Store {
     valor_hora: 6000,
     viatico_por_dia: 5000,
     horas_por_semana: 9,
-    dias_trabajo: [1, 2, 3, 4, 5, 6],
+    dias_trabajo: [1, 2, 3, 4, 5, 6], dias_viatico: [],
     observacion: "Encargada y cejas",
   };
 

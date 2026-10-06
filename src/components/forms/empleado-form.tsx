@@ -145,6 +145,7 @@ export function EmpleadoForm({
             </div>
           </div>
           <DiasTrabajoField dias={empleado?.dias_trabajo ?? []} />
+          <DiasViaticoField dias={empleado?.dias_viatico ?? []} />
           <Field
             label="Observación"
             name="observacion"
@@ -250,6 +251,45 @@ function DiasTrabajoField({ dias }: { dias: number[] }) {
       </div>
       <p className="text-xs text-muted-foreground">
         Se usan para calcular las horas del período al liquidar.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Qué días le corresponde viático.
+ *
+ * Aparte de los días que trabaja, a propósito: hay chicas que trabajan cinco
+ * días y cobran viático dos. Con esto cargado, los viáticos de toda la semana
+ * se generan de un botón desde Liquidaciones en vez de uno por uno.
+ */
+function DiasViaticoField({ dias }: { dias: number[] }) {
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Días que cobra viático
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {DIAS.map((d) => (
+          <label
+            key={d.value}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm cursor-pointer hover:bg-cream has-[:checked]:border-sage-700 has-[:checked]:bg-sage-50"
+          >
+            <input
+              type="checkbox"
+              name="dias_viatico"
+              value={d.value}
+              defaultChecked={dias.includes(d.value)}
+              className="h-3.5 w-3.5 rounded border-border accent-sage-500"
+            />
+            <span>{d.label}</span>
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        No son necesariamente los días que trabaja. Con esto y el monto de
+        arriba, los viáticos de la semana se cargan de un botón desde
+        Liquidaciones.
       </p>
     </div>
   );

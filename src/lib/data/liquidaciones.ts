@@ -807,6 +807,7 @@ function mapEmpleadoRow(row: typeof empleadosTable.$inferSelect): Empleado {
     viatico_por_dia: row.viaticoPorDia,
     horas_por_semana: row.horasPorSemana,
     dias_trabajo: row.diasTrabajo ?? [],
+    dias_viatico: row.diasViatico ?? [],
     observacion: row.observacion ?? undefined,
   };
 }

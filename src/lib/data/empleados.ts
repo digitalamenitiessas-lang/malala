@@ -156,6 +156,7 @@ function mapEmpleado(row: typeof empleadosTable.$inferSelect): Empleado {
     viatico_por_dia: row.viaticoPorDia,
     horas_por_semana: row.horasPorSemana,
     dias_trabajo: row.diasTrabajo ?? [],
+    dias_viatico: row.diasViatico ?? [],
     observacion: row.observacion ?? undefined,
   };
 }
@@ -232,6 +233,7 @@ function parse(formData: FormData) {
     viatico_por_dia: formData.get("viatico_por_dia"),
     horas_por_semana: formData.get("horas_por_semana"),
     dias_trabajo: formData.getAll("dias_trabajo"),
+    dias_viatico: formData.getAll("dias_viatico"),
     observacion: formData.get("observacion"),
     activo: formData.get("activo") === "on" || formData.get("activo") === "true",
   });
@@ -660,6 +662,7 @@ export async function updateEmpleado(
       viaticoPorDia: parsed.data.viatico_por_dia,
       horasPorSemana: parsed.data.horas_por_semana,
       diasTrabajo: parsed.data.dias_trabajo,
+      diasViatico: parsed.data.dias_viatico,
       observacion: parsed.data.observacion ?? null,
     })
     .where(eq(empleadosTable.id, empleadoId));

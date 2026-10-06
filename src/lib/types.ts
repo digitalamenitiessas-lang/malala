@@ -65,6 +65,8 @@ export interface Empleado {
   viatico_por_dia: number;
   horas_por_semana: number;
   dias_trabajo: number[]; // 0=domingo … 6=sábado
+  /** Días en que le corresponde viático (0=domingo). Aparte de dias_trabajo. */
+  dias_viatico: number[];
   observacion?: string;
 }
 
