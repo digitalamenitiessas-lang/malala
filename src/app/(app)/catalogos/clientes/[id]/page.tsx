@@ -155,6 +155,7 @@ export default async function EditarClientePage({
         mediosPago={mediosPago}
         cuentasBanco={cuentasBanco}
         puedeGestionar={puedeEditar}
+        puedeRevertir={user.rol === "superadmin"}
       />
 
       <FichaTecnica

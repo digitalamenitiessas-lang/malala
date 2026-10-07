@@ -17,6 +17,7 @@ import {
   registrarCargoCc,
   registrarPagoCc,
   registrarSaldoAFavorCc,
+  revertirMovimientoCc,
   toggleCuentaCorriente,
 } from "@/lib/data/cuenta-corriente";
 import type {
@@ -32,6 +33,11 @@ interface Props {
   mediosPago: MedioPago[];
   cuentasBanco: CuentaBancaria[];
   puedeGestionar: boolean;
+  /**
+   * Sólo Lucía revierte. Pedido así: "yo había pensado que me des a mí el
+   * perfil para hacerlo, así no nos equivocamos".
+   */
+  puedeRevertir?: boolean;
 }
 
 type Modo = null | "cargo" | "pago" | "favor";
@@ -53,9 +59,13 @@ export function CuentaCorrientePanel({
   mediosPago,
   cuentasBanco,
   puedeGestionar,
+  puedeRevertir = false,
 }: Props) {
   const { pending, run } = useTransitionFeedback();
   const [error, setError] = useState<string | null>(null);
+  // Dos toques para revertir: el primero muestra "¿Seguro?". Mueve deuda y
+  // plata a la vez, así que no puede salir de un clic al pasar.
+  const [confirmando, setConfirmando] = useState<string | null>(null);
 
   const [modo, setModo] = useState<Modo>(null);
   const [monto, setMonto] = useState(0);
@@ -465,12 +475,60 @@ export function CuentaCorrientePanel({
                       <p className="mt-0.5 truncate text-sm">{movimiento.descripcion}</p>
                     )}
                   </div>
-                  <span
-                    className="shrink-0 font-medium tabular-nums"
-                    style={{ color: esCargo ? "var(--danger)" : "var(--sage-700)" }}
-                  >
-                    {esCargo ? "+" : "−"} {formatARS(movimiento.monto)}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span
+                      className="font-medium tabular-nums"
+                      style={{
+                        color: esCargo ? "var(--danger)" : "var(--sage-700)",
+                      }}
+                    >
+                      {esCargo ? "+" : "−"} {formatARS(movimiento.monto)}
+                    </span>
+                    {/* La reversa en sí no se revierte: corregir una
+                        corrección es la forma más rápida de no entender más
+                        nada en una ficha. */}
+                    {puedeRevertir && movimiento.ref_tipo !== "reverso" && (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          if (confirmando !== movimiento.id) {
+                            setConfirmando(movimiento.id);
+                            return;
+                          }
+                          setError(null);
+                          run(
+                            async () => {
+                              const res = await revertirMovimientoCc(
+                                movimiento.id,
+                              );
+                              if (!res.ok) {
+                                setError(
+                                  Object.values(res.errors).flat().join(", "),
+                                );
+                              }
+                              return res;
+                            },
+                            {
+                              refreshOnSuccess: true,
+                              successMessage: "Movimiento revertido",
+                            },
+                          );
+                          setConfirmando(null);
+                        }}
+                        onBlur={() => setConfirmando(null)}
+                        className={`rounded-md border px-2 py-1 text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                          confirmando === movimiento.id
+                            ? "border-danger text-danger"
+                            : "border-border text-muted-foreground hover:bg-cream"
+                        }`}
+                      >
+                        {confirmando === movimiento.id
+                          ? "¿Seguro?"
+                          : "Revertir"}
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}

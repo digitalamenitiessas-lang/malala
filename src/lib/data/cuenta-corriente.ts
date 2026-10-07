@@ -5,9 +5,13 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
 import {
+  cierresCaja as cierresCajaTable,
   clientes as clientesTable,
+  movimientosBancarios as movimientosBancariosTable,
   movimientosCc as movimientosCcTable,
 } from "@/lib/db/schema";
+import { fechaArDeISO, formatYmdAr } from "@/lib/fecha-ar";
+import { reversoDe, type TipoMovCc } from "@/lib/cuenta-corriente-reverso";
 import { getActiveSucursalForUser } from "@/lib/auth/session";
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
 import {
@@ -417,4 +421,146 @@ export async function registrarSaldoAFavorCc(
     descripcionBanco: "Saldo a favor de clienta",
     errorGenerico: "No se pudo registrar el saldo a favor",
   });
+}
+
+/**
+ * Deshace un movimiento de cuenta corriente mal cargado.
+ *
+ * Elu: "como hago para REVERTIR PAGO DE CUENTA CORRIENTE. voy al cliente y me
+ * aparece el pago pero no lo puedo revertir". No se podía: no existía.
+ *
+ * Queda sólo para Lucía (superadmin) porque lo pidió así: "yo había pensado
+ * que me des a mí el perfil para hacerlo, así no nos equivocamos". Un pago
+ * revertido mueve deuda y plata al mismo tiempo, y es justo el lugar donde un
+ * error de apuro sale caro.
+ *
+ * Lo que hace, y por qué cada parte:
+ *  - En la cuenta corriente deja el asiento contrario, no borra el original.
+ *    La ficha del cliente tiene que poder contar que se cargó mal y se
+ *    corrigió; es la prueba cuando el cliente discute el saldo.
+ *  - En bancos sí borra, porque esa plata nunca entró. Un contra-asiento ahí
+ *    serviría de historia pero rompería el arqueo del día, que compara contra
+ *    lo que hay fisicamente en el cajón.
+ *  - Borra también los impuestos que se auto-emitieron con el cobro: el banco
+ *    no retuvo nada por un movimiento que no existió. Se los ubica por el
+ *    instante exacto, que el cobro y sus impuestos comparten.
+ */
+export async function revertirMovimientoCc(
+  movimientoId: string,
+): Promise<ActionResult> {
+  const user = await requireRole(["superadmin"]);
+  requireSupabaseRuntime("La cuenta corriente requiere Supabase configurado.");
+
+  const db = getDb();
+  let clienteId = "";
+
+  try {
+    await db.transaction(async (tx) => {
+      const [mov] = await tx
+        .select()
+        .from(movimientosCcTable)
+        .where(eq(movimientosCcTable.id, movimientoId))
+        .limit(1);
+      if (!mov) throw new Error("No se encontro ese movimiento");
+      clienteId = mov.clienteId;
+
+      if (mov.refTipo === "reverso") {
+        throw new Error(
+          "Ese movimiento ya es la correccion de otro: no se revierte una reversa.",
+        );
+      }
+
+      const [yaRevertido] = await tx
+        .select({ id: movimientosCcTable.id })
+        .from(movimientosCcTable)
+        .where(
+          and(
+            eq(movimientosCcTable.refTipo, "reverso"),
+            eq(movimientosCcTable.refId, movimientoId),
+          ),
+        )
+        .limit(1);
+      if (yaRevertido) throw new Error("Ese movimiento ya fue revertido.");
+
+      // El arqueo de un dia cerrado esta firmado: tocarlo por atras haria que
+      // el cierre deje de explicar lo que se conto esa noche.
+      const ymd = fechaArDeISO(mov.fecha.toISOString());
+      if (mov.sucursalId) {
+        const [cerrada] = await tx
+          .select({ id: cierresCajaTable.id })
+          .from(cierresCajaTable)
+          .where(
+            and(
+              eq(cierresCajaTable.sucursalId, mov.sucursalId),
+              eq(cierresCajaTable.fecha, ymd),
+            ),
+          )
+          .limit(1);
+        if (cerrada) {
+          throw new Error(
+            `Ese movimiento es del ${formatYmdAr(ymd)} y la caja de ese dia ya esta cerrada. Entra a Caja -> Cierres anteriores, abri el cierre del ${formatYmdAr(ymd)}, toca "Reabrir cierre", reverti el movimiento y volve a cerrar el dia.`,
+          );
+        }
+      }
+
+      const [cliente] = await tx
+        .select()
+        .from(clientesTable)
+        .where(eq(clientesTable.id, mov.clienteId))
+        .limit(1);
+      if (!cliente) throw new Error("Cliente no encontrado");
+
+      const reverso = reversoDe(mov.tipo as TipoMovCc, mov.monto);
+
+      await tx.insert(movimientosCcTable).values({
+        id: createId(),
+        clienteId: mov.clienteId,
+        fecha: new Date(),
+        tipo: reverso.tipo,
+        monto: mov.monto,
+        sucursalId: mov.sucursalId,
+        mpId: mov.mpId,
+        refTipo: "reverso",
+        refId: mov.id,
+        descripcion: `Reversa de: ${mov.descripcion ?? mov.tipo}`,
+        usuarioId: user.id,
+      });
+
+      await tx
+        .update(clientesTable)
+        .set({ saldoCc: cliente.saldoCc + reverso.deltaSaldo })
+        .where(eq(clientesTable.id, mov.clienteId));
+
+      // Un cargo no movio plata, asi que no hay nada que sacar de bancos.
+      if (mov.tipo === "pago") {
+        await tx
+          .delete(movimientosBancariosTable)
+          .where(
+            and(
+              eq(movimientosBancariosTable.refId, mov.clienteId),
+              inArray(movimientosBancariosTable.refTipo, ["cc_pago", "impuesto"]),
+              eq(movimientosBancariosTable.fecha, mov.fecha),
+            ),
+          );
+      }
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          error instanceof Error
+            ? error.message
+            : "No se pudo revertir el movimiento",
+        ],
+      },
+    };
+  }
+
+  revalidatePath(`/catalogos/clientes/${clienteId}`);
+  revalidatePath("/catalogos/clientes");
+  revalidatePath("/caja");
+  revalidatePath("/bancos");
+  revalidatePath("/ventas/nueva");
+  return { ok: true };
 }
