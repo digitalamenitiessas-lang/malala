@@ -158,7 +158,7 @@ export default async function MediosPagoPage() {
                 significado y conviene decirlo acá. */}
             <p className="text-xs text-muted-foreground">
               Un apodo corto para esta forma de cobro, el que quieras: MP,
-              TRANSF, CHEQUE. <strong>EF</strong> y <strong>CC</strong> están
+              TRANSF, INFLU. <strong>EF</strong> y <strong>CC</strong> están
               reservados para efectivo y cuenta corriente.
             </p>
           </div>
@@ -204,6 +204,27 @@ export default async function MediosPagoPage() {
               className="w-full px-3 py-2 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
+          {/* El caso que lo pidió: Centro quiere un medio "sin costo
+              influencer". Se presta el servicio y no entra un peso, igual que
+              una gift card de cortesía. Sin esto, el medio quedaba marcado
+              para siempre como "sin cuenta destino", y el modo de callar ese
+              aviso —asignarle una cuenta— habría hecho que cada cortesía
+              inventara un ingreso en la caja. */}
+          <label className="flex items-start gap-2 text-sm sm:col-span-2">
+            <input
+              type="checkbox"
+              name="no_mueve_plata"
+              className="mt-0.5 h-4 w-4 rounded border-border accent-sage-500"
+            />
+            <span>
+              No entra plata con este medio
+              <span className="block text-xs text-muted-foreground">
+                Para cortesías y canjes: la venta se registra y la chica cobra
+                su comisión, pero no ingresa un peso. No lleva cuenta destino y
+                no se avisa como si faltara.
+              </span>
+            </span>
+          </label>
           <SubmitButton
             className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium uppercase tracking-wider hover:bg-brown-700 transition-colors"
             pendingLabel="Agregando..."
@@ -218,8 +239,12 @@ export default async function MediosPagoPage() {
           acá, que es donde se arregla. El medio GIFT queda afuera: ese NO tiene
           que tener cuenta, porque canjear una tarjeta no mueve plata nueva. */}
       {(() => {
+        // Antes la excepción era el código "GIFT" escrito a mano, así que
+        // cualquier medio nuevo que legítimamente no mueve plata —una cortesía,
+        // un canje— quedaba denunciado como error para siempre. Ahora lo dice
+        // el propio medio.
         const huerfanos = medios.filter(
-          (m) => m.activo && !m.cuenta_id && m.codigo.toUpperCase() !== "GIFT",
+          (m) => m.activo && !m.cuenta_id && m.mueve_plata,
         );
         if (huerfanos.length === 0) return null;
         return (

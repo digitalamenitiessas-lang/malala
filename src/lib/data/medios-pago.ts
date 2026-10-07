@@ -27,6 +27,7 @@ function mapMedioPago(row: typeof mediosPagoTable.$inferSelect): MedioPago {
     cuenta_id: row.cuentaId ?? undefined,
     recargo_pct: row.recargoPct,
     moneda: row.moneda,
+    mueve_plata: row.muevePlata,
   };
 }
 
@@ -102,6 +103,7 @@ export async function createMedioPago(
     activo: true,
     cuenta_id: formData.get("cuenta_id"),
     recargo_pct: formData.get("recargo_pct") ?? 0,
+    no_mueve_plata: formData.get("no_mueve_plata"),
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   if (!isSucursalAllowed(scope, parsed.data.sucursal_id)) {
@@ -143,8 +145,13 @@ export async function createMedioPago(
     codigo: parsed.data.codigo,
     nombre: parsed.data.nombre,
     activo: true,
-    cuentaId: parsed.data.cuenta_id ?? null,
+    // Un medio que no mueve plata no lleva cuenta aunque hayan elegido una:
+    // tenerla haría que cada cortesía inventara un ingreso en la caja.
+    cuentaId: parsed.data.no_mueve_plata
+      ? null
+      : (parsed.data.cuenta_id ?? null),
     recargoPct: parsed.data.recargo_pct,
+    muevePlata: !parsed.data.no_mueve_plata,
   });
   revalidatePath("/catalogos/medios-pago");
   return { ok: true };

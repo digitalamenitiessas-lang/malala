@@ -370,6 +370,12 @@ export interface MedioPago {
    * lo que se guarda son PESOS al cambio del momento. Ver drizzle/0055.
    */
   moneda: string;
+  /**
+   * Si cobrar con este medio hace entrar plata. False en Gift card, Cuenta
+   * corriente y las cortesias: la venta se registra y la comision se paga,
+   * pero no entra un peso. Un medio asi no lleva cuenta destino.
+   */
+  mueve_plata: boolean;
 }
 
 export type TipoCuenta = "banco" | "efectivo";

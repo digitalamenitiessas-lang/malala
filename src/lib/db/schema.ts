@@ -460,6 +460,13 @@ export const mediosPago = pgTable("medios_pago", {
   recargoPct: doublePrecision("recargo_pct").notNull().default(0),
   // "ARS" salvo USD. Ver drizzle/0055.
   moneda: text("moneda").notNull().default("ARS"),
+  /**
+   * Si cobrar con este medio hace entrar plata. False para Gift card, Cuenta
+   * corriente y las cortesías (el "sin costo influencer" de Centro): la venta
+   * se registra y la comisión se paga, pero no entra un peso y por eso no
+   * tiene —ni debe tener— cuenta destino. Ver drizzle/0060.
+   */
+  muevePlata: boolean("mueve_plata").notNull().default(true),
 });
 
 export const movimientosBancarios = pgTable(

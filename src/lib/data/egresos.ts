@@ -143,6 +143,7 @@ function mapMedioPago(row: typeof mediosPagoTable.$inferSelect): MedioPago {
     cuenta_id: row.cuentaId ?? undefined,
     recargo_pct: row.recargoPct,
     moneda: row.moneda,
+    mueve_plata: row.muevePlata,
   };
 }
 
