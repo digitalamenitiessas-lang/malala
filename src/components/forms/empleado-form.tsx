@@ -109,10 +109,6 @@ export function EmpleadoForm({
               hora, poné 0.
             </p>
           )}
-          {/* El viático ya no vive acá: se carga día por día, con su monto, en
-              la ficha de la empleada. Un fijo en el alta hacía creer que el
-              sistema sabía quién almorzó cada día, y en realidad lo adivinaba
-              contando ventas. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* El campo pedía horas por DÍA y el salón cargaba la semana: 34,
                 52, 48, 47, que coincidían exacto con el horario semanal de cada
@@ -145,6 +141,24 @@ export function EmpleadoForm({
             </div>
           </div>
           <DiasTrabajoField dias={empleado?.dias_trabajo ?? []} />
+          {/* El monto del viático volvió a la ficha, pero ya no es lo que era.
+              En septiembre se sacó de acá porque un fijo por persona hacía
+              creer que el sistema sabía quién había almorzado cada día. Ahora
+              es declaradamente una plantilla: con esto y los días de abajo, el
+              botón de Liquidaciones genera la semana entera, y después cada
+              viático se edita o se borra suelto si una faltó.
+
+              Sin este campo la plantilla no funciona, y eso fue exactamente lo
+              que pasó: se cargaron los días de toda Yerba Buena y el botón
+              seguía diciendo "ninguna empleada tiene el viático configurado",
+              porque el monto quedaba en cero y no había dónde escribirlo. */}
+          <CurrencyField
+            label="Viático por día"
+            name="viatico_por_dia"
+            defaultValue={empleado?.viatico_por_dia ?? 0}
+            error={errors.viatico_por_dia}
+            hint="Lo que cobra por cada día de viático. En 0 si no cobra."
+          />
           <DiasViaticoField dias={empleado?.dias_viatico ?? []} />
           <Field
             label="Observación"
