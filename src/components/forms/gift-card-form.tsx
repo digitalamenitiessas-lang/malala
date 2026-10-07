@@ -53,6 +53,9 @@ export function GiftCardForm({
     "venta",
   );
   const cobraHoy = origen === "venta";
+  // Controlado sólo para poder avisar de una fecha futura con nuestras
+  // palabras; vacío sigue significando "se vende hoy".
+  const [fechaVenta, setFechaVenta] = useState("");
   const mp = mediosPago.find((m) => m.id === mpId);
 
   // Sin cuenta —ni la del medio ni una elegida a mano— el cobro no impacta en
@@ -159,20 +162,36 @@ export function GiftCardForm({
                   htmlFor="fecha_venta"
                   className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
                 >
-                  Cuando se vendio (opcional)
+                  Cuándo se vendió (opcional)
                 </label>
                 <input
                   id="fecha_venta"
                   name="fecha_venta"
                   type="date"
                   max={hoyAr()}
+                  value={fechaVenta}
+                  onChange={(e) => setFechaVenta(e.currentTarget.value)}
                   className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
-                <p className="text-xs text-muted-foreground">
-                  {cobraHoy
-                    ? "Dejalo vacio si se vende hoy. Si se vendio otro dia, la plata entra en la caja de ese dia."
-                    : "El dia en que se vendio de verdad, para saber de cuando viene."}
-                </p>
+                {/* El navegador ya frena la fecha futura, pero lo hace con un
+                    globito suyo que dice "el valor debe ser menor o igual a
+                    2026-10-07". Elu se quedó trabada mirando eso y conclusión:
+                    "no me deja avanzar por los importes me parece". Decirlo
+                    nosotros, abajo del campo y en castellano, es la diferencia
+                    entre arreglarlo sola y escribir por WhatsApp. */}
+                {fechaVenta > hoyAr() ? (
+                  <p className="text-xs text-danger">
+                    Esa fecha todavía no llegó. Poné el día en que se vendió de
+                    verdad, o dejalo vacío si se vende hoy. ¿No la confundiste
+                    con el vencimiento, que va más abajo?
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {cobraHoy
+                      ? "Dejalo vacío si se vende hoy. Si se vendió otro día, la plata entra en la caja de ese día."
+                      : "El día en que se vendió de verdad, para saber de cuándo viene."}
+                  </p>
+                )}
               </div>
             )}
           </div>
