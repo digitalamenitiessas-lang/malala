@@ -148,9 +148,19 @@ export default async function MediosPagoPage() {
               name="codigo"
               required
               maxLength={8}
-              placeholder="EF, TR…"
+              placeholder="MP, TRANSF…"
               className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm uppercase focus:outline-none focus:ring-2 focus:ring-ring"
             />
+            {/* Centro, parada en este campo: "Me pide un código, ¿cuál pongo?".
+                El placeholder solo mostraba ejemplos, y el navegador le ofrecia
+                autocompletar con basura guardada de otros formularios. Un
+                codigo inventado no rompe nada, pero EF y CC sí tienen
+                significado y conviene decirlo acá. */}
+            <p className="text-xs text-muted-foreground">
+              Un apodo corto para esta forma de cobro, el que quieras: MP,
+              TRANSF, CHEQUE. <strong>EF</strong> y <strong>CC</strong> están
+              reservados para efectivo y cuenta corriente.
+            </p>
           </div>
           <div className="space-y-1.5">
             <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -225,8 +235,18 @@ export default async function MediosPagoPage() {
                 .map((m) => `${m.nombre} (${sucursalNombreById.get(m.sucursal_id) ?? m.sucursal_id})`)
                 .join(", ")}{" "}
               <strong>no va a entrar a la caja del día</strong>: la venta queda
-              registrada pero la plata no impacta en ninguna cuenta. Asignales
-              una acá abajo.
+              registrada pero la plata no impacta en ninguna cuenta.
+            </p>
+            {/* Decir que el medio YA existe y dónde se arregla.
+                Centro leyó este aviso, entendió que faltaba crear el medio y
+                se fue al formulario de arriba: "Me pide un código, ¿cuál
+                pongo?". No hacía falta crear nada —Mercado Pago ya estaba—,
+                solo elegirle la cuenta en su fila. */}
+            <p className="mt-2 text-xs text-brown-700">
+              {huerfanos.length === 1 ? "Ese medio ya existe" : "Esos medios ya existen"}
+              : no hay que crearlo de nuevo. Bajá a la tabla, buscá la fila{" "}
+              {huerfanos.map((m) => `“${m.codigo}”`).join(", ")} y elegile una
+              cuenta en la columna <strong>¿Dónde cae la plata?</strong>.
             </p>
           </div>
         );
