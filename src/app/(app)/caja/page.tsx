@@ -211,7 +211,12 @@ export default async function CajaPage({
                   : "flex items-center gap-2 rounded-md bg-sage-700 px-4 py-2 text-sm font-medium uppercase tracking-wider text-white transition-colors hover:bg-sage-800"
               }
             >
-              {aperturaHoy ? "Ver apertura" : "Abrir caja"}
+              {/* Con la caja de hoy abierta, lo único que queda por hacer acá
+                  es abrir un día viejo —y "Ver apertura" no lo decía. Centro,
+                  buscando cargar las ventas del 26/09: "no veo para abrir la
+                  caja del 26/9". El botón va a la misma pantalla, que arranca
+                  con el selector "Abrir otro día" y abajo muestra la de hoy. */}
+              {aperturaHoy ? "Abrir otro día" : "Abrir caja"}
             </Link>
           ) : null}
 

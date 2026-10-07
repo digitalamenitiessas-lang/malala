@@ -807,8 +807,14 @@ export async function getCajasPendientesDeCierre(
   //    vieja. Antes esto no se miraba y pasaba lo peor posible: el sistema te
   //    frenaba por una caja que la pantalla no mostraba en ningún lado, y no
   //    había forma de cerrarla.
+  //
+  //    Hoy queda afuera: una caja abierta hoy es el estado normal de un salón
+  //    trabajando, no algo que quedó pendiente. Incluirla ponía el cartel
+  //    "Quedó una caja sin cerrar · Cerrar caja del 07/10" arriba de la misma
+  //    pantalla que ya tiene el botón "Cerrar caja de hoy", y ese ruido tapaba
+  //    el aviso cuando el pendiente era de verdad.
   for (const a of aperturas) {
-    if (!cerradas.has(a.fecha)) pendientes.add(a.fecha);
+    if (a.fecha !== hoy && !cerradas.has(a.fecha)) pendientes.add(a.fecha);
   }
 
   // 2) Días que operaron sin haber abierto caja, dentro de la ventana. No
