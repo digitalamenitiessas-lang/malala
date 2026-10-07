@@ -186,6 +186,7 @@ export default async function InsumosPage({
                           <RegistrarCompraInsumoModal
                             insumo={i}
                             proveedores={proveedoresDelInsumo}
+                            proveedoresTodos={proveedores}
                             sucursales={sucursalesParaCompra}
                             mediosPago={mediosPago}
                             defaultSucursalId={sucursalActiva.id}

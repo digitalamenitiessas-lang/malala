@@ -298,6 +298,19 @@ export async function registrarCompraInsumo(
 
   const result = await createEgreso(null, fd);
 
+  // Comprarle a alguien es asociarlo.
+  //
+  // Un insumo sin proveedores no dejaba registrar la compra. Ahora se elige de
+  // la lista completa, y si no quedara asociado habría que volver a elegirlo
+  // en cada compra de ese mismo insumo — que es el trabajo repetido que el
+  // salón viene pidiendo sacar.
+  if (result.ok && proveedorId && !insumo.proveedor_ids?.includes(proveedorId)) {
+    await syncProveedoresInsumo(insumoId, [
+      ...(insumo.proveedor_ids ?? []),
+      proveedorId,
+    ]);
+  }
+
   // Si la compra trajo precio del envase, actualizo el catálogo para reflejar lo más reciente
   if (result.ok) {
     const cantidad = Number(formData.get("cantidad") ?? 0);

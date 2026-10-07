@@ -12,7 +12,17 @@ import { formatARS } from "@/lib/utils";
 
 interface Props {
   insumo: Insumo;
+  /** Los que ya están asociados a este insumo. Puede venir vacío. */
   proveedores: Proveedor[];
+  /**
+   * Todos los de la casa, para cuando el insumo no tiene ninguno asociado.
+   *
+   * Sin esto el modal no dibujaba ningún campo de proveedor y la compra se
+   * rechazaba igual, con un cartel que decía "elegí el proveedor" al lado de
+   * un formulario donde no había dónde elegirlo. Elu: "me pide proveedor
+   * obviamente pero no tengo el campo para ponerlo".
+   */
+  proveedoresTodos?: Proveedor[];
   sucursales: Sucursal[];
   mediosPago: MedioPago[];
   defaultSucursalId: string;
@@ -34,11 +44,16 @@ function todayYMD(): string {
 export function RegistrarCompraInsumoModal({
   insumo,
   proveedores,
+  proveedoresTodos,
   sucursales,
   mediosPago,
   defaultSucursalId,
   triggerLabel = "Registrar compra",
 }: Props) {
+  // Si el insumo no tiene proveedores propios, se eligen de la lista completa
+  // y ese queda asociado para la próxima compra.
+  const sinAsociar = proveedores.length === 0;
+  const opciones = sinAsociar ? (proveedoresTodos ?? []) : proveedores;
   const [open, setOpen] = useState(false);
   const [sucursalId, setSucursalId] = useState(defaultSucursalId);
   const [cantidad, setCantidad] = useState<number>(1);
@@ -100,9 +115,7 @@ export function RegistrarCompraInsumoModal({
                 </h3>
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   {insumo.nombre}
-                  {proveedores.length === 1
-                    ? ` · ${proveedores[0].nombre}`
-                    : ""}
+                  {opciones.length === 1 ? ` · ${opciones[0].nombre}` : ""}
                 </p>
               </div>
               <button
@@ -116,29 +129,40 @@ export function RegistrarCompraInsumoModal({
 
             <form action={formAction} className="space-y-4">
               <input type="hidden" name="insumo_id" value={insumo.id} />
-              {proveedores.length === 1 && (
+              {/* Uno solo: no hay nada que elegir. Vale también cuando el
+                  insumo no tiene asociados y la casa tiene un único proveedor
+                  —si no, ese caso volvía a quedar sin campo. */}
+              {opciones.length === 1 && (
                 <input
                   type="hidden"
                   name="proveedor_id"
-                  value={proveedores[0].id}
+                  value={opciones[0].id}
                 />
               )}
-              {proveedores.length > 1 && (
+              {opciones.length > 1 && (
                 <div className="space-y-1.5">
                   <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Proveedor
                   </label>
                   <select
                     name="proveedor_id"
-                    defaultValue={proveedores[0].id}
+                    defaultValue={sinAsociar ? "" : opciones[0].id}
+                    required
                     className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
                   >
-                    {proveedores.map((p) => (
+                    {sinAsociar && <option value="">— Elegí uno —</option>}
+                    {opciones.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nombre}
                       </option>
                     ))}
                   </select>
+                  {sinAsociar && (
+                    <p className="text-xs text-muted-foreground">
+                      Este insumo todavía no tiene proveedor. El que elijas
+                      queda asociado y la próxima vez viene puesto.
+                    </p>
+                  )}
                 </div>
               )}
 
