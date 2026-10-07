@@ -688,6 +688,11 @@ export interface GiftCard {
   sucursal_id: ID;
   codigo: string;
   importe: number;
+  /**
+   * Lo que realmente pagaron, cuando no fue el importe (gift card con
+   * descuento). Sin valor = se pagó el importe.
+   */
+  cobrado?: number;
   /** Lo que queda por usar. Baja en cada canje; puede quedar a mitad de camino. */
   saldo: number;
   estado: GiftCardEstado;

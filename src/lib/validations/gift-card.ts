@@ -25,6 +25,14 @@ export const giftCardSchema = z.object({
     .max(32, "El código no puede tener más de 32 caracteres")
     .transform((s) => s.trim().toUpperCase()),
   importe: z.coerce.number().positive("El importe debe ser mayor a 0"),
+  /**
+   * Lo que pagaron, si no es el importe. Vacío = pagaron el importe.
+   *
+   * .nullish() y no .optional() porque FormData.get devuelve null cuando el
+   * campo no vino, y con .optional() eso explota en vez de tomarse como "no
+   * mandaron nada".
+   */
+  cobrado: z.coerce.number().nonnegative().nullish(),
   mp_id: optStr,
   mp_cuenta_id: optStr,
   vence_el: optStr,

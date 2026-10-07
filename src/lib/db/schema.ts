@@ -1167,6 +1167,12 @@ export const giftCards = pgTable(
       .references(() => sucursales.id),
     codigo: text("codigo").notNull(),
     importe: doublePrecision("importe").notNull(),
+    /**
+     * Lo que realmente pagaron, cuando no es el importe. Null = se cobro el
+     * importe, que es el caso normal. Existe para la gift card con descuento:
+     * la tarjeta vale $100.000 y entran $60.000. Ver drizzle/0059.
+     */
+    cobrado: doublePrecision("cobrado"),
     saldo: doublePrecision("saldo").notNull(),
     estado: text("estado").notNull().default("activa"), // "activa" | "anulada"
     fechaEmision: timestamp("fecha_emision", { withTimezone: true }).notNull(),

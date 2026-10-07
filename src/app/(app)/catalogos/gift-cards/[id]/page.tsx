@@ -116,6 +116,17 @@ export default async function GiftCardPage({
           <p className="mt-2 font-display text-2xl tabular-nums">
             {formatARS(giftCard.importe)}
           </p>
+          {/* Si se vendió con descuento hay que poder ver las dos puntas: la
+              tarjeta debe servicios por su importe, pero a caja entró menos. */}
+          {giftCard.cobrado !== undefined && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Se pagó {formatARS(giftCard.cobrado)} ·{" "}
+              {Math.round(
+                ((giftCard.importe - giftCard.cobrado) / giftCard.importe) * 100,
+              )}
+              % de descuento
+            </p>
+          )}
         </div>
         <div className="rounded-md border border-border bg-card p-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">

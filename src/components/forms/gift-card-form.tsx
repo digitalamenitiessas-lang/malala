@@ -89,10 +89,25 @@ export function GiftCardForm({
                 ? "El saldo que le queda a la tarjeta hoy."
                 : origen === "cortesia"
                   ? "Por cuanto se regala. Es el saldo con el que arranca."
-                  : "Lo que paga quien la compra. Es el saldo con el que arranca."
+                  : "Cuánto vale la tarjeta: el saldo con el que arranca."
             }
             required
           />
+
+          {/* Lo que vale y lo que pagan no siempre son lo mismo.
+              Elu: "Venta de GIFT CARD a DUEÑOS (40% de descuento) ... al pagar
+              con un dto. no coincide lo que pagan con lo que tienen a favor,
+              cómo se hace en ese caso?". Antes no se podía: el importe era las
+              dos cosas, y había que mentir en una de las dos puntas.
+              Vacío = pagaron el importe, que es el caso de siempre. */}
+          {cobraHoy && (
+            <CurrencyField
+              label="Lo que pagan (si es distinto)"
+              name="cobrado"
+              error={errors.cobrado}
+              hint="Dejalo vacío si pagan el importe completo. Si va con descuento, poné acá lo que entra a caja."
+            />
+          )}
 
           <div className="rounded-md border border-border bg-cream/40 p-3 space-y-2">
             <span className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">

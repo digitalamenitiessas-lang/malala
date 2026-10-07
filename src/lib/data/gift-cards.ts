@@ -44,6 +44,7 @@ function mapGiftCard(row: typeof giftCardsTable.$inferSelect): GiftCard {
     sucursal_id: row.sucursalId,
     codigo: row.codigo,
     importe: row.importe,
+    cobrado: row.cobrado ?? undefined,
     saldo: row.saldo,
     estado: row.estado as GiftCard["estado"],
     fecha_emision: row.fechaEmision.toISOString(),
@@ -271,6 +272,7 @@ export async function emitirGiftCard(
     sucursal_id: formData.get("sucursal_id"),
     codigo: formData.get("codigo"),
     importe: formData.get("importe"),
+    cobrado: formData.get("cobrado"),
     mp_id: formData.get("mp_id"),
     mp_cuenta_id: formData.get("mp_cuenta_id"),
     vence_el: formData.get("vence_el"),
@@ -284,6 +286,21 @@ export async function emitirGiftCard(
 
   if (!isSucursalAllowed(scope, parsed.data.sucursal_id)) {
     return { ok: false, errors: { sucursal_id: ["Sin acceso a esa sucursal"] } };
+  }
+
+  /**
+   * Lo que entra a caja. Si no lo mandaron, es el importe: la tarjeta de
+   * $50.000 que se paga $50.000 sigue siendo el caso normal y nadie tiene que
+   * completar un campo de más para eso.
+   */
+  const cobrado = parsed.data.cobrado ?? parsed.data.importe;
+  if (cobrado > parsed.data.importe) {
+    return {
+      ok: false,
+      errors: {
+        cobrado: ["No puede pagar más de lo que vale la tarjeta"],
+      },
+    };
   }
 
   const yaExiste = await getGiftCardPorCodigo(
@@ -339,6 +356,7 @@ export async function emitirGiftCard(
         sucursalId: parsed.data.sucursal_id,
         codigo: parsed.data.codigo,
         importe: parsed.data.importe,
+        cobrado: cobrado === parsed.data.importe ? null : cobrado,
         saldo: parsed.data.importe,
         estado: "activa",
         fechaEmision: fecha,
@@ -391,7 +409,9 @@ export async function emitirGiftCard(
       await emitMovimientoBancarioTx(tx, {
         cuentaId,
         fecha,
-        monto: parsed.data.importe,
+        // Entra lo que pagaron, no lo que vale la tarjeta: con 40% de
+        // descuento el arqueo tiene que esperar $60.000, no $100.000.
+        monto: cobrado,
         tipo: "ingreso",
         sucursalId: parsed.data.sucursal_id,
         refTipo: "gift_card_venta",
