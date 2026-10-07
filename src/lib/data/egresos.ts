@@ -8,7 +8,7 @@ import {
   isSucursalAllowed,
 } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
-import { hoyAr, instanteEnFechaAr } from "@/lib/fecha-ar";
+import { formatYmdAr, hoyAr, instanteEnFechaAr } from "@/lib/fecha-ar";
 import {
   anticipos as anticiposTable,
   aperturasCaja as aperturasCajaTable,
@@ -378,7 +378,7 @@ export async function createEgreso(
 
       if (cierreDelDia) {
         throw new Error(
-          `La caja del ${ymdFecha} ya esta cerrada para esta sucursal. Reabri el cierre o carga el egreso con otra fecha.`,
+          `La caja del ${formatYmdAr(ymdFecha)} ya está cerrada para esta sucursal. Para cargarlo igual, entrá a Caja → Cierres anteriores, abrí el cierre del ${formatYmdAr(ymdFecha)} y tocá "Reabrir cierre". Si no, cargá el gasto con otra fecha.`,
         );
       }
 

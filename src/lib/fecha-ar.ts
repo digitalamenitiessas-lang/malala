@@ -8,6 +8,17 @@ const TZ = "America/Argentina/Buenos_Aires";
 // construir instantes a partir de fechas locales.
 const AR_OFFSET = "-03:00";
 
+/**
+ * 2026-09-29 → 29/09/2026. Sólo para hablarle a una persona.
+ *
+ * Un mensaje de error que dice "la caja del 2026-09-29" se lee como una falla
+ * del sistema, no como una fecha. En el salón las fechas son dd/mm.
+ */
+export function formatYmdAr(ymd: string): string {
+  const [y, m, d] = ymd.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : ymd;
+}
+
 /** Fecha de hoy como YYYY-MM-DD en horario de Argentina. */
 export function hoyAr(): string {
   // en-CA formatea como YYYY-MM-DD.

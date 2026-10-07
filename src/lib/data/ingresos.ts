@@ -49,7 +49,7 @@ import type {
   Receta,
   Servicio,
 } from "@/lib/types";
-import { hoyAr, sumarDiasYmd } from "@/lib/fecha-ar";
+import { formatYmdAr, hoyAr, sumarDiasYmd } from "@/lib/fecha-ar";
 
 export interface IngresoFiltros {
   sucursalId?: string;
@@ -736,10 +736,17 @@ export async function createIngreso(
         .limit(1);
 
       if (cierreDelDia) {
+        // Decir la fecha y el camino exacto.
+        //
+        // Este mensaje salió a producción sin la fecha —"La caja del  ya esta
+        // cerrada"— y encima mandaba a "reabrir ese cierre desde Caja" sin
+        // decir dónde. El cierre viejo se alcanza por Caja → Cierres
+        // anteriores → "Ver más", que no es obvio: Jo quedó trabada cargando
+        // el pack de masajes del 29/09 sin saber que ese camino existía.
         throw new Error(
           esRetroactiva
-            ? `La caja del  ya esta cerrada. Reabri ese cierre desde Caja para poder cargar esta venta.`
-            : "La caja de hoy ya esta cerrada para esta sucursal. Reabri el cierre para registrar mas ventas.",
+            ? `Esa venta es del ${formatYmdAr(hoyYmd)} y la caja de ese día ya está cerrada. Para cargarla, entrá a Caja → Cierres anteriores, abrí el cierre del ${formatYmdAr(hoyYmd)} y tocá "Reabrir cierre". Después volvé a guardar la venta y cerrá de nuevo ese día.`
+            : "La caja de hoy ya está cerrada para esta sucursal. Reabrí el cierre desde Caja para registrar más ventas.",
         );
       }
 
@@ -765,7 +772,7 @@ export async function createIngreso(
         // abierta porque acabo de grabar una venta".
         throw new Error(
           esRetroactiva
-            ? `Esa venta es del ${hoyYmd} y la caja de ese día nunca se abrió. Abrila desde Caja → Abrir caja, con el selector "Abrir otro día".`
+            ? `Esa venta es del ${formatYmdAr(hoyYmd)} y la caja de ese día nunca se abrió. Abrila desde Caja → Abrir caja, con el selector "Abrir otro día".`
             : "Tenés que abrir la caja de hoy antes de registrar ventas.",
         );
       }
