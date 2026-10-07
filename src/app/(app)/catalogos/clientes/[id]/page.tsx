@@ -63,6 +63,38 @@ export default async function EditarClientePage({
   );
   const totalGastado = historial.reduce((acc, ing) => acc + ing.ingreso.total, 0);
 
+  /**
+   * Una visita es un día, no una venta.
+   *
+   * El mostrador factura por sector: la clienta que se hace el pelo y las uñas
+   * la misma tarde deja dos ventas, y el historial las mostraba como dos
+   * visitas separadas. Para el salón eso es una sola vez que vino, y así se
+   * lee cuando hay que responder un reclamo. Elu: "veo que separa por sector,
+   * aunque sea la misma fecha. ¿Se puede tener esa info por fecha?".
+   *
+   * Se agrupa por la fecha ya formateada porque formatDate resuelve en hora de
+   * Argentina: agrupar por el timestamp crudo partiría en dos una venta de la
+   * noche, que en UTC cae al día siguiente.
+   */
+  type Visita = {
+    fecha: string;
+    total: number;
+    lineas: (typeof historial)[number]["lineas"];
+    observaciones: string[];
+  };
+  const visitas = historial.reduce<Visita[]>((acc, ing) => {
+    const fecha = fmtFecha(ing.ingreso.fecha);
+    let visita = acc.find((v) => v.fecha === fecha);
+    if (!visita) {
+      visita = { fecha, total: 0, lineas: [], observaciones: [] };
+      acc.push(visita);
+    }
+    visita.total += ing.ingreso.total;
+    visita.lineas.push(...ing.lineas);
+    if (ing.ingreso.observacion) visita.observaciones.push(ing.ingreso.observacion);
+    return acc;
+  }, []);
+
   const serviciosOpts = servicios.map((s) => ({ id: s.id, nombre: s.nombre }));
   const empleadosOpts = empleados
     .filter((e) => e.activo)
@@ -144,7 +176,7 @@ export default async function EditarClientePage({
           {historial.length > 0 && (
             <p className="text-xs uppercase tracking-wider text-muted-foreground tabular-nums">
               {totalServicios} servicio{totalServicios !== 1 ? "s" : ""} ·{" "}
-              {historial.length} visita{historial.length !== 1 ? "s" : ""} ·{" "}
+              {visitas.length} visita{visitas.length !== 1 ? "s" : ""} ·{" "}
               {formatARS(totalGastado)} total
             </p>
           )}
@@ -159,21 +191,21 @@ export default async function EditarClientePage({
           </div>
         ) : (
           <ol className="space-y-3">
-            {historial.map((ing) => (
+            {visitas.map((visita) => (
               <li
-                key={ing.ingreso.id}
+                key={visita.fecha}
                 className="rounded-md border border-border bg-card p-4"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="text-sm font-medium tabular-nums">
-                    {fmtFecha(ing.ingreso.fecha)}
+                    {visita.fecha}
                   </p>
                   <p className="text-sm font-medium tabular-nums">
-                    {formatARS(ing.ingreso.total)}
+                    {formatARS(visita.total)}
                   </p>
                 </div>
                 <ul className="mt-2 divide-y divide-border">
-                  {ing.lineas.map((linea) => (
+                  {visita.lineas.map((linea) => (
                     <li
                       key={linea.id}
                       className="flex items-baseline justify-between gap-3 py-1.5 text-sm"
@@ -199,11 +231,11 @@ export default async function EditarClientePage({
                     </li>
                   ))}
                 </ul>
-                {ing.ingreso.observacion && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {ing.ingreso.observacion}
+                {visita.observaciones.map((obs, i) => (
+                  <p key={i} className="mt-2 text-xs text-muted-foreground">
+                    {obs}
                   </p>
-                )}
+                ))}
               </li>
             ))}
           </ol>
