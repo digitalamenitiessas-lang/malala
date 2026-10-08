@@ -34,14 +34,17 @@ export default async function EditarClientePage({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const cliente = await getCliente(id);
+  const sucursal = await getActiveSucursal();
+  // La deuda y los movimientos son los de ESTA sucursal. Centro veía la deuda
+  // de Yerba Buena y, abajo, los movimientos que la explicaban: dos ventas
+  // fiadas de otro local.
+  const cliente = await getCliente(id, sucursal?.id);
   if (!cliente) notFound();
 
   const puedeEditar = esAdmin(user.rol) || user.rol === "encargada";
 
-  const sucursal = await getActiveSucursal();
   const [movimientosCc, mediosPago, cuentas] = await Promise.all([
-    listMovimientosCc(id),
+    listMovimientosCc(id, sucursal?.id),
     sucursal
       ? listMediosPago({ sucursalId: sucursal.id, soloActivos: true, excluirGiftCard: true })
       : Promise.resolve([]),

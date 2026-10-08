@@ -49,6 +49,15 @@ function mapMovimiento(
 
 export async function listMovimientosCc(
   clienteId: string,
+  /**
+   * Sucursal desde la que se mira. La deuda es por local, así que el detalle
+   * que la explica también: sin esto, Centro listaba las ventas fiadas de
+   * Yerba Buena abajo de un saldo que no era suyo.
+   *
+   * Opcional porque el asistente del panel consulta la cuenta completa de una
+   * clienta, que es otra pregunta.
+   */
+  sucursalId?: string,
 ): Promise<MovimientoCc[]> {
   requireSupabaseRuntime(
     "Los movimientos de cuenta corriente requieren Supabase.",
@@ -57,7 +66,14 @@ export async function listMovimientosCc(
   const rows = await db
     .select()
     .from(movimientosCcTable)
-    .where(eq(movimientosCcTable.clienteId, clienteId))
+    .where(
+      sucursalId
+        ? and(
+            eq(movimientosCcTable.clienteId, clienteId),
+            eq(movimientosCcTable.sucursalId, sucursalId),
+          )
+        : eq(movimientosCcTable.clienteId, clienteId),
+    )
     .orderBy(desc(movimientosCcTable.fecha), desc(movimientosCcTable.creadoEn));
   return rows.map(mapMovimiento);
 }
