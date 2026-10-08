@@ -9,7 +9,7 @@ import { getCierreDeFecha } from "@/lib/data/caja";
 import { AperturaCajaForm } from "@/components/forms/apertura-caja-form";
 import { ReabrirAperturaButton } from "./reabrir-apertura-button";
 import { formatARS } from "@/lib/utils";
-import { hoyAr } from "@/lib/fecha-ar";
+import { formatYmdAr, hoyAr } from "@/lib/fecha-ar";
 import { esAdmin } from "@/lib/auth/access";
 
 function todayYMD(): string {
@@ -43,12 +43,18 @@ export default async function AperturaCajaPage({
 
   return (
     <div className="space-y-8 max-w-3xl">
+      {/* Decir SIEMPRE de qué día es esta pantalla.
+          Elu: "lo que también a veces es confuso es entrar a reabrir una caja.
+          Se modifican, no sabés si estás en la caja que abriste o en la caja
+          del día". El título decía sólo "Abrir caja" y la fecha iba abajo en
+          gris y en formato 2026-10-07, que no es como se lee una fecha acá. */}
       <header className="space-y-2">
         <h1 className="font-display text-3xl tracking-[0.2em] uppercase">
-          Abrir caja
+          Abrir caja {esVieja && `del ${formatYmdAr(fecha)}`}
         </h1>
         <p className="text-sm text-muted-foreground tabular-nums">
-          {sucursal.nombre} · {fecha}
+          {sucursal.nombre} · {formatYmdAr(fecha)}
+          {!esVieja && " · hoy"}
         </p>
         {/* Abrir un día viejo: hace falta para poder cargarle las ventas que
             quedaron sin registrar, porque vender exige la caja de ese día
@@ -117,8 +123,9 @@ export default async function AperturaCajaPage({
       {existente ? (
         <section className="space-y-4">
           <div className="rounded-md border border-sage-300 bg-sage-50 p-4 text-sm text-sage-900">
-            La caja de hoy ya está abierta. Estos son los saldos con los que
-            arrancó el día.
+            {esVieja
+              ? `La caja del ${formatYmdAr(fecha)} ya está abierta. Estos son los saldos con los que arrancó ESE día, no el de hoy.`
+              : "La caja de hoy ya está abierta. Estos son los saldos con los que arrancó el día."}
           </div>
 
           <div className="overflow-hidden rounded-md border border-border bg-card">

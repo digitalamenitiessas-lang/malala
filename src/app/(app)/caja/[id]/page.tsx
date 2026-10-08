@@ -42,7 +42,12 @@ export default async function CierreDetallePage({
               {formatDateTimeLong(cierre.fecha_cierre)}
             </p>
           </div>
-          {isAdmin && <ReabrirCierreButton cierreId={cierre.id} />}
+          {isAdmin && (
+            <ReabrirCierreButton
+              cierreId={cierre.id}
+              fecha={formatYMD(cierre.fecha)}
+            />
+          )}
         </div>
       </header>
 
