@@ -28,11 +28,20 @@ export const giftCardSchema = z.object({
   /**
    * Lo que pagaron, si no es el importe. Vacío = pagaron el importe.
    *
-   * .nullish() y no .optional() porque FormData.get devuelve null cuando el
-   * campo no vino, y con .optional() eso explota en vez de tomarse como "no
-   * mandaron nada".
+   * El vacío se descarta ANTES de convertir a número, y ahí está el filo:
+   * z.coerce.number() convierte "" en 0, no en "sin valor". Con .nullish()
+   * sobre el coerce, dejar el campo en blanco —que es el caso normal— pasaba
+   * como "cobraron cero". La gift card GC-0193 de $40.000 se emitió así y
+   * registró $0 entrando a la caja; el salón contó $40.000 de menos en el
+   * arqueo sin que nada avisara.
    */
-  cobrado: z.coerce.number().nonnegative().nullish(),
+  cobrado: z
+    .union([z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) => (v === "" || v === null || v === undefined ? undefined : Number(v)))
+    .refine(
+      (v) => v === undefined || (Number.isFinite(v) && v >= 0),
+      "Importe inválido",
+    ),
   mp_id: optStr,
   mp_cuenta_id: optStr,
   vence_el: optStr,
