@@ -5,6 +5,7 @@ import {
   getAperturaDeFecha,
   getSugerenciasApertura,
 } from "@/lib/data/apertura-caja";
+import { getCierreDeFecha } from "@/lib/data/caja";
 import { AperturaCajaForm } from "@/components/forms/apertura-caja-form";
 import { ReabrirAperturaButton } from "./reabrir-apertura-button";
 import { formatARS } from "@/lib/utils";
@@ -33,9 +34,10 @@ export default async function AperturaCajaPage({
   const pedida = /^\d{4}-\d{2}-\d{2}$/.test(sp.fecha ?? "") ? sp.fecha! : "";
   const fecha = pedida && pedida <= todayYMD() ? pedida : todayYMD();
   const esVieja = fecha !== todayYMD();
-  const [existente, sugerencias] = await Promise.all([
+  const [existente, sugerencias, cierreDelDia] = await Promise.all([
     getAperturaDeFecha(sucursal.id, fecha),
     getSugerenciasApertura(sucursal.id, fecha),
+    getCierreDeFecha(sucursal.id, fecha),
   ]);
   const cuentaById = new Map(sugerencias.map((s) => [s.cuenta.id, s.cuenta]));
 
@@ -83,7 +85,27 @@ export default async function AperturaCajaPage({
             </Link>
           )}
         </form>
-        {esVieja && (
+        {/* La puerta, puesta donde la gente la busca.
+            Para corregir un día pasado hay que reabrir su CIERRE, que vive en
+            Caja → Cierres anteriores → "Ver más". Dos veces en dos días
+            alguien vino a parar acá en su lugar: Centro buscando cargar el
+            26/09 y Lucía el 07/10. Y acá lo único que hay es "deshacer
+            apertura", que es otra cosa y borra el arranque del día. */}
+        {cierreDelDia && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-brown-700">
+            <p>
+              La caja del <strong>{fecha}</strong> ya está cerrada. Para
+              corregir ese día no es acá: hay que reabrir su cierre.
+            </p>
+            <Link
+              href={`/caja/${cierreDelDia.id}`}
+              className="mt-1 inline-block font-medium underline underline-offset-2"
+            >
+              Ir al cierre del {fecha} →
+            </Link>
+          </div>
+        )}
+        {esVieja && !cierreDelDia && (
           <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-brown-700">
             Estás abriendo un día pasado. Lo que declares acá es la plata que
             había <strong>ese día</strong>, no la de hoy, y las ventas que
