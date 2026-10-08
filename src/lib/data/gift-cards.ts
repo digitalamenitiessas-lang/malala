@@ -293,7 +293,22 @@ export async function emitirGiftCard(
    * $50.000 que se paga $50.000 sigue siendo el caso normal y nadie tiene que
    * completar un campo de más para eso.
    */
-  const cobrado = parsed.data.cobrado ?? parsed.data.importe;
+  /**
+   * Cero significa "no lo especificaron", no "no entró plata".
+   *
+   * El campo es un CurrencyField, que guarda un número y arranca en 0: no
+   * puede mandar vacío. Tratar ese 0 como un cobro real hizo que cuatro gift
+   * cards de un mismo día —entre ellas un pack de masajes de $120.000 pagado
+   * en efectivo— registraran $0 entrando a la caja, y Yerba Buena cerró con
+   * $120.000 de sobrante que nadie podía explicar.
+   *
+   * Una tarjeta que de verdad no se cobra es una cortesía, y eso es un origen
+   * aparte que ni siquiera muestra este campo. Así que acá el cero es seguro.
+   */
+  const cobrado =
+    parsed.data.cobrado && parsed.data.cobrado > 0
+      ? parsed.data.cobrado
+      : parsed.data.importe;
   if (cobrado > parsed.data.importe) {
     return {
       ok: false,

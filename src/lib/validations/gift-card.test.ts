@@ -41,7 +41,16 @@ describe("giftCardSchema · cobrado", () => {
     if (r.success) expect(r.data.cobrado).toBe(24000);
   });
 
-  it("un cero explicito sigue siendo cero", () => {
+  /**
+   * El campo es un CurrencyField: guarda un número y arranca en 0, así que no
+   * puede mandar vacío. El schema deja pasar el 0 y es createGiftCard quien lo
+   * lee como "no lo especificaron" — una tarjeta que de verdad no se cobra es
+   * una cortesía, que es otro origen y ni muestra este campo.
+   *
+   * Este test decía antes que el cero "sigue siendo cero", y esa suposición
+   * fue la que dejó cuatro gift cards de un día registrando $0 de ingreso.
+   */
+  it("deja pasar el cero, que el alta interpreta como sin especificar", () => {
     const r = giftCardSchema.safeParse(base({ cobrado: "0" }));
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.cobrado).toBe(0);

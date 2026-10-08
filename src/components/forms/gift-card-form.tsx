@@ -108,7 +108,7 @@ export function GiftCardForm({
               label="Lo que pagan (si es distinto)"
               name="cobrado"
               error={errors.cobrado}
-              hint="Dejalo vacío si pagan el importe completo. Si va con descuento, poné acá lo que entra a caja."
+              hint="Dejalo en 0 si pagan el importe completo. Si va con descuento, poné acá lo que entra a caja."
             />
           )}
 
