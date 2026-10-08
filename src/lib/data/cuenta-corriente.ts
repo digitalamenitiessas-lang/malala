@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, gt, inArray, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
@@ -75,24 +75,80 @@ export interface DeudorCc {
  * mayor a menor, con el último concepto fiado de cada uno. El saldo_cc es global
  * (no por sucursal), así que lista a todos los deudores.
  */
-export async function getDeudoresCc(): Promise<DeudorCc[]> {
+/**
+ * Saldo de un cliente EN UNA SUCURSAL.
+ *
+ * La deuda es por local, no de la clienta con "Malala". Lucia, buscando a
+ * Carolina Prieto en Centro: "me aparece el saldo de Malala Yerba Buena, es
+ * esto posible?". Lo era: clientes.saldo_cc es UNA columna que las dos
+ * sucursales miraban, y la deuda de Carolina —entera de Yerba Buena— se veia
+ * igual desde Centro. Su propia cuenta, con movimientos en los dos locales,
+ * era una suma que ninguna de las dos podia explicar.
+ *
+ * Se calcula desde los movimientos, que si tienen sucursal: no hay un total
+ * guardado por local que pueda quedar desfasado de su detalle. La columna
+ * saldo_cc se sigue escribiendo como total de la clienta, pero ya no se
+ * muestra en ningun lado.
+ */
+export async function getSaldosCcPorCliente(
+  sucursalId: string,
+  clienteIds?: string[],
+): Promise<Map<string, number>> {
+  requireSupabaseRuntime("La cuenta corriente requiere Supabase configurado.");
+  if (clienteIds && clienteIds.length === 0) return new Map();
+  const db = getDb();
+
+  // Se agrupa toda la sucursal y se filtra después: una sola consulta, sin
+  // interpolar una lista de ids. Los movimientos de cuenta corriente son
+  // pocos —son las ventas fiadas y sus pagos, no todas las ventas.
+  const filas = (await db.execute(sql`
+    select m.cliente_id,
+           sum(case when m.tipo = 'cargo' then m.monto else -m.monto end) as saldo
+      from movimientos_cc m
+     where m.sucursal_id = ${sucursalId}
+     group by m.cliente_id
+  `)) as unknown as { cliente_id: string; saldo: number }[];
+
+  const pedidos = clienteIds ? new Set(clienteIds) : null;
+  const mapa = new Map<string, number>();
+  for (const f of filas) {
+    if (pedidos && !pedidos.has(f.cliente_id)) continue;
+    mapa.set(f.cliente_id, Number(f.saldo));
+  }
+  return mapa;
+}
+
+/** Lo que una clienta debe en esta sucursal. Positivo debe, negativo a favor. */
+export async function getSaldoCc(
+  clienteId: string,
+  sucursalId: string,
+): Promise<number> {
+  const mapa = await getSaldosCcPorCliente(sucursalId, [clienteId]);
+  return mapa.get(clienteId) ?? 0;
+}
+
+export async function getDeudoresCc(sucursalId: string): Promise<DeudorCc[]> {
   requireSupabaseRuntime(
     "La cuenta corriente requiere Supabase configurado.",
   );
   const db = getDb();
 
-  const deudores = await db
-    .select({
-      id: clientesTable.id,
-      nombre: clientesTable.nombre,
-      saldo: clientesTable.saldoCc,
-    })
-    .from(clientesTable)
-    .where(gt(clientesTable.saldoCc, EPS))
-    .orderBy(desc(clientesTable.saldoCc));
-  if (deudores.length === 0) return [];
+  // Quién debe EN ESTA SUCURSAL. Antes se leía clientes.saldo_cc, que es el
+  // total de la clienta, y la caja de un local listaba deudores del otro.
+  const saldos = await getSaldosCcPorCliente(sucursalId);
+  const ids = [...saldos.entries()]
+    .filter(([, saldo]) => saldo > EPS)
+    .map(([id]) => id);
+  if (ids.length === 0) return [];
 
-  const ids = deudores.map((d) => d.id);
+  const nombres = await db
+    .select({ id: clientesTable.id, nombre: clientesTable.nombre })
+    .from(clientesTable)
+    .where(inArray(clientesTable.id, ids));
+  const deudores = nombres
+    .map((c) => ({ id: c.id, nombre: c.nombre, saldo: saldos.get(c.id) ?? 0 }))
+    .sort((a, b) => b.saldo - a.saldo);
+
   const cargos = await db
     .select({
       clienteId: movimientosCcTable.clienteId,
@@ -104,6 +160,7 @@ export async function getDeudoresCc(): Promise<DeudorCc[]> {
       and(
         inArray(movimientosCcTable.clienteId, ids),
         eq(movimientosCcTable.tipo, "cargo"),
+        eq(movimientosCcTable.sucursalId, sucursalId),
       ),
     )
     .orderBy(desc(movimientosCcTable.fecha));
@@ -146,25 +203,30 @@ export interface SaldoAFavorCc {
  * lado del cero (negativo), y se devuelve en positivo para que la vista no
  * tenga que acordarse del signo.
  */
-export async function getSaldosAFavorCc(): Promise<SaldoAFavorCc[]> {
+export async function getSaldosAFavorCc(
+  sucursalId: string,
+): Promise<SaldoAFavorCc[]> {
   requireSupabaseRuntime("La cuenta corriente requiere Supabase configurado.");
   const db = getDb();
 
-  const rows = await db
-    .select({
-      id: clientesTable.id,
-      nombre: clientesTable.nombre,
-      saldo: clientesTable.saldoCc,
-    })
-    .from(clientesTable)
-    .where(lt(clientesTable.saldoCc, -EPS))
-    .orderBy(asc(clientesTable.saldoCc));
+  const saldos = await getSaldosCcPorCliente(sucursalId);
+  const ids = [...saldos.entries()]
+    .filter(([, saldo]) => saldo < -EPS)
+    .map(([id]) => id);
+  if (ids.length === 0) return [];
 
-  return rows.map((r) => ({
-    cliente_id: r.id,
-    nombre: r.nombre,
-    a_favor: -r.saldo,
-  }));
+  const rows = await db
+    .select({ id: clientesTable.id, nombre: clientesTable.nombre })
+    .from(clientesTable)
+    .where(inArray(clientesTable.id, ids));
+
+  return rows
+    .map((r) => ({
+      cliente_id: r.id,
+      nombre: r.nombre,
+      a_favor: -(saldos.get(r.id) ?? 0),
+    }))
+    .sort((a, b) => b.a_favor - a.a_favor);
 }
 
 export async function toggleCuentaCorriente(
@@ -346,12 +408,22 @@ async function recibirPlataDeClienteCc(
 
       const monto = data.monto;
       if (modo.topeEnLaDeuda) {
-        if (cliente.saldoCc <= EPS) {
-          throw new Error("El cliente no tiene deuda pendiente");
+        // El tope es la deuda EN ESTE LOCAL, no el total de la clienta: con el
+        // saldo global, Centro podía cobrar una deuda de Yerba Buena.
+        const [agg] = (await tx.execute(sql`
+          select coalesce(sum(case when tipo = 'cargo' then monto else -monto end), 0) as saldo
+            from movimientos_cc
+           where cliente_id = ${data.cliente_id}
+             and sucursal_id = ${sucursal?.id ?? null}
+        `)) as unknown as { saldo: number }[];
+        const deuda = Number(agg?.saldo ?? 0);
+
+        if (deuda <= EPS) {
+          throw new Error("El cliente no tiene deuda pendiente en esta sucursal");
         }
-        if (monto > cliente.saldoCc + EPS) {
+        if (monto > deuda + EPS) {
           throw new Error(
-            `El pago no puede superar la deuda (${cliente.saldoCc.toFixed(2)})`,
+            `El pago no puede superar la deuda de esta sucursal (${deuda.toFixed(2)})`,
           );
         }
       }

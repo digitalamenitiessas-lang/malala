@@ -90,8 +90,8 @@ export default async function CajaPage({
     getCierreDeFecha(sucursal.id, hoy),
     getAperturaDeFecha(sucursal.id, hoy),
     puedeCerrar ? getCajasPendientesDeCierre(sucursal.id) : Promise.resolve([]),
-    getDeudoresCc(),
-    getSaldosAFavorCc(),
+    getDeudoresCc(sucursal.id),
+    getSaldosAFavorCc(sucursal.id),
   ]);
 
   const totalInicial = estado.reduce((s, r) => s + r.saldoInicial, 0);

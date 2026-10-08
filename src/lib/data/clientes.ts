@@ -9,6 +9,7 @@ import {
   clienteSucursal as clienteSucursalTable,
 } from "@/lib/db/schema";
 import type { Cliente } from "@/lib/types";
+import { getSaldoCc, getSaldosCcPorCliente } from "./cuenta-corriente";
 import { clienteSchema } from "@/lib/validations/cliente";
 import { tryNormalizarTelefonoAR } from "@/lib/phone";
 import { getActiveSucursalForUser, requireUser } from "@/lib/auth/session";
@@ -104,7 +105,14 @@ export async function listClientes(opts?: {
       .from(clienteSucursalTable)
       .where(eq(clienteSucursalTable.sucursalId, opts.sucursalId));
     const habilitados = new Set(miembros.map((m) => m.clienteId));
-    return tope(rows.filter((r) => habilitados.has(r.id))).map(mapCliente);
+    // El saldo que se muestra es el de ESTA sucursal. La columna saldo_cc es
+    // el total de la clienta sumando los dos locales, y mostrarla hacía que
+    // Centro viera como propia una deuda de Yerba Buena.
+    const saldos = await getSaldosCcPorCliente(opts.sucursalId);
+    return tope(rows.filter((r) => habilitados.has(r.id))).map((r) => ({
+      ...mapCliente(r),
+      saldo_cc: saldos.get(r.id) ?? 0,
+    }));
   }
 
   return tope(rows).map(mapCliente);
@@ -170,7 +178,15 @@ export async function contarClientes(opts?: {
  * verificó que los 1989 clientes tienen membresía y que no hay huérfanos, así
  * que este filtro no esconde a nadie que antes se viera.
  */
-export async function getCliente(clienteId: string): Promise<Cliente | null> {
+export async function getCliente(
+  clienteId: string,
+  /**
+   * Sucursal desde la que se mira. Define el saldo que se devuelve: la deuda
+   * es por local. Sin ella queda el total de la clienta, que sirve para
+   * procesos internos pero no para mostrar en una pantalla de sucursal.
+   */
+  sucursalId?: string,
+): Promise<Cliente | null> {
   const user = await requireUser();
   const scope = buildAccessScope(user);
   requireSupabaseRuntime(
@@ -196,7 +212,9 @@ export async function getCliente(clienteId: string): Promise<Cliente | null> {
     if (!alcanzable) return null;
   }
 
-  return mapCliente(row);
+  const cliente = mapCliente(row);
+  if (!sucursalId) return cliente;
+  return { ...cliente, saldo_cc: await getSaldoCc(clienteId, sucursalId) };
 }
 
 function parse(formData: FormData) {
