@@ -1,5 +1,6 @@
 "use client";
 
+import { coincide } from "./buscador-servicio";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Cliente } from "@/lib/types";
@@ -20,13 +21,15 @@ export function ClienteCombobox({ clientes, value, onChange }: Props) {
   const selected = clientes.find((c) => c.id === value) ?? null;
   const displayValue = open ? query : selected ? selected.nombre : "";
 
-  const q = query.trim().toLowerCase();
+  // Mismo criterio que el buscador de servicios: sin acentos y por palabras
+  // sueltas. Antes era un includes pelado, así que "maria jose" no encontraba
+  // a "María José" y había que escribir las tildes para dar con la clienta.
+  const q = query.trim();
   const filtered = (
     q
       ? clientes.filter(
           (c) =>
-            c.nombre.toLowerCase().includes(q) ||
-            (c.telefono ?? "").toLowerCase().includes(q),
+            coincide(c.nombre, q) || coincide(c.telefono ?? "", q),
         )
       : clientes
   ).slice(0, MAX_RESULTADOS);

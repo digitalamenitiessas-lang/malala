@@ -1,5 +1,6 @@
 "use client";
 
+import { BuscadorServicio } from "./buscador-servicio";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -1928,18 +1929,13 @@ function LineaServicioRow({
               {servicio?.nombre ?? "Servicio de promo"}
             </div>
           ) : (
-            <select
+            /* Buscar tipeando, no leer 133 renglones ordenados por rubro.
+               Pedido así por el salón mirando este mismo desplegable. */
+            <BuscadorServicio
+              servicios={servicios}
               value={linea.servicio_id}
-              onChange={(e) => onServicio(e.target.value)}
-              className="w-full px-2 py-1.5 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">— Servicio —</option>
-              {servicios.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nombre}
-                </option>
-              ))}
-            </select>
+              onChange={onServicio}
+            />
           )}
         </div>
         <div className="col-span-12 sm:col-span-2">
