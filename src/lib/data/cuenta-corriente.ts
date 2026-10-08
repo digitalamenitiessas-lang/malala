@@ -10,7 +10,7 @@ import {
   movimientosBancarios as movimientosBancariosTable,
   movimientosCc as movimientosCcTable,
 } from "@/lib/db/schema";
-import { fechaArDeISO, formatYmdAr } from "@/lib/fecha-ar";
+import { fechaArDeISO, formatYmdAr, hoyAr } from "@/lib/fecha-ar";
 import { reversoDe, type TipoMovCc } from "@/lib/cuenta-corriente-reverso";
 import { getActiveSucursalForUser } from "@/lib/auth/session";
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
@@ -295,13 +295,22 @@ async function recibirPlataDeClienteCc(
     mp_id: formData.get("mp_id"),
     cuenta_id: formData.get("cuenta_id"),
     descripcion: formData.get("descripcion"),
+    fecha: formData.get("fecha"),
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   const data = parsed.data;
 
   const sucursal = await getActiveSucursalForUser(user);
   const db = getDb();
-  const fecha = new Date();
+
+  // Mediodía argentino, igual que en las ventas retroactivas: dentro del día
+  // elegido mire desde donde se mire, sin que el corrimiento de zona lo pase
+  // al día anterior o al siguiente.
+  const ymd = data.fecha ?? hoyAr();
+  const esRetroactivo = ymd !== hoyAr();
+  const fecha = esRetroactivo
+    ? new Date(`${data.fecha}T12:00:00-03:00`)
+    : new Date();
 
   try {
     await db.transaction(async (tx) => {
@@ -313,6 +322,26 @@ async function recibirPlataDeClienteCc(
       if (!cliente) throw new Error("Cliente no encontrado");
       if (!cliente.cuentaCorrienteHabilitada) {
         throw new Error("El cliente no tiene la cuenta corriente habilitada");
+      }
+
+      // Un arqueo firmado no se toca por atrás: si el día ya se cerró, esta
+      // plata cambiaría el esperado de un cierre que ya se contó.
+      if (esRetroactivo && sucursal) {
+        const [cerrada] = await tx
+          .select({ id: cierresCajaTable.id })
+          .from(cierresCajaTable)
+          .where(
+            and(
+              eq(cierresCajaTable.sucursalId, sucursal.id),
+              eq(cierresCajaTable.fecha, ymd),
+            ),
+          )
+          .limit(1);
+        if (cerrada) {
+          throw new Error(
+            `La caja del ${formatYmdAr(ymd)} ya está cerrada. Entrá a Caja → Cierres anteriores, abrí el cierre de ese día y tocá "Reabrir cierre"; después cargá el cobro y volvé a cerrarlo.`,
+          );
+        }
       }
 
       const monto = data.monto;

@@ -13,6 +13,7 @@ import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyInput } from "@/components/forms/currency-input";
 import { LoadingButton } from "@/components/forms/field";
 import { formatARS, formatDateTime } from "@/lib/utils";
+import { hoyAr } from "@/lib/fecha-ar";
 import {
   registrarCargoCc,
   registrarPagoCc,
@@ -71,6 +72,13 @@ export function CuentaCorrientePanel({
   const [monto, setMonto] = useState(0);
   const [descripcion, setDescripcion] = useState("");
   const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
+  /**
+   * Dia en que el cliente entrego la plata. Vacio es hoy.
+   *
+   * Sin esto, corregir un cobro al dia siguiente lo cambiaba de dia: la plata
+   * salia de la caja en la que entro y aparecia en la de hoy.
+   */
+  const [fechaPago, setFechaPago] = useState("");
   const [cuentaId, setCuentaId] = useState("");
 
   const mpSel = mediosPago.find((m) => m.id === mpId);
@@ -157,6 +165,7 @@ export function CuentaCorrientePanel({
     fd.set("mp_id", mpId);
     fd.set("cuenta_id", cuentaIdEnvio);
     fd.set("descripcion", descripcion);
+    if (fechaPago) fd.set("fecha", fechaPago);
     run(
       async () => {
         const res = esSaldoAFavor
@@ -334,6 +343,34 @@ export function CuentaCorrientePanel({
                 className="w-full rounded-md border border-border bg-card px-3 py-2 text-right text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
+            {/* El día en que entregó la plata, no el día en que se carga.
+                Lucía corrigió de madrugada dos cobros del día anterior y los
+                ingresos saltaron al día siguiente: la caja de ayer cerró con
+                $269.375 de sobrante y la de hoy esperaba $260.000 de más,
+                mientras los gastos que esos cobros pagaban se quedaron en su
+                día. Vacío sigue siendo hoy. */}
+            {modo !== "cargo" && (
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="cc-fecha"
+                  className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
+                  Cuándo la entregó (opcional)
+                </label>
+                <input
+                  id="cc-fecha"
+                  type="date"
+                  value={fechaPago}
+                  max={hoyAr()}
+                  onChange={(e) => setFechaPago(e.currentTarget.value)}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dejalo vacío si la entregó hoy. Si fue otro día, la plata
+                  entra en la caja de ese día.
+                </p>
+              </div>
+            )}
             {modo !== "cargo" && (
               <div className="space-y-1.5">
                 <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
