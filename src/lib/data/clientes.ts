@@ -23,6 +23,43 @@ import {
 } from "./_helpers";
 
 /** Asocia un cliente a la sucursal activa del usuario (membresía). */
+/**
+ * Quién tiene ya ese teléfono, si alguien lo tiene.
+ *
+ * La base no deja dos clientas con el mismo número y eso está bien, pero el
+ * choque salía como excepción: Centro, cargando a "cecilia briccola", vio el
+ * cartel de "An error occurred in the Server Components render" y no tenía
+ * forma de saber que esa persona ya estaba cargada como "Ceci".
+ *
+ * Devuelve el nombre para poder decirlo, que es lo único que le sirve a quien
+ * está en el mostrador con la clienta enfrente.
+ */
+async function clienteConTelefono(
+  telefonoE164: string | null,
+  exceptoId?: string,
+): Promise<{ id: string; nombre: string } | null> {
+  if (!telefonoE164) return null;
+  const db = getDb();
+  const [row] = await db
+    .select({ id: clientesTable.id, nombre: clientesTable.nombre })
+    .from(clientesTable)
+    .where(eq(clientesTable.telefonoE164, telefonoE164))
+    .limit(1);
+  if (!row || row.id === exceptoId) return null;
+  return row;
+}
+
+function errorTelefonoRepetido(nombre: string) {
+  return {
+    ok: false as const,
+    errors: {
+      telefono: [
+        `Ese teléfono ya es de «${nombre}». Si es la misma persona, buscala por ese nombre; si no, cargala sin teléfono.`,
+      ],
+    },
+  };
+}
+
 async function asociarClienteASucursal(user: Usuario, clienteId: string) {
   const sucursalActiva = await getActiveSucursalForUser(user);
   if (!sucursalActiva) return;
@@ -238,6 +275,12 @@ export async function createCliente(formData: FormData): Promise<ActionResult> {
   const db = getDb();
   const clienteId = crypto.randomUUID();
   const telefono = normPhone(parsed.data.telefono) ?? null;
+
+  const repetido = await clienteConTelefono(
+    telefono ? tryNormalizarTelefonoAR(telefono) : null,
+  );
+  if (repetido) return errorTelefonoRepetido(repetido.nombre);
+
   await db.insert(clientesTable).values({
     id: clienteId,
     nombre: parsed.data.nombre,
@@ -280,6 +323,10 @@ export async function createClienteQuick(input: {
   const id = crypto.randomUUID();
   const telefono = normPhone(parsed.data.telefono) ?? null;
   const telefonoE164 = telefono ? tryNormalizarTelefonoAR(telefono) : null;
+
+  const repetido = await clienteConTelefono(telefonoE164);
+  if (repetido) return errorTelefonoRepetido(repetido.nombre);
+
   const db = getDb();
   await db.insert(clientesTable).values({
     id,
@@ -329,6 +376,13 @@ export async function updateCliente(
   if (!existing) return { ok: false, errors: { _: ["No encontrado"] } };
 
   const telefono = normPhone(parsed.data.telefono) ?? null;
+
+  const repetido = await clienteConTelefono(
+    telefono ? tryNormalizarTelefonoAR(telefono) : null,
+    clienteId,
+  );
+  if (repetido) return errorTelefonoRepetido(repetido.nombre);
+
   await db
     .update(clientesTable)
     .set({
