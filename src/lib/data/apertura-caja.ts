@@ -263,6 +263,22 @@ export async function crearApertura(
 
   const aperturaId = createId();
   const fechaApertura = new Date();
+  /**
+   * El ajuste va en el día de ESA caja, no en el de hoy.
+   *
+   * Abrir un día pasado emitía el ajuste con la fecha del momento, así que la
+   * corrección de un día viejo caía en la caja de hoy y la descuadraba.
+   * Centro abrió el 07/10 durante el 08/10 y su ajuste de −$146.700 se fue al
+   * efectivo del 08, que quedó esperando −$27.100: un saldo negativo imposible
+   * de cuadrar contra un cajón.
+   *
+   * Mediodía argentino, igual que las ventas retroactivas: cae dentro del día
+   * elegido mire desde donde se mire.
+   */
+  const fechaDelAjuste =
+    data.fecha === hoyAr()
+      ? fechaApertura
+      : new Date(`${data.fecha}T12:00:00-03:00`);
 
   try {
     await db.transaction(async (tx) => {
@@ -316,7 +332,7 @@ export async function crearApertura(
         if (Math.abs(diff) > EPSILON) {
           await emitMovimientoBancarioTx(tx, {
             cuentaId: sug.cuenta.id,
-            fecha: fechaApertura,
+            fecha: fechaDelAjuste,
             monto: diff,
             tipo: "ajuste",
             sucursalId: data.sucursal_id,
