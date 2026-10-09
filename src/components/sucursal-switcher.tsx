@@ -1,3 +1,4 @@
+import { SucursalSelect } from "./sucursal-select";
 import { switchSucursal } from "@/lib/auth/actions";
 import type { Sucursal, Usuario } from "@/lib/types";
 
@@ -35,18 +36,16 @@ export function SucursalSwitcher({ user, active, sucursales }: Props) {
       >
         Sucursal
       </label>
-      <select
-        id="sucursal"
-        name="sucursal_id"
-        defaultValue={active.id}
-        className="text-sm border border-border rounded-md px-3 py-1.5 bg-card"
-      >
-        {sucursalesPermitidas.map((sucursal) => (
-          <option key={sucursal.id} value={sucursal.id}>
-            {sucursal.nombre}
-          </option>
-        ))}
-      </select>
+      <SucursalSelect
+        value={active.id}
+        opciones={sucursalesPermitidas.map((s) => ({
+          id: s.id,
+          nombre: s.nombre,
+        }))}
+      />
+      {/* Queda para el teclado y para el caso sin JavaScript, pero elegir en
+          el desplegable ya cambia: ese botón chiquito al costado era todo lo
+          que separaba "elegí la sucursal" de "cambié de sucursal". */}
       <button
         type="submit"
         className="text-xs uppercase tracking-wider text-sage-700 hover:text-sage-900"
