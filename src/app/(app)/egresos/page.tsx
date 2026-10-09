@@ -1,3 +1,4 @@
+import { sucursalEnPantalla } from "@/lib/auth/session";
 import Link from "next/link";
 import { Ban, Check, Clock, Plus, Sandwich } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -60,7 +61,7 @@ export default async function EgresosPage({
 
   const rango = sp.rango ?? "mes";
   const { desde, hasta } = rangoToFechas(rango);
-  const sucursalId = clampSucursalId(scope, sp.sucursal);
+  const sucursalId = await sucursalEnPantalla(scope, sp.sucursal);
   const sucursal =
     sucursales.find((item) => item.id === sucursalId) ??
     sucursales.find((item) => scope.sucursalIdsPermitidas.includes(item.id)) ??

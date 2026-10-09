@@ -1,3 +1,4 @@
+import { sucursalEnPantalla } from "@/lib/auth/session";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { TableActionLink } from "@/components/table-action-link";
@@ -43,7 +44,7 @@ export default async function LiquidacionesPage({
   const sucursalesPermitidas = sucursales.filter((s) =>
     scope.sucursalIdsPermitidas.includes(s.id),
   );
-  const sucursalId = clampSucursalId(scope, sp.sucursal);
+  const sucursalId = await sucursalEnPantalla(scope, sp.sucursal);
   const sucursal = sucursalesPermitidas.find((s) => s.id === sucursalId) ?? null;
   if (!sucursal) redirect("/dashboard");
 

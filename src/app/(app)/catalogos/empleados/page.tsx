@@ -1,3 +1,4 @@
+import { sucursalEnPantalla } from "@/lib/auth/session";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { TableActionLink } from "@/components/table-action-link";
@@ -35,7 +36,7 @@ export default async function EmpleadosPage({
   );
   const sucursalId =
     sucursales.length > 1
-      ? clampSucursalId(scope, sp.sucursal)
+      ? await sucursalEnPantalla(scope, sp.sucursal)
       : sucursales[0]?.id ?? null;
   // Las dadas de baja quedan fuera salvo que se pidan. El salón no quiere ver
   // en la pantalla de todos los días a gente que ya no trabaja ahí; pero

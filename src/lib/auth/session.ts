@@ -154,3 +154,27 @@ export async function setActiveSucursal(sucursalId: string) {
   const c = await cookies();
   c.set(COOKIE_SUCURSAL, sucursalId, COOKIE_OPTS);
 }
+
+/**
+ * En qué sucursal está parado el usuario, para las pantallas que además
+ * aceptan elegirla por la URL.
+ *
+ * Había dos formas de contestar esto y daban distinto. Caja, Gastos,
+ * Empleadas y Liquidaciones miraban sólo el `?sucursal=` y, sin parámetro,
+ * caían a la primera de las permitidas —que para un superadmin es la primera
+ * alfabéticamente, Malala Centro—. El resto del sistema lee la cookie que
+ * deja el selector. Lucía, recién hecha superadmin: "sigo entrando con mi
+ * usuario y pongo yb y me aparece centro".
+ *
+ * El orden es: lo que pide la URL, si no lo último que eligió en el selector,
+ * y recién ahí la primera permitida.
+ */
+export async function sucursalEnPantalla(
+  scope: { sucursalIdsPermitidas: string[] },
+  pedida?: string | null,
+): Promise<string | null> {
+  if (pedida && scope.sucursalIdsPermitidas.includes(pedida)) return pedida;
+  const activa = await getActiveSucursal();
+  if (activa && scope.sucursalIdsPermitidas.includes(activa.id)) return activa.id;
+  return scope.sucursalIdsPermitidas[0] ?? null;
+}

@@ -57,12 +57,40 @@ export function SucursalSwitcher({ user, active, sucursales }: Props) {
   );
 }
 
+/**
+ * Cambiar de sucursal tiene que dejar la pantalla en la sucursal elegida.
+ *
+ * El selector guardaba la elección en una cookie pero no tocaba la URL, y
+ * Caja, Gastos, Empleadas y Liquidaciones leen la sucursal del `?sucursal=`.
+ * Parada en /caja?sucursal=<yerba buena>, elegir Centro guardaba Centro y la
+ * pantalla seguía mostrando Yerba Buena, porque el parámetro viejo le ganaba a
+ * la cookie recién escrita. Lucía: "cambio a centro arriba y me sigue
+ * apareciendo datos de yb".
+ *
+ * Se vuelve a la misma pantalla sin ese parámetro, así manda lo que acaba de
+ * elegir.
+ */
 async function switchSucursalAndReload(formData: FormData) {
   "use server";
   const { revalidatePath } = await import("next/cache");
+  const { headers } = await import("next/headers");
+  const { redirect } = await import("next/navigation");
+
   const sucursalId = formData.get("sucursal_id");
-  if (typeof sucursalId === "string") {
-    await switchSucursal(sucursalId);
-    revalidatePath("/", "layout");
+  if (typeof sucursalId !== "string") return;
+
+  await switchSucursal(sucursalId);
+  revalidatePath("/", "layout");
+
+  const referer = (await headers()).get("referer");
+  if (!referer) return;
+  let destino: string;
+  try {
+    const url = new URL(referer);
+    url.searchParams.delete("sucursal");
+    destino = url.pathname + url.search;
+  } catch {
+    return; // Sin un referer utilizable alcanza con el revalidate de arriba.
   }
+  redirect(destino);
 }

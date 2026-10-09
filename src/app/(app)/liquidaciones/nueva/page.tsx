@@ -1,3 +1,4 @@
+import { sucursalEnPantalla } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { buildAccessScope, clampSucursalId } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
@@ -24,7 +25,7 @@ export default async function NuevaLiquidacionPage({
   const sucursalesPermitidas = sucursales.filter((s) =>
     scope.sucursalIdsPermitidas.includes(s.id),
   );
-  const sucursalId = clampSucursalId(scope, sp.sucursal);
+  const sucursalId = await sucursalEnPantalla(scope, sp.sucursal);
   const sucursal = sucursalesPermitidas.find((s) => s.id === sucursalId) ?? null;
   if (!sucursal) redirect("/dashboard");
 

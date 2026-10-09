@@ -1,3 +1,4 @@
+import { sucursalEnPantalla } from "@/lib/auth/session";
 import Link from "next/link";
 import { AlertTriangle, Plus } from "lucide-react";
 import { CierresAnteriores } from "./cierres-anteriores";
@@ -66,7 +67,7 @@ export default async function CajaPage({
 
   const sucursales = await listSucursales({ soloActivas: true });
 
-  const sucursalId = clampSucursalId(scope, sp.sucursal);
+  const sucursalId = await sucursalEnPantalla(scope, sp.sucursal);
   const sucursal =
     sucursales.find((item) => item.id === sucursalId) ??
     sucursales.find((item) => scope.sucursalIdsPermitidas.includes(item.id)) ??
