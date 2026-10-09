@@ -317,12 +317,29 @@ async function fetchValorHoraYAnticipos(args: {
     args.hasta,
     empleado?.diasTrabajo ?? [],
   );
+  /**
+   * Cero horas en la ficha significa que esta persona no cobra por hora.
+   *
+   * Las franjas horarias son la disponibilidad para la reserva online —cuándo
+   * una clienta puede pedir turno con ella—, no su jornada paga. Usarlas como
+   * base del sueldo pisaba un 0 puesto a propósito: Valentina tiene 0 horas
+   * semanales en la ficha y la liquidación le sugería 41,5 h sacadas de su
+   * disponibilidad, que a $6.000 son $249.000 sumados arriba de su comisión y
+   * su básico. Isaías: "en centro de nuevo está sumando las horas aseguradas
+   * con comisiones".
+   *
+   * Con horas en cero no se sugiere nada. El campo sigue siendo editable por
+   * si alguna semana hay horas que pagar.
+   */
+  const horasPorSemana = empleado?.horasPorSemana ?? 0;
   const horasSugeridas =
-    franjas.length > 0
-      ? horasDeFranjasEnRango(args.desde, args.hasta, franjas)
-      : diasPorSemana > 0
-        ? (diasEnRango / diasPorSemana) * (empleado?.horasPorSemana ?? 0)
-        : 0;
+    horasPorSemana <= 0
+      ? 0
+      : franjas.length > 0
+        ? horasDeFranjasEnRango(args.desde, args.hasta, franjas)
+        : diasPorSemana > 0
+          ? (diasEnRango / diasPorSemana) * horasPorSemana
+          : 0;
 
   // El basico es semanal y el periodo se cuenta en SEMANAS, no en dias.
   //
