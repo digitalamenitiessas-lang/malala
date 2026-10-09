@@ -2,10 +2,22 @@ import Link from "next/link";
 import { AlertTriangle, Plus } from "lucide-react";
 import { CierresAnteriores } from "./cierres-anteriores";
 import { DesgloseCaja } from "./desglose-caja";
+import { DetalleEfectivo } from "./detalle-efectivo";
 import { redirect } from "next/navigation";
 import { clampSucursalId, getAccessScopeForUser, esAdmin } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
-import { hoyAr } from "@/lib/fecha-ar";
+import { finDeDiaArISO, hoyAr, inicioDeDiaArISO } from "@/lib/fecha-ar";
+import { listMovimientos } from "@/lib/data/cuentas-bancarias";
+
+/** 14:08 en hora argentina, que es como se lee un movimiento de caja. */
+function horaAr(iso: string): string {
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso));
+}
 import {
   getCajasPendientesDeCierre,
   getCierreDeFecha,
@@ -83,6 +95,7 @@ export default async function CajaPage({
     pendientesDeCierre,
     deudores,
     aFavor,
+    movimientosDelDia,
   ] = await Promise.all([
     getResumenDelDia(sucursal.id, hoy),
     getEstadoCajaDelDia(sucursal.id, hoy),
@@ -92,7 +105,26 @@ export default async function CajaPage({
     puedeCerrar ? getCajasPendientesDeCierre(sucursal.id) : Promise.resolve([]),
     getDeudoresCc(sucursal.id),
     getSaldosAFavorCc(sucursal.id),
+    listMovimientos({
+      sucursalId: sucursal.id,
+      desde: inicioDeDiaArISO(hoy),
+      hasta: finDeDiaArISO(hoy),
+    }),
   ]);
+
+  // Agrupados por cuenta para el detalle del efectivo. Vienen de la misma
+  // consulta que alimenta Cuentas y saldos, asi que es el mismo dato.
+  //
+  // Se reordenan de la mañana a la noche: listMovimientos devuelve lo más
+  // nuevo primero, y el saldo corriente del detalle se construye sumando
+  // renglón a renglón. Al revés arrancaría por el final y ningún saldo
+  // intermedio querría decir nada.
+  const movsPorCuenta = new Map<string, typeof movimientosDelDia>();
+  for (const m of [...movimientosDelDia].reverse()) {
+    const id = m.movimiento.cuenta_id;
+    if (!movsPorCuenta.has(id)) movsPorCuenta.set(id, []);
+    movsPorCuenta.get(id)!.push(m);
+  }
 
   const totalInicial = estado.reduce((s, r) => s + r.saldoInicial, 0);
   const totalIngresos = estado.reduce((s, r) => s + r.ingresos, 0);
@@ -339,6 +371,29 @@ export default async function CajaPage({
                 </tbody>
               </table>
             </div>
+
+            {/* El renglón por renglón detrás del esperado, con saldo corriente.
+                Pedido dos veces el mismo día —Elu y Lucía— porque cuando el
+                número no coincide con el cajón no había forma de buscar la
+                diferencia desde adentro del sistema. Es lo que llevan a mano
+                en una planilla aparte. */}
+            {estado
+              .filter((row) => row.cuenta.tipo === "efectivo")
+              .map((row) => (
+                <DetalleEfectivo
+                  key={row.cuenta.id}
+                  cuenta={row.cuenta.nombre}
+                  saldoInicial={row.saldoInicial}
+                  esperado={row.saldoEsperado}
+                  movimientos={(movsPorCuenta.get(row.cuenta.id) ?? []).map(
+                    (m) => ({
+                      hora: horaAr(m.movimiento.fecha),
+                      concepto: m.movimiento.descripcion ?? "Movimiento",
+                      monto: m.movimiento.monto,
+                    }),
+                  )}
+                />
+              ))}
           </>
         )}
         <p className="text-xs text-muted-foreground">
