@@ -58,8 +58,7 @@ async function main() {
   console.log(`${filas.length} salto(s) para revisar entre el cierre de un dia y la apertura del siguiente.`);
   console.log("No todos son errores: la plata puede salir del cajon de noche. Lo");
   console.log("que no puede es un contado negativo, que es el calculo del sistema");
-  console.log("cargado como si fuera lo que habia en el cajon.
-");
+  console.log("cargado como si fuera lo que habia en el cajon.\n");
   for (const f of filas) {
     console.log(`  ${String(f.suc).padEnd(20)} ${f.cuenta}: cerro ${f.cerro} con ${Number(f.saldo_contado)}, abrio ${f.abrio} con ${Number(f.saldo_declarado)}  -> salto ${Number(f.salto)}`);
   }
