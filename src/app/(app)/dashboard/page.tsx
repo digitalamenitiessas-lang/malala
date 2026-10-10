@@ -63,14 +63,26 @@ export default async function DashboardPage() {
   const pushConfigured = isWebPushConfigured();
   const vapidPublicKey = pushConfigured ? getVapidPublicKey() : undefined;
 
+  // Los números del día son los de LA sucursal en la que estás parada.
+  //
+  // El dashboard calculaba la sucursal activa y no la usaba para pedir los
+  // datos. Con una sola sucursal permitida no se notaba —el scope ya recorta—,
+  // pero un superadmin veía las dos sumadas y los mismos totales en las dos:
+  // 39 tickets y $2.396.375 tanto en Centro como en Yerba Buena, con Valentina
+  // (Centro) entre las top de Yerba Buena. Lucía: "pruebo en dashboard y no veo
+  // que cambien los números de las cards".
+  //
+  // Los saldos quedan afuera a propósito: esa tarjeta los agrupa por sucursal
+  // y muestra las dos, que es lo que se quiere ver de un vistazo.
   const [ingresosHoy, saldos, turnosHoy, sucursalesAll] = await Promise.all([
     listIngresos({
+      sucursalId: activa?.id,
       desde: desdeIso,
       hasta: hastaIso,
       empleadoId: isEmployee ? scope.empleadoId : undefined,
     }),
     scope.puedeVerCaja ? listSaldos() : Promise.resolve([]),
-    listTurnos({ fecha: hoy }),
+    listTurnos({ fecha: hoy, sucursalId: activa?.id }),
     listSucursales({ soloActivas: true }),
   ]);
   const sucursales = sucursalesAll.filter((s) =>
