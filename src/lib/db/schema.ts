@@ -1185,6 +1185,14 @@ export const giftCards = pgTable(
     fechaEmision: timestamp("fecha_emision", { withTimezone: true }).notNull(),
     venceEl: date("vence_el"),
     compradora: text("compradora"),
+    /**
+     * Cliente que la compró, sólo cuando queda fiada a su cuenta corriente:
+     * para cargarle la deuda hace falta un cliente, no un nombre escrito.
+     * Ver drizzle/0061.
+     */
+    compradoraClienteId: text("compradora_cliente_id").references(
+      () => clientes.id,
+    ),
     beneficiaria: text("beneficiaria"),
     observacion: text("observacion"),
     /**

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { CrudForm } from "./crud-form";
+import { ClienteCombobox } from "@/components/forms/cliente-combobox";
 import { CurrencyField, Field } from "./field";
-import type { CuentaBancaria, MedioPago } from "@/lib/types";
+import type { Cliente, CuentaBancaria, MedioPago } from "@/lib/types";
 import type { ActionResult } from "@/lib/data/_helpers";
 import { hoyAr } from "@/lib/fecha-ar";
 
@@ -15,6 +16,8 @@ interface Props {
   vencePorDefecto: string;
   mediosPago: MedioPago[];
   cuentasBanco: CuentaBancaria[];
+  /** Para fiarla: la deuda necesita un cliente, no un nombre escrito. */
+  clientes: Cliente[];
   action: (
     state: ActionResult | null,
     formData: FormData,
@@ -25,6 +28,11 @@ interface Props {
 // ¿El medio de pago impacta en una cuenta de banco? (habilita elegir a cuál).
 // Mismo criterio que nueva-venta-form.tsx: efectivo y cuenta corriente no van a
 // bancos, el resto sí.
+/** Fiada: no entra plata, queda como deuda de quien la compra. */
+function esCuentaCorriente(mp: MedioPago | undefined): boolean {
+  return mp?.codigo.toUpperCase() === "CC";
+}
+
 function usaCuentaBanco(mp: MedioPago | undefined): boolean {
   if (!mp) return false;
   const cod = mp.codigo.toUpperCase();
@@ -37,6 +45,7 @@ export function GiftCardForm({
   vencePorDefecto,
   mediosPago,
   cuentasBanco,
+  clientes,
   action,
   submitLabel,
 }: Props) {
@@ -56,6 +65,7 @@ export function GiftCardForm({
   // Controlado sólo para poder avisar de una fecha futura con nuestras
   // palabras; vacío sigue significando "se vende hoy".
   const [fechaVenta, setFechaVenta] = useState("");
+  const [clienteCc, setClienteCc] = useState("");
   const mp = mediosPago.find((m) => m.id === mpId);
 
   // Sin cuenta —ni la del medio ni una elegida a mano— el cobro no impacta en
@@ -246,6 +256,31 @@ export function GiftCardForm({
                 </div>
               )}
             </div>
+
+            {/* Fiada: hay que decir a quién. Un nombre escrito a mano alcanza
+                para encontrar la tarjeta después, pero no para cargarle la
+                deuda a nadie: la cuenta corriente es de un cliente. */}
+            {esCuentaCorriente(mp) && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  A la cuenta de quién
+                </label>
+                <ClienteCombobox
+                  clientes={clientes}
+                  value={clienteCc}
+                  onChange={setClienteCc}
+                />
+                <input
+                  type="hidden"
+                  name="compradora_cliente_id"
+                  value={clienteCc}
+                />
+                <p className="text-xs text-muted-foreground">
+                  No entra plata ahora: queda como deuda suya y la paga después
+                  desde su ficha.
+                </p>
+              </div>
+            )}
 
             {usaCuentaBanco(mp) && cuentasBanco.length > 0 ? (
               <div className="space-y-1.5">

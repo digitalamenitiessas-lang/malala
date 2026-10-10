@@ -3,6 +3,7 @@ import { GiftCardForm } from "@/components/forms/gift-card-form";
 import { emitirGiftCard, sugerirCodigoGiftCard } from "@/lib/data/gift-cards";
 import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { listMediosPago } from "@/lib/data/medios-pago";
+import { listClientes } from "@/lib/data/clientes";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
 import { vencimientoPorDefecto } from "@/lib/gift-card-estado";
@@ -15,16 +16,21 @@ export default async function NuevaGiftCardPage() {
   const sucursal = await getActiveSucursal();
   if (!sucursal) redirect("/catalogos/gift-cards");
 
-  const [codigoSugerido, mediosPago, cuentasBanco] = await Promise.all([
-    sugerirCodigoGiftCard(sucursal.id),
-    // Sin GIFT: no se compra una gift card pagando con otra gift card.
-    listMediosPago({
-      sucursalId: sucursal.id,
-      soloActivos: true,
-      excluirGiftCard: true,
-    }),
-    listCuentas({ sucursalId: sucursal.id, soloActivas: true }),
-  ]);
+  const [codigoSugerido, mediosPago, cuentasBanco, clientes] =
+    await Promise.all([
+      sugerirCodigoGiftCard(sucursal.id),
+      // Sin GIFT: no se compra una gift card pagando con otra gift card.
+      // Con CC: Yerba Buena pidió poder fiarla, y ahí la plata no entra a una
+      // cuenta sino que queda como deuda de quien la compró.
+      listMediosPago({
+        sucursalId: sucursal.id,
+        soloActivos: true,
+        excluirGiftCard: true,
+        incluirCuentaCorriente: true,
+      }),
+      listCuentas({ sucursalId: sucursal.id, soloActivas: true }),
+      listClientes({ sucursalId: sucursal.id }),
+    ]);
 
   async function action(_prev: unknown, formData: FormData) {
     "use server";
@@ -48,6 +54,7 @@ export default async function NuevaGiftCardPage() {
         vencePorDefecto={vencimientoPorDefecto()}
         mediosPago={mediosPago}
         cuentasBanco={cuentasBanco.filter((c) => c.tipo === "banco")}
+        clientes={clientes}
         action={action}
         submitLabel="Emitir"
       />

@@ -4,9 +4,12 @@ import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
+  clientes as clientesTable,
   egresos as egresosTable,
   giftCardMovimientos as giftCardMovimientosTable,
   giftCards as giftCardsTable,
+  mediosPago as mediosPagoTable,
+  movimientosCc as movimientosCcTable,
   rubrosGasto as rubrosGastoTable,
 } from "@/lib/db/schema";
 import {
@@ -50,6 +53,7 @@ function mapGiftCard(row: typeof giftCardsTable.$inferSelect): GiftCard {
     fecha_emision: row.fechaEmision.toISOString(),
     vence_el: row.venceEl ?? undefined,
     compradora: row.compradora ?? undefined,
+    compradora_cliente_id: row.compradoraClienteId ?? undefined,
     beneficiaria: row.beneficiaria ?? undefined,
     observacion: row.observacion ?? undefined,
     origen: row.origen as GiftCard["origen"],
@@ -277,6 +281,7 @@ export async function emitirGiftCard(
     mp_cuenta_id: formData.get("mp_cuenta_id"),
     vence_el: formData.get("vence_el"),
     compradora: formData.get("compradora"),
+    compradora_cliente_id: formData.get("compradora_cliente_id"),
     beneficiaria: formData.get("beneficiaria"),
     observacion: formData.get("observacion"),
     origen: formData.get("origen") ?? "venta",
@@ -305,6 +310,20 @@ export async function emitirGiftCard(
    * Una tarjeta que de verdad no se cobra es una cortesía, y eso es un origen
    * aparte que ni siquiera muestra este campo. Así que acá el cero es seguro.
    */
+  /**
+   * Si se fía: el medio "CC" no es un cobro, genera deuda. Se mira el código
+   * del medio y no su nombre, que el salón puede editar.
+   */
+  let esCc = false;
+  if (parsed.data.origen === "venta" && parsed.data.mp_id) {
+    const [mp] = await getDb()
+      .select({ codigo: mediosPagoTable.codigo })
+      .from(mediosPagoTable)
+      .where(eq(mediosPagoTable.id, parsed.data.mp_id))
+      .limit(1);
+    esCc = mp?.codigo?.toUpperCase() === "CC";
+  }
+
   const cobrado =
     parsed.data.cobrado && parsed.data.cobrado > 0
       ? parsed.data.cobrado
@@ -377,6 +396,7 @@ export async function emitirGiftCard(
         fechaEmision: fecha,
         venceEl: parsed.data.vence_el ?? null,
         compradora: parsed.data.compradora ?? null,
+        compradoraClienteId: parsed.data.compradora_cliente_id ?? null,
         beneficiaria: parsed.data.beneficiaria ?? null,
         observacion: parsed.data.observacion ?? null,
         origen: parsed.data.origen,
@@ -410,6 +430,52 @@ export async function emitirGiftCard(
       // aparece recién al canjearla, cuando el servicio factura sin que entre
       // un peso.
       if (parsed.data.origen !== "venta") return;
+
+      /**
+       * Fiada: la tarjeta se entrega y la plata queda como deuda.
+       *
+       * Pedido por Yerba Buena. No entra a ninguna cuenta —si entrara, el
+       * arqueo del día daría un sobrante que nadie puso en el cajón—, genera
+       * un cargo en la cuenta corriente de quien la compró. Por eso hace falta
+       * un cliente y no alcanza el nombre escrito a mano.
+       */
+      if (esCc) {
+        const clienteId = parsed.data.compradora_cliente_id;
+        if (!clienteId) {
+          throw new Error(
+            "Para fiar la gift card hay que elegir a la clienta de la lista, no sólo escribir su nombre.",
+          );
+        }
+        const [cli] = await tx
+          .select()
+          .from(clientesTable)
+          .where(eq(clientesTable.id, clienteId))
+          .limit(1);
+        if (!cli) throw new Error("Cliente no encontrado");
+        if (!cli.cuentaCorrienteHabilitada) {
+          throw new Error(
+            `${cli.nombre} no tiene la cuenta corriente habilitada. Habilitásela desde su ficha y volvé a intentar.`,
+          );
+        }
+        await tx.insert(movimientosCcTable).values({
+          id: createId(),
+          clienteId,
+          fecha,
+          tipo: "cargo",
+          monto: cobrado,
+          sucursalId: parsed.data.sucursal_id,
+          mpId: null,
+          refTipo: "gift_card",
+          refId: giftCardId,
+          descripcion: `Gift card ${parsed.data.codigo} fiada a cuenta corriente`,
+          usuarioId: user.id,
+        });
+        await tx
+          .update(clientesTable)
+          .set({ saldoCc: cli.saldoCc + cobrado })
+          .where(eq(clientesTable.id, clienteId));
+        return;
+      }
 
       const cuentaId =
         parsed.data.mp_cuenta_id ??

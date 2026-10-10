@@ -46,6 +46,11 @@ export const giftCardSchema = z.object({
   mp_cuenta_id: optStr,
   vence_el: optStr,
   compradora: optStr,
+  /**
+   * Cliente al que se le fía la tarjeta. Sólo cuando el medio es cuenta
+   * corriente: ahí la deuda necesita un cliente, no un nombre escrito.
+   */
+  compradora_cliente_id: optStr,
   beneficiaria: optStr,
   observacion: optStr,
   /**

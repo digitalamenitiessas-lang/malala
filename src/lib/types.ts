@@ -705,6 +705,8 @@ export interface GiftCard {
   fecha_emision: string; // ISO
   vence_el?: string; // YYYY-MM-DD
   compradora?: string;
+  /** Cliente que la compró, cuando quedó fiada a su cuenta corriente. */
+  compradora_cliente_id?: string;
   beneficiaria?: string;
   observacion?: string;
   /**
