@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CrudForm } from "./crud-form";
 import { ClienteCombobox } from "@/components/forms/cliente-combobox";
 import { CurrencyField, Field } from "./field";
+import { formatARS } from "@/lib/utils";
 import type { Cliente, CuentaBancaria, MedioPago } from "@/lib/types";
 import type { ActionResult } from "@/lib/data/_helpers";
 import { hoyAr } from "@/lib/fecha-ar";
@@ -66,6 +67,11 @@ export function GiftCardForm({
   // palabras; vacío sigue significando "se vende hoy".
   const [fechaVenta, setFechaVenta] = useState("");
   const [clienteCc, setClienteCc] = useState("");
+  // Controlados para poder decir, antes de guardar, cuanta deuda se genera.
+  const [importe, setImporte] = useState(0);
+  const [cobrado, setCobrado] = useState(0);
+  /** Lo que de verdad se le cobra: el campo de descuento si lo usaron. */
+  const aCobrar = cobrado > 0 ? cobrado : importe;
   const mp = mediosPago.find((m) => m.id === mpId);
 
   // Sin cuenta —ni la del medio ni una elegida a mano— el cobro no impacta en
@@ -96,6 +102,8 @@ export function GiftCardForm({
           <CurrencyField
             label="Importe"
             name="importe"
+            value={importe}
+            onChange={setImporte}
             error={errors.importe}
             hint={
               origen === "pre_sistema"
@@ -117,6 +125,8 @@ export function GiftCardForm({
             <CurrencyField
               label="Lo que pagan (si es distinto)"
               name="cobrado"
+              value={cobrado}
+              onChange={setCobrado}
               error={errors.cobrado}
               hint="Dejalo en 0 si pagan el importe completo. Si va con descuento, poné acá lo que entra a caja."
             />
@@ -275,10 +285,28 @@ export function GiftCardForm({
                   name="compradora_cliente_id"
                   value={clienteCc}
                 />
-                <p className="text-xs text-muted-foreground">
-                  No entra plata ahora: queda como deuda suya y la paga después
-                  desde su ficha.
-                </p>
+                {/* Decir el número de la deuda ANTES de guardar.
+                    Belén compró una de $84.000 con descuento, pagando
+                    $63.000, y el descuento no llegó a guardarse: se le cargaron
+                    los $84.000 y recién apareció en su cuenta corriente.
+                    "Debería haberse tomado el monto de $63.000". El formulario
+                    nunca le mostró cuánta deuda iba a generar. */}
+                {aCobrar > 0 && (
+                  <p className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-brown-700">
+                    Le va a quedar debiendo{" "}
+                    <strong>{formatARS(aCobrar)}</strong>
+                    {cobrado > 0 && cobrado !== importe && (
+                      <> — la tarjeta vale {formatARS(importe)}</>
+                    )}
+                    . No entra plata ahora: la paga después desde su ficha.
+                  </p>
+                )}
+                {aCobrar <= 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No entra plata ahora: queda como deuda suya y la paga
+                    después desde su ficha.
+                  </p>
+                )}
               </div>
             )}
 
