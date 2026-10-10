@@ -40,6 +40,7 @@ import {
   liquidacionPagoSchema,
 } from "@/lib/validations/liquidacion";
 import { fieldErrors, requireRole } from "./_helpers";
+import { formatARS } from "@/lib/utils";
 import { calcularLiquidacion } from "@/lib/liquidacion-formula";
 import { listEmpleados } from "./empleados";
 import { listSaldos } from "./cuentas-bancarias";
@@ -96,6 +97,8 @@ function mapLiquidacion(
     total_viatico: row.totalViatico,
     total_anticipos: row.totalAnticipos,
     total_pagar: row.totalPagar,
+    total_pagado: row.totalPagado ?? undefined,
+    arrastre: row.arrastre,
     estado: row.estado as LiquidacionEstado,
     mp_id: row.mpId ?? undefined,
     fecha_pago: row.fechaPago?.toISOString() ?? undefined,
@@ -168,6 +171,13 @@ export interface LiquidacionPreview {
   viatico_a_pagar: number;
   anticipos: LiquidacionPreviewAnticipo[];
   total_anticipos: number;
+  /**
+   * Lo que quedó a favor de liquidaciones anteriores y se suma a esta.
+   *
+   * Pagan redondeado —"cuando me dice $237.340 yo pago $237.000"— y esa
+   * diferencia queda para la semana siguiente. Cero es el caso normal.
+   */
+  arrastre: number;
 }
 
 async function fetchLineasPendientes(args: {
@@ -494,6 +504,11 @@ export async function previewLiquidacion(input: {
     });
   const totalAnticipos = anticipos.reduce((s, a) => s + a.monto, 0);
 
+  const arrastre = await getArrastrePendiente({
+    empleadoId: parsed.data.empleado_id,
+    sucursalId: parsed.data.sucursal_id,
+  });
+
   // Viáticos cargados día por día. Ya no se estima como "días × monto fijo": ese
   // camino adivinaba la asistencia contando ventas y no dejaba que el monto
   // variara de un día a otro.
@@ -538,6 +553,7 @@ export async function previewLiquidacion(input: {
         .reduce((acc, v) => acc + v.monto, 0),
       anticipos,
       total_anticipos: totalAnticipos,
+      arrastre,
     },
   };
 }
@@ -592,12 +608,22 @@ export async function createLiquidacion(
   });
 
   if (lineas.length === 0 && horasTrabajadas <= 0 && diasViatico <= 0) {
-    return {
-      ok: false,
-      errors: {
-        _: ["No hay servicios, horas ni viatico para liquidar en ese período"],
-      },
-    };
+    // Salvo que le hayan quedado debiendo de antes: una semana sin trabajo
+    // pero con plata a favor igual se liquida, es lo único que hay para
+    // pagarle. (El número que vale es el que se vuelve a leer dentro de la
+    // transacción; este es sólo para no cortarle el paso acá.)
+    const aFavor = await getArrastrePendiente({
+      empleadoId: parsed.data.empleado_id,
+      sucursalId: parsed.data.sucursal_id,
+    });
+    if (aFavor <= 0) {
+      return {
+        ok: false,
+        errors: {
+          _: ["No hay servicios, horas ni viatico para liquidar en ese período"],
+        },
+      };
+    }
   }
 
   const { valorHora, tipoComision, viaticoPorDia, anticipos } = await fetchValorHoraYAnticipos({
@@ -639,17 +665,6 @@ export async function createLiquidacion(
     .reduce((s, v) => s + v.monto, 0);
 
   const totalAnticipos = anticipos.reduce((s, a) => s + a.monto, 0);
-  // Tres arreglos distintos, tres cuentas distintas: ver liquidacion-formula.
-  // Antes esto sumaba los tres conceptos para todo el mundo, asi que a una
-  // profesional le pagaba la comision Y el asegurado en vez de la mayor.
-  const { total: totalPagar } = calcularLiquidacion({
-    tipoComision,
-    totalComision,
-    sueldoHoras,
-    sueldoBasico,
-    viaticoAPagar,
-    totalAnticipos,
-  });
   const liquidacionId = createId();
 
   let solapadaError: ReturnType<typeof errorSolapada> | null = null;
@@ -670,6 +685,31 @@ export async function createLiquidacion(
       throw new Error("SOLAP");
     }
 
+    // Lo que quedó debiéndosele de semanas anteriores por pagar redondeado.
+    // Se lee ACÁ adentro y no antes a propósito: entre la lectura y el insert
+    // se puede estar creando otra liquidación de la misma empleada, y las dos
+    // se llevarían la misma diferencia.
+    const arrastre = await getArrastrePendiente(
+      {
+        empleadoId: parsed.data.empleado_id,
+        sucursalId: parsed.data.sucursal_id,
+      },
+      tx,
+    );
+
+    // Tres arreglos distintos, tres cuentas distintas: ver liquidacion-formula.
+    // Antes esto sumaba los tres conceptos para todo el mundo, asi que a una
+    // profesional le pagaba la comision Y el asegurado en vez de la mayor.
+    const { total: totalPagar } = calcularLiquidacion({
+      tipoComision,
+      totalComision,
+      sueldoHoras,
+      sueldoBasico,
+      viaticoAPagar,
+      totalAnticipos,
+      arrastre,
+    });
+
     await tx.insert(liquidacionesTable).values({
       id: liquidacionId,
       sucursalId: parsed.data.sucursal_id,
@@ -687,6 +727,7 @@ export async function createLiquidacion(
       diasViatico,
       totalViatico,
       totalAnticipos,
+      arrastre,
       totalPagar,
       estado: "pendiente",
       usuarioId: user.id,
@@ -921,6 +962,7 @@ export async function marcarLiquidacionPagada(
 
   const parsed = liquidacionPagoSchema.safeParse({
     mp_id: formData.get("mp_id"),
+    total_pagado: formData.get("total_pagado"),
     mp2_id: formData.get("mp2_id"),
     fecha: formData.get("fecha"),
     valor2: formData.get("valor2"),
@@ -1019,7 +1061,28 @@ export async function marcarLiquidacionPagada(
       // Monto neto a pagar al empleado: comisiones + sueldo por horas − anticipos
       // (los anticipos ya salieron de caja al registrarse). Solo genera egreso si
       // queda saldo a favor del empleado.
-      const montoAPagar = existing.totalPagar;
+      /**
+       * Lo que se entrega, que puede ser menos que el total.
+       *
+       * El salon paga redondeado: "cuando me dice $237.340 yo pago $237.000".
+       * Esa diferencia no se regala, queda a favor de la empleada y entra en
+       * la liquidacion siguiente. Sin este campo habia que pagar el total
+       * exacto o perder el resto.
+       */
+      const montoAPagar =
+        parsed.data.total_pagado != null &&
+        parsed.data.total_pagado >= 0 &&
+        parsed.data.total_pagado <= existing.totalPagar
+          ? parsed.data.total_pagado
+          : existing.totalPagar;
+      const quedaAFavor = existing.totalPagar - montoAPagar;
+      // Que el egreso diga por qué sale menos que la liquidación: si no, el
+      // día que alguien revise la caja ve un sueldo pagado de menos y no hay
+      // dónde leer la explicación.
+      const observacionConSaldo =
+        quedaAFavor > 0.01
+          ? `${observacionEgreso} — queda a favor ${formatARS(quedaAFavor)}`
+          : observacionEgreso;
       let egresoIdFinal: string | null = null;
 
       if (montoAPagar > 0.01) {
@@ -1044,7 +1107,7 @@ export async function marcarLiquidacionPagada(
           mpId: parsed.data.mp_id,
           mp2Id: monto2 > 0 ? parsed.data.mp2_id : null,
           valor2: monto2 > 0 ? monto2 : null,
-          observacion: observacionEgreso,
+          observacion: observacionConSaldo,
           pagado: true,
           usuarioId: user.id,
         });
@@ -1070,7 +1133,7 @@ export async function marcarLiquidacionPagada(
             sucursalId: existing.sucursalId,
             refTipo: "egreso",
             refId: egresoId,
-            descripcion: observacionEgreso,
+            descripcion: observacionConSaldo,
             usuarioId: user.id,
           });
         }
@@ -1083,6 +1146,10 @@ export async function marcarLiquidacionPagada(
           mpId: parsed.data.mp_id,
           mp2Id: parsed.data.mp2_id ?? null,
           valor2: parsed.data.mp2_id ? (Number(parsed.data.valor2) || 0) : null,
+          // Null cuando se pagó todo: guardar el mismo número dos veces invita
+          // a que queden desfasados.
+          totalPagado:
+            montoAPagar < existing.totalPagar - 0.01 ? montoAPagar : null,
           fechaPago: ahora,
           observacion: parsed.data.observacion ?? null,
           egresoId: egresoIdFinal,
@@ -1365,6 +1432,8 @@ export interface ProyeccionEmpleado {
   sueldoBasico: number;
   viatico: number;
   anticipos: number;
+  /** Lo que quedó a favor de semanas anteriores por pagar redondeado. */
+  arrastre: number;
   total: number;
   /** Para una profesional: si hoy gana por comisión o por el asegurado. */
   gana: "comision" | "asegurado" | null;
@@ -1469,6 +1538,12 @@ export async function getProyeccionSemanal(args: {
       }),
     ]);
 
+    // Lo que quedó debiéndosele de semanas anteriores también hay que juntarlo.
+    const arrastre = await getArrastrePendiente({
+      empleadoId: emp.id,
+      sucursalId: args.sucursalId,
+    });
+
     const viaticos = await getDb()
       .select()
       .from(viaticosTable)
@@ -1511,11 +1586,13 @@ export async function getProyeccionSemanal(args: {
       sueldoBasico: datos.sueldoBasicoSugerido,
       viaticoAPagar: viatico,
       totalAnticipos: anticipos,
+      arrastre,
     });
 
     // Una empleada sin nada en la semana no se muestra: la lista es para ver
     // cuanto falta juntar, no un padron.
-    if (detalle.total === 0 && comision === 0 && sueldoHoras === 0) continue;
+    if (detalle.total === 0 && comision === 0 && sueldoHoras === 0 && arrastre === 0)
+      continue;
 
     filas.push({
       empleadoId: emp.id,
@@ -1525,6 +1602,7 @@ export async function getProyeccionSemanal(args: {
       sueldoBasico: datos.sueldoBasicoSugerido,
       viatico,
       anticipos,
+      arrastre,
       total: detalle.total,
       gana: detalle.gana,
       fijoMensual: esFijoMensual,
@@ -1568,4 +1646,45 @@ function aYmd(v: unknown): string {
       .slice(0, 10);
   }
   return String(v).slice(0, 10);
+}
+
+/**
+ * Lo que el salón todavía le debe a una empleada de liquidaciones anteriores.
+ *
+ * Pagan redondeado: "cuando me dice $237.340 yo pago $237.000". Esa diferencia
+ * no se regala, queda a favor para la semana siguiente.
+ *
+ * Se calcula como lo no pagado MENOS lo ya arrastrado. Sin restar lo arrastrado
+ * la misma diferencia entraría en todas las liquidaciones siguientes, y se le
+ * terminaría pagando muchas veces.
+ */
+export async function getArrastrePendiente(
+  args: {
+    empleadoId: string;
+    sucursalId: string;
+  },
+  db: DbOrTx = getDb(),
+): Promise<number> {
+  const [row] = (await db.execute(sql`
+    select
+      coalesce(sum(
+        case when estado = 'pagada'
+             then total_pagar - coalesce(total_pagado, total_pagar)
+             else 0 end
+      ), 0) as debido,
+      coalesce(sum(arrastre), 0) as ya_arrastrado
+    from liquidaciones
+    where empleado_id = ${args.empleadoId}
+      and sucursal_id = ${args.sucursalId}
+      and estado <> 'anulada'
+  `)) as unknown as { debido: number; ya_arrastrado: number }[];
+
+  const pendiente = Number(row?.debido ?? 0) - Number(row?.ya_arrastrado ?? 0);
+  // Nunca negativo. Anular una liquidación la BORRA, así que si se anula una
+  // que se había pagado de menos, lo que se debía desaparece pero el arrastre
+  // que ya se cobró en la siguiente sigue contado, y la resta da negativo.
+  // Devolverlo así le descontaría plata del sueldo a alguien por un arreglo
+  // administrativo. En la duda, no se le saca.
+  if (pendiente < 0.01) return 0;
+  return pendiente;
 }

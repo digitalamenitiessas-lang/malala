@@ -27,6 +27,8 @@ import type { TipoComision } from "@/lib/types";
  *
  * Los viáticos se suman y los anticipos se restan en los tres casos: no son
  * parte del arreglo, son plata que ya se le dio o que le corresponde aparte.
+ * El arrastre también suma: es lo que quedó debiéndosele de la semana pasada
+ * por pagar redondeado.
  */
 export interface ArgsLiquidacion {
   tipoComision: TipoComision;
@@ -40,6 +42,14 @@ export interface ArgsLiquidacion {
   viaticoAPagar: number;
   /** Adelantos ya cobrados, que se descuentan. */
   totalAnticipos: number;
+  /**
+   * Lo que quedo debiendole de liquidaciones anteriores.
+   *
+   * El salon paga redondeado —"cuando me dice $237.340 yo pago $237.000"— y
+   * esa diferencia no se regala: queda a favor de la empleada para la semana
+   * que viene. Positivo suma; es plata que el salon le debe.
+   */
+  arrastre?: number;
 }
 
 export interface DetalleLiquidacion {
@@ -74,6 +84,7 @@ export function calcularLiquidacion(args: ArgsLiquidacion): DetalleLiquidacion {
   return {
     base,
     gana,
-    total: base + args.viaticoAPagar - args.totalAnticipos,
+    total:
+      base + args.viaticoAPagar - args.totalAnticipos + (args.arrastre ?? 0),
   };
 }

@@ -36,6 +36,24 @@ export const liquidacionCreateSchema = liquidacionPreviewSchema.extend({
 export const liquidacionPagoSchema = z.object({
   mp_id: z.string().min(1, "Medio de pago requerido"),
   /**
+   * Lo que se entrega de verdad, si es menos que el total.
+   *
+   * El salón paga redondeado: "cuando me dice $237.340 yo pago $237.000 (esa
+   * sobrante no lo pago)". La diferencia queda a favor de la empleada y entra
+   * en la liquidación siguiente. Vacío o cero = se paga el total.
+   *
+   * Va como string u opcional y no con coerce directo: un CurrencyField manda
+   * "0" cuando está vacío, y ese cero significa "no lo tocaron", no "no le
+   * pago nada".
+   */
+  total_pagado: z
+    .union([z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) => {
+      if (v === "" || v === null || v === undefined) return undefined;
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    }),
+  /**
    * Segundo medio, opcional: parte en efectivo y parte por transferencia es
    * como se paga cuando la caja no tiene todo el sueldo.
    *

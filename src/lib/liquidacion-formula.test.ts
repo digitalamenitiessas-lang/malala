@@ -116,3 +116,63 @@ describe("viáticos y anticipos van en los tres arreglos", () => {
     expect(r.total).toBe(-30000);
   });
 });
+
+/**
+ * El salón paga redondeado y la diferencia no se regala: "cuando me dice
+ * $237.340 yo pago $237.000, en el sistema viejo la empleada queda con un
+ * saldo a favor para la semana que viene".
+ */
+describe("arrastre de lo que quedó debiéndose", () => {
+  const base = {
+    tipoComision: "porcentaje" as const,
+    totalComision: 200_000,
+    sueldoHoras: 100_000,
+    sueldoBasico: 0,
+    viaticoAPagar: 0,
+    totalAnticipos: 0,
+  };
+
+  it("suma al total lo que quedó debiendo de la semana pasada", () => {
+    expect(calcularLiquidacion({ ...base, arrastre: 340 }).total).toBe(200_340);
+  });
+
+  it("sin arrastre el total no cambia", () => {
+    expect(calcularLiquidacion(base).total).toBe(200_000);
+    expect(calcularLiquidacion({ ...base, arrastre: 0 }).total).toBe(200_000);
+  });
+
+  it("no toca la base: el arreglo es el mismo, lo que cambia es lo que se paga", () => {
+    const r = calcularLiquidacion({ ...base, arrastre: 340 });
+    expect(r.base).toBe(200_000);
+    expect(r.gana).toBe("comision");
+  });
+
+  it("el caso que lo pidió: cobra $237.340, le pagan $237.000, arrastra $340", () => {
+    const semana1 = calcularLiquidacion({
+      ...base,
+      totalComision: 237_340,
+      sueldoHoras: 0,
+    });
+    expect(semana1.total).toBe(237_340);
+
+    // Le pagan redondeado. Lo que no se pagó entra en la semana siguiente.
+    const pagado = 237_000;
+    const semana2 = calcularLiquidacion({
+      ...base,
+      totalComision: 180_000,
+      sueldoHoras: 0,
+      arrastre: semana1.total - pagado,
+    });
+    expect(semana2.total).toBe(180_340);
+  });
+
+  it("convive con viáticos y anticipos", () => {
+    const r = calcularLiquidacion({
+      ...base,
+      viaticoAPagar: 9_000,
+      totalAnticipos: 50_000,
+      arrastre: 340,
+    });
+    expect(r.total).toBe(200_000 + 9_000 - 50_000 + 340);
+  });
+});

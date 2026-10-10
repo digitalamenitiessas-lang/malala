@@ -189,6 +189,7 @@ export function NuevaLiquidacionForm({
         sueldoBasico: basico,
         viaticoAPagar: totalViatico,
         totalAnticipos: preview.total_anticipos,
+        arrastre: preview.arrastre,
       })
     : null;
   const totalPagar = detalle?.total ?? 0;
@@ -197,7 +198,10 @@ export function NuevaLiquidacionForm({
     (preview.lineas.length > 0 ||
       horas > 0 ||
       basico > 0 ||
-      preview.total_viatico > 0);
+      preview.total_viatico > 0 ||
+      // Una semana sin trabajo pero con plata a favor igual se liquida: es
+      // lo único que hay para pagarle.
+      preview.arrastre > 0);
 
   return (
     <div className="space-y-6">
@@ -554,6 +558,14 @@ export function NuevaLiquidacionForm({
                 label="Anticipos"
                 value={`− ${formatARS(preview.total_anticipos)}`}
                 muted
+              />
+            )}
+            {/* Lo que quedó sin pagar de la liquidación anterior por redondeo.
+                Entra solo; se muestra para que el total no parezca un error. */}
+            {preview.arrastre > 0 && (
+              <DesgloseRow
+                label="A favor de la semana pasada"
+                value={formatARS(preview.arrastre)}
               />
             )}
             <div className="flex items-center justify-between border-t border-border pt-2 mt-1">

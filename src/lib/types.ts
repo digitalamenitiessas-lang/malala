@@ -592,7 +592,11 @@ export interface Liquidacion {
   dias_viatico: number;
   total_viatico: number;
   total_anticipos: number; // anticipos descontados
-  total_pagar: number; // comisión + horas + básico + viáticos − anticipos
+  total_pagar: number; // comisión + horas + básico + viáticos − anticipos + arrastre
+  /** Lo que se entregó. Sin valor = se pagó el total. */
+  total_pagado?: number;
+  /** Lo que se le debía de antes y entró en esta liquidación. */
+  arrastre: number;
   estado: LiquidacionEstado;
   mp_id?: ID;
   fecha_pago?: string; // ISO

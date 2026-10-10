@@ -1044,6 +1044,13 @@ export const liquidaciones = pgTable(
     totalViatico: doublePrecision("total_viatico").notNull().default(0),
     totalAnticipos: doublePrecision("total_anticipos").notNull().default(0),
     totalPagar: doublePrecision("total_pagar").notNull().default(0),
+    /**
+     * Lo que de verdad se entrego. Vacio = se pago el total. El salon paga
+     * redondeado y la diferencia queda a favor de la empleada. Ver 0063.
+     */
+    totalPagado: doublePrecision("total_pagado"),
+    /** Cuanto de lo que se debia de antes entro en ESTA liquidacion. */
+    arrastre: doublePrecision("arrastre").notNull().default(0),
     estado: liquidacionEstadoEnum("estado").notNull().default("pendiente"),
     mpId: text("mp_id").references(() => mediosPago.id),
     // Segundo medio: parte en efectivo y parte por transferencia es como se

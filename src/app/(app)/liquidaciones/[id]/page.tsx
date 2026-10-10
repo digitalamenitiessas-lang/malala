@@ -177,6 +177,15 @@ export default async function LiquidacionDetallePage({
                 color="var(--warning)"
               />
             )}
+            {/* Lo que quedó debiéndosele de semanas anteriores por pagar
+                redondeado. Va acá para que el total cierre a la vista. */}
+            {liquidacion.arrastre > 0 && (
+              <KV
+                label="A favor de la semana pasada"
+                value={formatARS(liquidacion.arrastre)}
+                color="var(--sage-700)"
+              />
+            )}
             <div className="pt-2 border-t border-border">
               <KV
                 label="Total a pagar"
@@ -228,6 +237,25 @@ export default async function LiquidacionDetallePage({
                   <span className="text-muted-foreground">Fecha:</span>{" "}
                   {formatDateTime(liquidacion.fecha_pago)}
                 </p>
+              )}
+              {/* Se pagó menos que el total porque redondearon. Decirlo acá
+                  evita que alguien lo lea como un pago mal cargado. */}
+              {liquidacion.total_pagado != null && (
+                <div className="pt-2 border-t border-border">
+                  <p>
+                    <span className="text-muted-foreground">Se pagó:</span>{" "}
+                    <span className="tabular-nums">
+                      {formatARS(liquidacion.total_pagado)}
+                    </span>
+                  </p>
+                  <p className="text-xs pt-0.5" style={{ color: "var(--sage-700)" }}>
+                    Quedan{" "}
+                    {formatARS(
+                      liquidacion.total_pagar - liquidacion.total_pagado,
+                    )}{" "}
+                    a favor, se suman a la próxima liquidación.
+                  </p>
+                </div>
               )}
               {liquidacion.observacion && (
                 <p className="text-muted-foreground italic pt-1">
