@@ -70,8 +70,15 @@ export function GiftCardForm({
   // Controlados para poder decir, antes de guardar, cuanta deuda se genera.
   const [importe, setImporte] = useState(0);
   const [cobrado, setCobrado] = useState(0);
+  /**
+   * Que la tarjeta vaya con descuento es una decision, no un campo que quedo
+   * en cero. Belen compro una de $84.000 pagando $63.000 y el descuento no
+   * llego a guardarse: el sistema no tenia forma de distinguir "no pusieron
+   * nada" de "se perdio lo que pusieron", y cargo el importe completo.
+   */
+  const [conDescuento, setConDescuento] = useState(false);
   /** Lo que de verdad se le cobra: el campo de descuento si lo usaron. */
-  const aCobrar = cobrado > 0 ? cobrado : importe;
+  const aCobrar = conDescuento && cobrado > 0 ? cobrado : importe;
   const mp = mediosPago.find((m) => m.id === mpId);
 
   // Sin cuenta —ni la del medio ni una elegida a mano— el cobro no impacta en
@@ -122,14 +129,28 @@ export function GiftCardForm({
               dos cosas, y había que mentir en una de las dos puntas.
               Vacío = pagaron el importe, que es el caso de siempre. */}
           {cobraHoy && (
-            <CurrencyField
-              label="Lo que pagan (si es distinto)"
-              name="cobrado"
-              value={cobrado}
-              onChange={setCobrado}
-              error={errors.cobrado}
-              hint="Dejalo en 0 si pagan el importe completo. Si va con descuento, poné acá lo que entra a caja."
-            />
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="con_descuento"
+                  checked={conDescuento}
+                  onChange={(e) => setConDescuento(e.currentTarget.checked)}
+                  className="h-4 w-4 rounded border-border accent-sage-500"
+                />
+                Va con descuento: paga menos de lo que vale
+              </label>
+              {conDescuento && (
+                <CurrencyField
+                  label="Lo que paga"
+                  name="cobrado"
+                  value={cobrado}
+                  onChange={setCobrado}
+                  error={errors.cobrado}
+                  hint="Lo que entra a caja. La tarjeta igual vale el importe de arriba."
+                />
+              )}
+            </div>
           )}
 
           <div className="rounded-md border border-border bg-cream/40 p-3 space-y-2">

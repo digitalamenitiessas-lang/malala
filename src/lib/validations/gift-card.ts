@@ -45,6 +45,12 @@ export const giftCardSchema = z.object({
   mp_id: optStr,
   mp_cuenta_id: optStr,
   vence_el: optStr,
+  /** Marcada = paga menos de lo que vale. Sin marcar, cobrado se ignora. */
+  con_descuento: z
+    .union([z.string(), z.boolean(), z.null(), z.undefined()])
+    // Un checkbox sin marcar no viaja: FormData devuelve null. Acepta
+    // cualquier string igual, para no romperse con "" ni con "false".
+    .transform((x) => x === true || x === "on" || x === "true"),
   compradora: optStr,
   /**
    * Cliente al que se le fía la tarjeta. Sólo cuando el medio es cuenta

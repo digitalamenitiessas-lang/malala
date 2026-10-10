@@ -60,3 +60,35 @@ describe("giftCardSchema · cobrado", () => {
     expect(giftCardSchema.safeParse(base({ cobrado: "pepe" })).success).toBe(false);
   });
 });
+
+/**
+ * El descuento dejo de inferirse de un campo en cero y pasa a ser una casilla.
+ * Inferirlo no distinguia "no pusieron nada" de "se perdio lo que pusieron", y
+ * a Belen Bobba se le cargaron $84.000 cuando pagaba $63.000.
+ */
+describe("giftCardSchema · con_descuento", () => {
+  it("sin la casilla es false", () => {
+    for (const v of [null, undefined, ""]) {
+      const r = giftCardSchema.safeParse(base({ con_descuento: v }));
+      expect(r.success).toBe(true);
+      if (r.success) expect(r.data.con_descuento).toBe(false);
+    }
+  });
+
+  it("la casilla marcada llega como 'on' y es true", () => {
+    const r = giftCardSchema.safeParse(base({ con_descuento: "on" }));
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.con_descuento).toBe(true);
+  });
+
+  it("convive con el monto cobrado", () => {
+    const r = giftCardSchema.safeParse(
+      base({ con_descuento: "on", cobrado: "63000" }),
+    );
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.con_descuento).toBe(true);
+      expect(r.data.cobrado).toBe(63000);
+    }
+  });
+});

@@ -280,6 +280,7 @@ export async function emitirGiftCard(
     mp_id: formData.get("mp_id"),
     mp_cuenta_id: formData.get("mp_cuenta_id"),
     vence_el: formData.get("vence_el"),
+    con_descuento: formData.get("con_descuento"),
     compradora: formData.get("compradora"),
     compradora_cliente_id: formData.get("compradora_cliente_id"),
     beneficiaria: formData.get("beneficiaria"),
@@ -324,10 +325,23 @@ export async function emitirGiftCard(
     esCc = mp?.codigo?.toUpperCase() === "CC";
   }
 
-  const cobrado =
-    parsed.data.cobrado && parsed.data.cobrado > 0
-      ? parsed.data.cobrado
-      : parsed.data.importe;
+  /**
+   * El descuento es ahora una decision explicita, no un campo en cero.
+   *
+   * Antes se infería: sin monto se cobraba el importe. Eso no distingue "no
+   * pusieron nada" de "se perdio lo que pusieron", y a Belen se le cargaron
+   * $84.000 cuando pagaba $63.000. Con la casilla marcada y sin monto, es un
+   * error y se dice; sin casilla, el campo ni se mira.
+   */
+  if (parsed.data.con_descuento && !(parsed.data.cobrado && parsed.data.cobrado > 0)) {
+    return {
+      ok: false,
+      errors: { cobrado: ["Pusiste que va con descuento: poné cuánto paga."] },
+    };
+  }
+  const cobrado = parsed.data.con_descuento
+    ? parsed.data.cobrado!
+    : parsed.data.importe;
   if (cobrado > parsed.data.importe) {
     return {
       ok: false,
