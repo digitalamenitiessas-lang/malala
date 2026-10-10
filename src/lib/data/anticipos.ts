@@ -328,11 +328,15 @@ export async function revertirAnticipo(
 
   try {
     await db.transaction(async (tx) => {
+      // El anticipo primero: su egreso_id es clave foránea al egreso, así que
+      // borrar el egreso con el anticipo todavía apuntándole viola la
+      // restricción y voltea la transacción entera. Lo tenía al revés y por eso
+      // fallaba.
+      await tx.delete(anticiposTable).where(eq(anticiposTable.id, anticipoId));
       if (ant.egresoId) {
         await deleteMovimientosByRefTx(tx, "egreso", ant.egresoId);
         await tx.delete(egresosTable).where(eq(egresosTable.id, ant.egresoId));
       }
-      await tx.delete(anticiposTable).where(eq(anticiposTable.id, anticipoId));
     });
   } catch (error) {
     return {
