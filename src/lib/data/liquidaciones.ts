@@ -291,8 +291,17 @@ async function fetchValorHoraYAnticipos(args: {
         eq(anticiposTable.empleadoId, args.empleadoId),
         eq(anticiposTable.sucursalId, args.sucursalId),
         isNull(anticiposTable.liquidacionId),
-        gte(anticiposTable.fecha, new Date(isoStart(args.desde))),
-        lte(anticiposTable.fecha, new Date(isoEnd(args.hasta))),
+        // Por el dia en que se DESCUENTA, no por el de la entrega.
+        //
+        // "Carolina pide $250.000... despues pide que sea recien el 24/10. La
+        // plata sale pero se les descuenta mas adelante. SON TODO EL TIEMPO."
+        // La columna fecha_descuento ya existia y la pantalla le prometia a la
+        // encargada "se descuenta el 24/10", pero ACA se filtraba por la fecha
+        // de entrega, asi que el anticipo caia igual en la liquidacion de esta
+        // semana y le descontaba del sueldo plata que no correspondia todavia.
+        sql`coalesce(${anticiposTable.fechaDescuento}::text,
+              to_char(${anticiposTable.fecha} at time zone 'America/Argentina/Buenos_Aires','YYYY-MM-DD'))
+            between ${args.desde} and ${args.hasta}`,
       ),
     )
     .orderBy(asc(anticiposTable.fecha));

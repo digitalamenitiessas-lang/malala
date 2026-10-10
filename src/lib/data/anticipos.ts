@@ -80,38 +80,6 @@ export async function listAnticipos(empleadoId: string): Promise<Anticipo[]> {
   return rows.map(mapAnticipo);
 }
 
-/**
- * Anticipos pendientes de descontar (liquidacion_id null) de un empleado en una
- * sucursal, dentro de un período. Se usan al previsualizar/crear la liquidación.
- */
-export async function listAnticiposPendientesPeriodo(args: {
-  empleadoId: string;
-  sucursalId: string;
-  desde: string;
-  hasta: string;
-}): Promise<Anticipo[]> {
-  requireSupabaseRuntime("Los anticipos requieren Supabase configurado.");
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(anticiposTable)
-    .where(
-      and(
-        eq(anticiposTable.empleadoId, args.empleadoId),
-        eq(anticiposTable.sucursalId, args.sucursalId),
-        isNull(anticiposTable.liquidacionId),
-        // Por el dia en que se DESCUENTA, no por el de la entrega. Son
-        // distintos cuando el salon acuerda descontarlo mas adelante; la plata
-        // ya salio de la caja ese otro dia.
-        sql`coalesce(${anticiposTable.fechaDescuento}::text,
-              to_char(${anticiposTable.fecha} at time zone 'America/Argentina/Buenos_Aires','YYYY-MM-DD'))
-            between ${args.desde} and ${args.hasta}`,
-      ),
-    )
-    .orderBy(asc(anticiposTable.fecha));
-  return rows.map(mapAnticipo);
-}
-
 export async function registrarAnticipo(
   formData: FormData,
 ): Promise<ActionResult> {
