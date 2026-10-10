@@ -318,28 +318,24 @@ async function fetchValorHoraYAnticipos(args: {
     empleado?.diasTrabajo ?? [],
   );
   /**
-   * Cero horas en la ficha significa que esta persona no cobra por hora.
+   * Las franjas mandan, y la ficha en cero NO significa "no cobra por hora".
    *
-   * Las franjas horarias son la disponibilidad para la reserva online —cuándo
-   * una clienta puede pedir turno con ella—, no su jornada paga. Usarlas como
-   * base del sueldo pisaba un 0 puesto a propósito: Valentina tiene 0 horas
-   * semanales en la ficha y la liquidación le sugería 41,5 h sacadas de su
-   * disponibilidad, que a $6.000 son $249.000 sumados arriba de su comisión y
-   * su básico. Isaías: "en centro de nuevo está sumando las horas aseguradas
-   * con comisiones".
+   * Intenté lo contrario y rompí cinco sueldos: Celeste, Fatyma, Priscila,
+   * Valentina y Zoe tienen 0 en la ficha justamente porque su semana está
+   * declarada en Disponibilidad pública, que es el único lugar donde el salón
+   * la carga. Zoe cobra el asegurado y su liquidación pasó de $160.000 a
+   * $18.000 —sólo la comisión— hasta que Elu lo vio.
    *
-   * Con horas en cero no se sugiere nada. El campo sigue siendo editable por
-   * si alguna semana hay horas que pagar.
+   * Si a alguien no hay que pagarle horas, eso se arregla en su configuración
+   * —su tipo de comisión, o no tener franjas si no atiende clientas—, no
+   * anulando la única fuente que tiene el sistema para saber su jornada.
    */
-  const horasPorSemana = empleado?.horasPorSemana ?? 0;
   const horasSugeridas =
-    horasPorSemana <= 0
-      ? 0
-      : franjas.length > 0
-        ? horasDeFranjasEnRango(args.desde, args.hasta, franjas)
-        : diasPorSemana > 0
-          ? (diasEnRango / diasPorSemana) * horasPorSemana
-          : 0;
+    franjas.length > 0
+      ? horasDeFranjasEnRango(args.desde, args.hasta, franjas)
+      : diasPorSemana > 0
+        ? (diasEnRango / diasPorSemana) * (empleado?.horasPorSemana ?? 0)
+        : 0;
 
   // El basico es semanal y el periodo se cuenta en SEMANAS, no en dias.
   //
