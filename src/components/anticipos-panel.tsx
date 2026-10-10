@@ -6,7 +6,7 @@ import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyInput } from "@/components/forms/currency-input";
 import { LoadingButton } from "@/components/forms/field";
 import { formatARS, formatDate } from "@/lib/utils";
-import { registrarAnticipo } from "@/lib/data/anticipos";
+import { registrarAnticipo, revertirAnticipo } from "@/lib/data/anticipos";
 import type { Anticipo, MedioPago } from "@/lib/types";
 
 interface Props {
@@ -21,6 +21,8 @@ function fmtFecha(iso: string): string {
 
 export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
   const { pending, run } = useTransitionFeedback();
+  // Dos toques: revertir devuelve plata a la caja, no sale de un clic al pasar.
+  const [confirmando, setConfirmando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [monto, setMonto] = useState(0);
@@ -225,9 +227,50 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
                       <p className="mt-0.5 truncate text-sm">{anticipo.observacion}</p>
                     )}
                   </div>
-                  <span className="shrink-0 font-medium tabular-nums">
-                    {formatARS(anticipo.monto)}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="font-medium tabular-nums">
+                      {formatARS(anticipo.monto)}
+                    </span>
+                    {/* Uno ya descontado no se revierte desde acá: esa plata se
+                        compensó contra un sueldo pagado, y sacarla dejaría esa
+                        liquidación sin explicación. */}
+                    {!descontado && (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          if (confirmando !== anticipo.id) {
+                            setConfirmando(anticipo.id);
+                            return;
+                          }
+                          setConfirmando(null);
+                          run(
+                            async () => {
+                              const res = await revertirAnticipo(anticipo.id);
+                              if (!res.ok) {
+                                setError(
+                                  Object.values(res.errors).flat().join(", "),
+                                );
+                              }
+                              return res;
+                            },
+                            {
+                              refreshOnSuccess: true,
+                              successMessage: "Anticipo revertido",
+                            },
+                          );
+                        }}
+                        onBlur={() => setConfirmando(null)}
+                        className={`rounded-md border px-2 py-1 text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                          confirmando === anticipo.id
+                            ? "border-danger text-danger"
+                            : "border-border text-muted-foreground hover:bg-cream"
+                        }`}
+                      >
+                        {confirmando === anticipo.id ? "¿Seguro?" : "Revertir"}
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}

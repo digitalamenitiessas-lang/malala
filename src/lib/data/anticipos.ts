@@ -16,12 +16,19 @@ import { getActiveSucursalForUser, requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
 import {
+  deleteMovimientosByRefTx,
   emitMovimientoBancarioTx,
   getCuentaIdForMpTx,
 } from "./movimientos-bancarios-helpers";
 import { anticipoSchema } from "@/lib/validations/anticipo";
 import type { Anticipo } from "@/lib/types";
-import { finDeDiaArISO, hoyAr, inicioDeDiaArISO } from "@/lib/fecha-ar";
+import {
+  fechaArDeISO,
+  finDeDiaArISO,
+  formatYmdAr,
+  hoyAr,
+  inicioDeDiaArISO,
+} from "@/lib/fecha-ar";
 
 function createId() {
   return crypto.randomUUID();
@@ -248,5 +255,99 @@ export async function registrarAnticipo(
   revalidatePath("/caja");
   revalidatePath("/bancos");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Deshace un anticipo mal cargado.
+ *
+ * Elu: "se puede habilitar revertir anticipos desde nuestro perfil? necesitaria
+ * poder hacerlo". No era un permiso: no existía.
+ *
+ * Lo puede hacer quien lo carga —admin y encargada—, porque corregir en el
+ * momento es parte de cargar. Un anticipo mueve plata de la caja, así que la
+ * reversa la devuelve: borra el egreso y su movimiento, no deja un asiento
+ * compensatorio. Un anticipo mal cargado no es un hecho que haya que contar;
+ * es un error de tipeo.
+ *
+ * Dos cosas lo frenan:
+ *  - Que ya esté descontado en una liquidación. Ahí la plata ya se compensó
+ *    contra un sueldo pagado y borrarlo acá dejaría esa liquidación sin
+ *    explicación.
+ *  - Que la caja de ese día esté cerrada, porque el arqueo ya se firmó.
+ */
+export async function revertirAnticipo(
+  anticipoId: string,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  requireSupabaseRuntime("Los anticipos requieren Supabase configurado.");
+  const scope = buildAccessScope(user);
+
+  const db = getDb();
+  const [ant] = await db
+    .select()
+    .from(anticiposTable)
+    .where(eq(anticiposTable.id, anticipoId))
+    .limit(1);
+  if (!ant) return { ok: false, errors: { _: ["Anticipo no encontrado"] } };
+  if (!isSucursalAllowed(scope, ant.sucursalId)) {
+    return { ok: false, errors: { _: ["Sin acceso a esa sucursal"] } };
+  }
+  if (ant.liquidacionId) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          "Ese anticipo ya se descontó en una liquidación. Para sacarlo hay que anular esa liquidación primero.",
+        ],
+      },
+    };
+  }
+
+  const ymd = fechaArDeISO(ant.fecha.toISOString());
+  const [cerrada] = await db
+    .select({ id: cierresCajaTable.id })
+    .from(cierresCajaTable)
+    .where(
+      and(
+        eq(cierresCajaTable.sucursalId, ant.sucursalId),
+        eq(cierresCajaTable.fecha, ymd),
+      ),
+    )
+    .limit(1);
+  if (cerrada) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          `Ese anticipo es del ${formatYmdAr(ymd)} y la caja de ese día ya está cerrada. Entrá a Caja → Cierres anteriores, abrí ese cierre y tocá "Reabrir cierre"; después revertilo y volvé a cerrar el día.`,
+        ],
+      },
+    };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      if (ant.egresoId) {
+        await deleteMovimientosByRefTx(tx, "egreso", ant.egresoId);
+        await tx.delete(egresosTable).where(eq(egresosTable.id, ant.egresoId));
+      }
+      await tx.delete(anticiposTable).where(eq(anticiposTable.id, anticipoId));
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      errors: {
+        _: [
+          error instanceof Error ? error.message : "No se pudo revertir el anticipo",
+        ],
+      },
+    };
+  }
+
+  revalidatePath(`/catalogos/empleados/${ant.empleadoId}`);
+  revalidatePath("/caja");
+  revalidatePath("/bancos");
+  revalidatePath("/liquidaciones");
   return { ok: true };
 }
