@@ -1,5 +1,6 @@
 "use client";
 
+import { hoyAr } from "@/lib/fecha-ar";
 import { useState } from "react";
 import { Wallet, Plus, AlertTriangle } from "lucide-react";
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
@@ -28,6 +29,13 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
   const [monto, setMonto] = useState(0);
   const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
   const [observacion, setObservacion] = useState("");
+  /**
+   * Dia en que se le dio la plata. Vacio es hoy.
+   *
+   * La fecha decide en que liquidacion se descuenta: sin esto, corregir un
+   * anticipo al dia siguiente lo movia de semana.
+   */
+  const [fecha, setFecha] = useState("");
 
   const pendientes = anticipos.filter((anticipo) => !anticipo.liquidacion_id);
   const totalPendiente = pendientes.reduce(
@@ -58,6 +66,7 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
     fd.set("monto", String(monto));
     fd.set("mp_id", mpId);
     fd.set("observacion", observacion);
+    if (fecha) fd.set("fecha", fecha);
 
     run(
       async () => {
@@ -144,6 +153,30 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
                 ))}
               </select>
             </div>
+          </div>
+          {/* La fecha decide en qué liquidación se descuenta.
+              Un anticipo que se corrige al día siguiente —revertir y volver a
+              cargar— caía en el período siguiente: "se pagaron pero se le
+              empieza a descontar en la semana del 24, ese es el problema". */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="anticipo-fecha"
+              className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+            >
+              Cuándo se lo diste (opcional)
+            </label>
+            <input
+              id="anticipo-fecha"
+              type="date"
+              value={fecha}
+              max={hoyAr()}
+              onChange={(e) => setFecha(e.currentTarget.value)}
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">
+              Dejalo vacío si es de hoy. Si fue otro día, se descuenta en la
+              liquidación de esa semana.
+            </p>
           </div>
           <div className="space-y-1.5">
             <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">

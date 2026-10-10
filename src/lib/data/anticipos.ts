@@ -118,6 +118,7 @@ export async function registrarAnticipo(
     monto: formData.get("monto"),
     mp_id: formData.get("mp_id"),
     observacion: formData.get("observacion"),
+    fecha: formData.get("fecha"),
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   const data = parsed.data;
@@ -153,9 +154,16 @@ export async function registrarAnticipo(
     };
   }
 
-  const ahora = new Date();
   // Fecha argentina: el cierre de caja se guarda con la fecha local, no UTC.
-  const ymdHoy = hoyAr();
+  //
+  // El dia elegido manda, y no solo para el arqueo: define en que liquidacion
+  // se descuenta. Mediodia argentino en los retroactivos, igual que las ventas,
+  // para que caiga dentro del dia mire desde donde se mire.
+  const ymdHoy = data.fecha ?? hoyAr();
+  const esRetroactivo = ymdHoy !== hoyAr();
+  const ahora = esRetroactivo
+    ? new Date(`${ymdHoy}T12:00:00-03:00`)
+    : new Date();
   const egresoId = createId();
   const anticipoId = createId();
   const observacionEgreso =
@@ -176,7 +184,7 @@ export async function registrarAnticipo(
         .limit(1);
       if (cierreDelDia) {
         throw new Error(
-          `La caja del ${ymdHoy} ya está cerrada para esta sucursal. Reabrí el cierre antes de registrar el anticipo.`,
+          `La caja del ${formatYmdAr(ymdHoy)} ya está cerrada. Entrá a Caja → Cierres anteriores, abrí el cierre de ese día y tocá "Reabrir cierre"; después cargá el anticipo y volvé a cerrarlo.`,
         );
       }
 
@@ -194,7 +202,7 @@ export async function registrarAnticipo(
         .limit(1);
       if (!aperturaDelDia) {
         throw new Error(
-          `Tenés que abrir la caja del ${ymdHoy} antes de registrar anticipos.`,
+          `Tenés que abrir la caja del ${formatYmdAr(ymdHoy)} antes de registrar anticipos de ese día.`,
         );
       }
 
