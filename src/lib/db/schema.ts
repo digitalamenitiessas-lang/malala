@@ -1136,6 +1136,12 @@ export const anticipos = pgTable(
       .notNull()
       .references(() => sucursales.id),
     fecha: timestamp("fecha", { withTimezone: true }).notNull(),
+    /**
+     * Dia en que se descuenta del sueldo, cuando no es el de la entrega. El
+     * salon acuerda con la chica descontarlo mas adelante y la plata igual
+     * sale hoy. Vacio = se descuenta en su propia fecha. Ver drizzle/0062.
+     */
+    fechaDescuento: date("fecha_descuento"),
     monto: doublePrecision("monto").notNull(),
     mpId: text("mp_id").references(() => mediosPago.id),
     egresoId: text("egreso_id").references(() => egresos.id),

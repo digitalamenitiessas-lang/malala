@@ -17,6 +17,15 @@ export const anticipoSchema = z.object({
     .nullish()
     .transform((s) => (s ? s : undefined))
     .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s), "Fecha inválida"),
+  /**
+   * Dia en que se le descuenta del sueldo, si se acordo para mas adelante.
+   * Vacio = se descuenta en la fecha de entrega.
+   */
+  fecha_descuento: z
+    .string()
+    .nullish()
+    .transform((s) => (s ? s : undefined))
+    .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s), "Fecha inválida"),
   observacion: z
     .string()
     .optional()

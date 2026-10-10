@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
@@ -46,6 +46,7 @@ function mapAnticipo(row: typeof anticiposTable.$inferSelect): Anticipo {
     empleado_id: row.empleadoId,
     sucursal_id: row.sucursalId,
     fecha: row.fecha.toISOString(),
+    fecha_descuento: row.fechaDescuento ?? undefined,
     monto: row.monto,
     mp_id: row.mpId ?? undefined,
     egreso_id: row.egresoId ?? undefined,
@@ -99,8 +100,12 @@ export async function listAnticiposPendientesPeriodo(args: {
         eq(anticiposTable.empleadoId, args.empleadoId),
         eq(anticiposTable.sucursalId, args.sucursalId),
         isNull(anticiposTable.liquidacionId),
-        gte(anticiposTable.fecha, new Date(isoStart(args.desde))),
-        lte(anticiposTable.fecha, new Date(isoEnd(args.hasta))),
+        // Por el dia en que se DESCUENTA, no por el de la entrega. Son
+        // distintos cuando el salon acuerda descontarlo mas adelante; la plata
+        // ya salio de la caja ese otro dia.
+        sql`coalesce(${anticiposTable.fechaDescuento}::text,
+              to_char(${anticiposTable.fecha} at time zone 'America/Argentina/Buenos_Aires','YYYY-MM-DD'))
+            between ${args.desde} and ${args.hasta}`,
       ),
     )
     .orderBy(asc(anticiposTable.fecha));
@@ -119,6 +124,7 @@ export async function registrarAnticipo(
     mp_id: formData.get("mp_id"),
     observacion: formData.get("observacion"),
     fecha: formData.get("fecha"),
+    fecha_descuento: formData.get("fecha_descuento"),
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   const data = parsed.data;
@@ -243,6 +249,12 @@ export async function registrarAnticipo(
         egresoId,
         liquidacionId: null,
         observacion: data.observacion ?? null,
+        // Vacia cuando coincide con la entrega: guardar el mismo dia dos veces
+        // invita a que queden desfasadas.
+        fechaDescuento:
+          data.fecha_descuento && data.fecha_descuento !== ymdHoy
+            ? data.fecha_descuento
+            : null,
         usuarioId: user.id,
       });
     });

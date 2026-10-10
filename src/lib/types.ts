@@ -606,7 +606,9 @@ export interface Anticipo {
   id: ID;
   empleado_id: ID;
   sucursal_id: ID;
-  fecha: string; // ISO
+  fecha: string; // ISO — cuando se le dio la plata
+  /** Dia en que se descuenta, si se acordo para mas adelante. YYYY-MM-DD. */
+  fecha_descuento?: string;
   monto: number;
   mp_id?: ID;
   egreso_id?: ID;

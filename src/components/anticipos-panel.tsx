@@ -1,6 +1,6 @@
 "use client";
 
-import { hoyAr } from "@/lib/fecha-ar";
+import { formatYmdAr, hoyAr } from "@/lib/fecha-ar";
 import { useState } from "react";
 import { Wallet, Plus, AlertTriangle } from "lucide-react";
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
@@ -36,6 +36,13 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
    * anticipo al dia siguiente lo movia de semana.
    */
   const [fecha, setFecha] = useState("");
+  /**
+   * Dia en que se le descuenta, si se acordo para mas adelante.
+   *
+   * "Carolina pide $250.000... despues pide que sea recien el 24/10". La plata
+   * sale hoy igual; lo que se corre es el descuento. Pasa todo el tiempo.
+   */
+  const [fechaDescuento, setFechaDescuento] = useState("");
 
   const pendientes = anticipos.filter((anticipo) => !anticipo.liquidacion_id);
   const totalPendiente = pendientes.reduce(
@@ -67,6 +74,7 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
     fd.set("mp_id", mpId);
     fd.set("observacion", observacion);
     if (fecha) fd.set("fecha", fecha);
+    if (fechaDescuento) fd.set("fecha_descuento", fechaDescuento);
 
     run(
       async () => {
@@ -174,8 +182,30 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
               className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <p className="text-xs text-muted-foreground">
-              Dejalo vacío si es de hoy. Si fue otro día, se descuenta en la
-              liquidación de esa semana.
+              Dejalo vacío si es de hoy.
+            </p>
+          </div>
+          {/* La plata sale cuando se la das; el descuento puede ser despues.
+              Son dos cosas distintas y hasta ahora habia una sola fecha
+              haciendo las dos. */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="anticipo-fecha-descuento"
+              className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+            >
+              Cuándo se le descuenta (opcional)
+            </label>
+            <input
+              id="anticipo-fecha-descuento"
+              type="date"
+              value={fechaDescuento}
+              onChange={(e) => setFechaDescuento(e.currentTarget.value)}
+              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">
+              Dejalo vacío para descontarlo en la liquidación de esta semana. Si
+              acordaron descontarlo más adelante, poné ese día: la plata sale
+              igual hoy.
             </p>
           </div>
           <div className="space-y-1.5">
@@ -258,6 +288,15 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
                     </div>
                     {anticipo.observacion && (
                       <p className="mt-0.5 truncate text-sm">{anticipo.observacion}</p>
+                    )}
+                    {/* Decirlo acá: un anticipo que no aparece en la
+                        liquidación de esta semana porque se acordó para más
+                        adelante tiene que poder explicarse sin abrir nada. */}
+                    {anticipo.fecha_descuento && !descontado && (
+                      <p className="mt-0.5 text-[11px] text-brown-700">
+                        Se descuenta el{" "}
+                        {formatYmdAr(anticipo.fecha_descuento)}
+                      </p>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
