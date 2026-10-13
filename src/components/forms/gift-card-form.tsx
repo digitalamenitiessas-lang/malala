@@ -19,6 +19,8 @@ interface Props {
   cuentasBanco: CuentaBancaria[];
   /** Para fiarla: la deuda necesita un cliente, no un nombre escrito. */
   clientes: Cliente[];
+  /** Para cobrarla con descuento de sueldo: el cargo va a su ficha. */
+  empleados: { id: string; nombre: string }[];
   action: (
     state: ActionResult | null,
     formData: FormData,
@@ -34,10 +36,15 @@ function esCuentaCorriente(mp: MedioPago | undefined): boolean {
   return mp?.codigo.toUpperCase() === "CC";
 }
 
+/** La paga una empleada con su sueldo: se le descuenta en la liquidación. */
+function esDescuentoSueldo(mp: MedioPago | undefined): boolean {
+  return mp?.codigo.toUpperCase() === "DTOSUELDO";
+}
+
 function usaCuentaBanco(mp: MedioPago | undefined): boolean {
   if (!mp) return false;
   const cod = mp.codigo.toUpperCase();
-  return cod !== "EF" && cod !== "CC";
+  return cod !== "EF" && cod !== "CC" && cod !== "DTOSUELDO";
 }
 
 export function GiftCardForm({
@@ -47,6 +54,7 @@ export function GiftCardForm({
   mediosPago,
   cuentasBanco,
   clientes,
+  empleados,
   action,
   submitLabel,
 }: Props) {
@@ -67,6 +75,9 @@ export function GiftCardForm({
   // palabras; vacío sigue significando "se vende hoy".
   const [fechaVenta, setFechaVenta] = useState("");
   const [clienteCc, setClienteCc] = useState("");
+  /** Empleada que la paga con su sueldo, y en qué fechas se le descuenta. */
+  const [empleadoDto, setEmpleadoDto] = useState("");
+  const [cuotas, setCuotas] = useState<string[]>([""]);
   // Controlados para poder decir, antes de guardar, cuanta deuda se genera.
   const [importe, setImporte] = useState(0);
   const [cobrado, setCobrado] = useState(0);
@@ -328,6 +339,88 @@ export function GiftCardForm({
                     después desde su ficha.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* La paga una empleada con su sueldo. No toca la caja ni la
+                cuenta corriente: se le crea un descuento por cuota y la
+                liquidación de esa semana se lo cobra sola. Lo pidieron así
+                para no tener que acordarse de descontarlo a mano, porque las
+                encargadas se turnan los sábados. */}
+            {esDescuentoSueldo(mp) && (
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="compradora_empleado_id"
+                  className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
+                  A qué empleada se le descuenta
+                </label>
+                <select
+                  id="compradora_empleado_id"
+                  name="compradora_empleado_id"
+                  value={empleadoDto}
+                  onChange={(e) => setEmpleadoDto(e.target.value)}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">— Elegí —</option>
+                  {empleados.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nombre}
+                    </option>
+                  ))}
+                </select>
+
+                <label className="block pt-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  En cuántas cuotas
+                </label>
+                {cuotas.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-16 shrink-0 text-xs text-muted-foreground">
+                      Cuota {i + 1}
+                    </span>
+                    <input
+                      type="date"
+                      value={f}
+                      onChange={(e) => {
+                        const next = [...cuotas];
+                        next[i] = e.currentTarget.value;
+                        setCuotas(next);
+                      }}
+                      className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                    <span className="w-28 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                      {aCobrar > 0
+                        ? formatARS(Math.round(aCobrar / cuotas.length))
+                        : ""}
+                    </span>
+                    {cuotas.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setCuotas(cuotas.filter((_, j) => j !== i))}
+                        className="shrink-0 rounded-md border border-border px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:bg-cream"
+                      >
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCuotas([...cuotas, ""])}
+                  className="rounded-md border border-border px-3 py-1.5 text-xs uppercase tracking-wider transition-colors hover:bg-cream"
+                >
+                  Agregar cuota
+                </button>
+                <input
+                  type="hidden"
+                  name="cuotas_fechas"
+                  value={cuotas.filter(Boolean).join(",")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  No entra plata ahora. Se le descuenta del sueldo en la
+                  liquidación de cada una de esas fechas. Si dejás las fechas
+                  vacías, se le descuenta todo en la liquidación de esta semana.
+                </p>
               </div>
             )}
 

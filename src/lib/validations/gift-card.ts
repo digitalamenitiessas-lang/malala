@@ -57,6 +57,32 @@ export const giftCardSchema = z.object({
    * corriente: ahí la deuda necesita un cliente, no un nombre escrito.
    */
   compradora_cliente_id: optStr,
+  /**
+   * Empleada que la paga con su sueldo. Sólo cuando el medio es "Descuento de
+   * sueldo": ahí el cargo va a su ficha, no a una cuenta corriente.
+   */
+  compradora_empleado_id: optStr,
+  /**
+   * Fechas en que se le descuenta, una por cuota. "Me pide poder abonarlo en
+   * dos partes. Primera cuota el sábado 17 y segunda el sábado 24."
+   *
+   * Viaja como texto separado por comas porque es un FormData, y se reparte el
+   * monto en partes iguales; el resto del redondeo va en la última.
+   */
+  cuotas_fechas: z
+    .string()
+    .nullish()
+    .transform((s) =>
+      (s ?? "")
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean),
+    )
+    .refine(
+      (arr) => arr.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
+      "Hay una fecha de cuota inválida",
+    )
+    .refine((arr) => arr.length <= 12, "Son demasiadas cuotas"),
   beneficiaria: optStr,
   observacion: optStr,
   /**

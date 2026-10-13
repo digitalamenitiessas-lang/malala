@@ -4,6 +4,7 @@ import { emitirGiftCard, sugerirCodigoGiftCard } from "@/lib/data/gift-cards";
 import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { listMediosPago } from "@/lib/data/medios-pago";
 import { listClientes } from "@/lib/data/clientes";
+import { listEmpleados } from "@/lib/data/empleados";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
 import { vencimientoPorDefecto } from "@/lib/gift-card-estado";
@@ -16,7 +17,7 @@ export default async function NuevaGiftCardPage() {
   const sucursal = await getActiveSucursal();
   if (!sucursal) redirect("/catalogos/gift-cards");
 
-  const [codigoSugerido, mediosPago, cuentasBanco, clientes] =
+  const [codigoSugerido, mediosPago, cuentasBanco, clientes, empleados] =
     await Promise.all([
       sugerirCodigoGiftCard(sucursal.id),
       // Sin GIFT: no se compra una gift card pagando con otra gift card.
@@ -30,6 +31,8 @@ export default async function NuevaGiftCardPage() {
       }),
       listCuentas({ sucursalId: sucursal.id, soloActivas: true }),
       listClientes({ sucursalId: sucursal.id }),
+      // Para cobrarla con descuento de sueldo: el cargo va a la ficha de ella.
+      listEmpleados({ sucursalId: sucursal.id }),
     ]);
 
   async function action(_prev: unknown, formData: FormData) {
@@ -55,6 +58,7 @@ export default async function NuevaGiftCardPage() {
         mediosPago={mediosPago}
         cuentasBanco={cuentasBanco.filter((c) => c.tipo === "banco")}
         clientes={clientes}
+        empleados={empleados}
         action={action}
         submitLabel="Emitir"
       />

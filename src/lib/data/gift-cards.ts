@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   clientes as clientesTable,
+  descuentos as descuentosTable,
+  empleados as empleadosTable,
   egresos as egresosTable,
   giftCardMovimientos as giftCardMovimientosTable,
   giftCards as giftCardsTable,
@@ -316,13 +318,20 @@ export async function emitirGiftCard(
    * del medio y no su nombre, que el salón puede editar.
    */
   let esCc = false;
+  /**
+   * La paga una empleada con su sueldo. Tampoco es un cobro: no entra plata
+   * hoy ni va a entrar, lo que pasa es que el sábado se le paga menos.
+   */
+  let esDtoSueldo = false;
   if (parsed.data.origen === "venta" && parsed.data.mp_id) {
     const [mp] = await getDb()
       .select({ codigo: mediosPagoTable.codigo })
       .from(mediosPagoTable)
       .where(eq(mediosPagoTable.id, parsed.data.mp_id))
       .limit(1);
-    esCc = mp?.codigo?.toUpperCase() === "CC";
+    const cod = mp?.codigo?.toUpperCase();
+    esCc = cod === "CC";
+    esDtoSueldo = cod === "DTOSUELDO";
   }
 
   /**
@@ -488,6 +497,66 @@ export async function emitirGiftCard(
           .update(clientesTable)
           .set({ saldoCc: cli.saldoCc + cobrado })
           .where(eq(clientesTable.id, clienteId));
+        return;
+      }
+
+      /**
+       * La paga una empleada con su sueldo, en una o varias cuotas.
+       *
+       * No toca la caja ni la cuenta corriente: se le crea un descuento por
+       * cuota en su ficha, y la liquidación de esa semana se lo cobra sola.
+       * Lo pidieron así justamente para que no quede nada abierto: "somos dos
+       * encargadas que vamos pagando un sábado una y el otro sábado la otra,
+       * veo más viable la opción B para no tener que acordarse".
+       */
+      if (esDtoSueldo) {
+        const empleadoId = parsed.data.compradora_empleado_id;
+        if (!empleadoId) {
+          throw new Error(
+            "Para cobrarla con descuento de sueldo hay que elegir de qué empleada es.",
+          );
+        }
+        const [emp] = await tx
+          .select({ id: empleadosTable.id, nombre: empleadosTable.nombre })
+          .from(empleadosTable)
+          .where(eq(empleadosTable.id, empleadoId))
+          .limit(1);
+        if (!emp) throw new Error("Empleada no encontrada");
+
+        // Sin fechas es una sola cuota, que se descuenta en la liquidación del
+        // período en que se cargó.
+        const fechas = parsed.data.cuotas_fechas.length
+          ? parsed.data.cuotas_fechas
+          : [null];
+
+        // El resto del redondeo va en la última, para que las cuotas sumen
+        // exactamente lo cobrado y no le quedemos debiendo un peso.
+        const porCuota = Math.round((cobrado / fechas.length) * 100) / 100;
+        const cuotasAInsertar: (typeof descuentosTable.$inferInsert)[] = [];
+        fechas.forEach((f, i) => {
+          const monto =
+            i === fechas.length - 1
+              ? Math.round((cobrado - porCuota * (fechas.length - 1)) * 100) / 100
+              : porCuota;
+          cuotasAInsertar.push({
+            id: createId(),
+            empleadoId,
+            sucursalId: parsed.data.sucursal_id,
+            fecha,
+            fechaDescuento: f,
+            monto,
+            concepto:
+              fechas.length > 1
+                ? `Gift card ${parsed.data.codigo} (cuota ${i + 1} de ${fechas.length})`
+                : `Gift card ${parsed.data.codigo}`,
+            observacion: null,
+            usuarioId: user.id,
+          });
+        });
+
+        if (cuotasAInsertar.length > 0) {
+          await tx.insert(descuentosTable).values(cuotasAInsertar);
+        }
         return;
       }
 
