@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { AgregarInsumoReceta } from "@/components/forms/agregar-insumo-receta";
+import { CantidadRecetaForm } from "@/components/forms/cantidad-receta-form";
 import {
   getRecetaItems,
   removeRecetaItem,
@@ -277,33 +278,12 @@ export default async function EditarRecetaPage({
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {isAdmin ? (
-                          <form
+                          <CantidadRecetaForm
+                            insumoId={insumo.id}
+                            cantidad={receta.cantidad}
+                            unidad={UNIDAD_LABEL[insumo.unidad_medida]}
                             action={update}
-                            className="flex items-center gap-1 justify-end"
-                          >
-                            <input
-                              type="hidden"
-                              name="insumo_id"
-                              value={insumo.id}
-                            />
-                            <input
-                              type="number"
-                              name="cantidad"
-                              step="0.01"
-                              min="0.01"
-                              defaultValue={receta.cantidad}
-                              className="w-20 px-2 py-1 text-right border border-border rounded-md text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              {UNIDAD_LABEL[insumo.unidad_medida]}
-                            </span>
-                            <button
-                              type="submit"
-                              className="text-xs uppercase tracking-wider text-sage-700 hover:text-sage-900 ml-1"
-                            >
-                              ↻
-                            </button>
-                          </form>
+                          />
                         ) : (
                           <>
                             {receta.cantidad}{" "}
