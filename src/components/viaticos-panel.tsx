@@ -96,7 +96,10 @@ export function ViaticosPanel({
     setModo("dia");
     setFecha(hoyAr());
     setHastaFecha(hoyAr());
-    setMonto(0);
+    // Vuelven a lo que dice la ficha, no a cero: es lo que cobra, y ponerlo en
+    // cero obliga a reescribirlo cada vez.
+    setMonto(viaticoPorDia);
+    setMontoSabado(viaticoSabado);
     setPagado(true);
     setObservacion("");
     setError(null);
