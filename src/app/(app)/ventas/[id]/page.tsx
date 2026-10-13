@@ -9,6 +9,8 @@ import { SatisfaccionVentaForm } from "@/components/forms/satisfaccion-venta";
 import { AnularVenta } from "@/components/forms/anular-venta";
 import { CambiarClienteVenta } from "@/components/forms/cambiar-cliente-venta";
 import { BaseComisionVenta } from "@/components/forms/base-comision-venta";
+import { AsignarVendedoraForm } from "@/components/forms/asignar-vendedora-form";
+import { listEmpleados } from "@/lib/data/empleados";
 import { comisionMontoServicio } from "@/lib/data/ingresos-helpers";
 import { formatARS, formatDateTimeLong } from "@/lib/utils";
 import { esAdmin } from "@/lib/auth/access";
@@ -30,6 +32,11 @@ export default async function VentaDetallePage({
   if (!row) notFound();
 
   const { ingreso, cliente, mp1, mp2, lineas, breakdown } = row;
+  // Para poder poner la vendedora que faltó. Son las de la sucursal de la
+  // venta, no las de la que esté en pantalla.
+  const empleadosSucursal = puedeRevisar
+    ? await listEmpleados({ sucursalId: ingreso.sucursal_id })
+    : [];
   const sucursal = sucursales.find((item) => item.id === ingreso.sucursal_id);
   const motivoDescuento = ingreso.descuento_motivo_id
     ? motivos.find((m) => m.id === ingreso.descuento_motivo_id)
@@ -213,11 +220,27 @@ export default async function VentaDetallePage({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {l.empleado?.nombre ?? (
-                        <span className="text-muted-foreground italic">
-                          {esProducto ? "—" : "sin asignar"}
-                        </span>
-                      )}
+                      <div className="space-y-1">
+                        <div>
+                          {l.empleado?.nombre ?? (
+                            <span className="text-muted-foreground italic">
+                              sin asignar
+                            </span>
+                          )}
+                        </div>
+                        {/* Se cobra rápido y se olvida poner quién vendió; la
+                            comisión queda en cero y se nota recién al liquidar.
+                            Esto no toca la caja, así que se puede corregir
+                            aunque el día ya esté cerrado. */}
+                        {puedeRevisar && !ingreso.anulado && (
+                          <AsignarVendedoraForm
+                            lineaId={l.id}
+                            empleados={empleadosSucursal}
+                            empleadoActualId={l.empleado?.id}
+                            comisionPctActual={l.comision_pct}
+                          />
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                       {l.cantidad}

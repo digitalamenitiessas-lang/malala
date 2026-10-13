@@ -14,6 +14,8 @@ import {
   liquidacionLineas as liquidacionLineasTable,
   movimientosCc as movimientosCcTable,
   movimientosStock as movimientosStockTable,
+  empleados as empleadosTable,
+  insumos as insumosTable,
   servicios as serviciosTable,
 } from "@/lib/db/schema";
 import { deleteMovimientosByRefTx } from "./movimientos-bancarios-helpers";
@@ -473,5 +475,113 @@ export async function anularIngreso(
   revalidatePath("/stock");
   revalidatePath("/dashboard");
   revalidatePath("/catalogos/clientes");
+  return { ok: true };
+}
+
+/**
+ * Asigna (o cambia) quién vendió una línea de una venta ya registrada.
+ *
+ * El caso real: se cobra rápido un producto y se olvida poner la vendedora.
+ * La comisión queda en cero —el sistema la pone en cero a propósito cuando no
+ * hay nadie asignado, porque "la comisión es de alguien o no es"— y recién se
+ * nota al liquidar. Hasta ahora el único camino era anular y volver a cargar,
+ * y eso se traba cuando la caja del día ya se cerró, que es justo cuando se
+ * dan cuenta.
+ *
+ * NO se frena con el cierre de caja, por el mismo motivo que reasignar la
+ * clienta: no toca el total, ni el medio de pago, ni el stock. El arqueo de
+ * ese día da exactamente igual antes y después. Lo único que cambia es de
+ * quién es la comisión.
+ *
+ * Sí se frena si la línea ya entró en una liquidación: esa comisión ya se
+ * pagó, y moverla dejaría ese sueldo sin explicación.
+ */
+export async function asignarVendedoraLinea(
+  ingresoLineaId: string,
+  empleadoId: string,
+  comisionPct: number,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+  const db = getDb();
+
+  if (!Number.isFinite(comisionPct) || comisionPct < 0 || comisionPct > 100) {
+    return failure("El porcentaje de comisión tiene que estar entre 0 y 100");
+  }
+
+  const [linea] = await db
+    .select({
+      id: ingresoLineasTable.id,
+      ingresoId: ingresoLineasTable.ingresoId,
+      insumoId: ingresoLineasTable.insumoId,
+      cantidad: ingresoLineasTable.cantidad,
+      subtotal: ingresoLineasTable.subtotal,
+      soportaDescuento: ingresoLineasTable.soportaDescuento,
+      promoServicioId: ingresoLineasTable.promoServicioId,
+      servicioId: ingresoLineasTable.servicioId,
+      precioEfectivoServicio: serviciosTable.precioEfectivo,
+      precioVentaEfectivoInsumo: insumosTable.precioVentaEfectivo,
+      ventaSucursalId: ingresosTable.sucursalId,
+      ventaAnulada: ingresosTable.anulado,
+      ventaSubtotal: ingresosTable.subtotal,
+      ventaDescuento: ingresosTable.descuentoMonto,
+      yaLiquidada: liquidacionLineasTable.id,
+    })
+    .from(ingresoLineasTable)
+    .innerJoin(ingresosTable, eq(ingresoLineasTable.ingresoId, ingresosTable.id))
+    .leftJoin(serviciosTable, eq(ingresoLineasTable.servicioId, serviciosTable.id))
+    .leftJoin(insumosTable, eq(ingresoLineasTable.insumoId, insumosTable.id))
+    .leftJoin(
+      liquidacionLineasTable,
+      eq(liquidacionLineasTable.ingresoLineaId, ingresoLineasTable.id),
+    )
+    .where(eq(ingresoLineasTable.id, ingresoLineaId))
+    .limit(1);
+
+  if (!linea) return failure("No encontré esa línea de la venta");
+  if (!scope.sucursalIdsPermitidas.includes(linea.ventaSucursalId)) {
+    return failure("No tenés acceso a esa venta");
+  }
+  if (linea.ventaAnulada) return failure("Esta venta está anulada");
+  if (linea.yaLiquidada) {
+    return failure(
+      "Esta línea ya entró en una liquidación: su comisión está pagada y no se puede cambiar.",
+    );
+  }
+
+  const [empleado] = await db
+    .select({ id: empleadosTable.id, sucursalId: empleadosTable.sucursalPrincipalId })
+    .from(empleadosTable)
+    .where(eq(empleadosTable.id, empleadoId))
+    .limit(1);
+  if (!empleado) return failure("No encontré a esa empleada");
+
+  // El mismo cálculo que hace la venta: la comisión sale del precio EN
+  // EFECTIVO, así el recargo de tarjeta queda para el local.
+  const precioEfectivoRef =
+    linea.precioEfectivoServicio ??
+    (linea.precioVentaEfectivoInsumo != null
+      ? linea.precioVentaEfectivoInsumo * linea.cantidad
+      : undefined);
+
+  const comisionMonto = comisionMontoServicio({
+    precioCobrado: linea.subtotal,
+    precioEfectivoServicio: precioEfectivoRef ?? undefined,
+    esDePromo: !!linea.promoServicioId,
+    comisionPct,
+    soportaDescuento: linea.soportaDescuento,
+    subtotal: linea.ventaSubtotal,
+    descuentoMonto: linea.ventaDescuento,
+  });
+
+  await db
+    .update(ingresoLineasTable)
+    .set({ empleadoId, comisionPct, comisionMonto })
+    .where(eq(ingresoLineasTable.id, ingresoLineaId));
+
+  revalidatePath(`/ventas/${linea.ingresoId}`);
+  revalidatePath("/ventas");
+  revalidatePath("/liquidaciones");
+  revalidatePath("/reportes/empleadas");
   return { ok: true };
 }
