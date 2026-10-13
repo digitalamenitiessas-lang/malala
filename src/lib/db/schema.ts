@@ -1043,6 +1043,12 @@ export const liquidaciones = pgTable(
     diasViatico: doublePrecision("dias_viatico").notNull().default(0),
     totalViatico: doublePrecision("total_viatico").notNull().default(0),
     totalAnticipos: doublePrecision("total_anticipos").notNull().default(0),
+    /**
+     * Lo descontado por conceptos que NO sacaron plata de la caja: un curso,
+     * un producto que se llevó. Aparte de los anticipos a propósito — el
+     * anticipo ya salió del cajón y esto no. Ver drizzle/0064.
+     */
+    totalDescuentos: doublePrecision("total_descuentos").notNull().default(0),
     totalPagar: doublePrecision("total_pagar").notNull().default(0),
     /**
      * Lo que de verdad se entrego. Vacio = se pago el total. El salon paga
@@ -1386,6 +1392,49 @@ export const pagosProveedor = pgTable(
   (table) => ({
     provFechaIdx: index("pagos_proveedor_prov_idx").on(
       table.proveedorId,
+      table.fecha,
+    ),
+  }),
+);
+
+/**
+ * Lo que se le cobra a una empleada sin que salga plata de la caja.
+ *
+ * No es un anticipo: un anticipo SACA plata del cajón el día que se da. Esto
+ * es un curso, un producto que se llevó, lo que el salón le descuenta el
+ * sábado y nunca movió efectivo. "Para muchos items que no salen de la caja
+ * hasta el día del pago del sábado". Ver drizzle/0064.
+ */
+export const descuentos = pgTable(
+  "descuentos",
+  {
+    id: text("id").primaryKey(),
+    empleadoId: text("empleado_id")
+      .notNull()
+      .references(() => empleados.id),
+    sucursalId: text("sucursal_id")
+      .notNull()
+      .references(() => sucursales.id),
+    fecha: timestamp("fecha", { withTimezone: true }).notNull(),
+    /** Día en que se descuenta, si se acordó para más adelante. */
+    fechaDescuento: date("fecha_descuento"),
+    monto: doublePrecision("monto").notNull(),
+    /** Por qué se le descuenta. Obligatorio: sin motivo no se puede explicar. */
+    concepto: text("concepto").notNull(),
+    observacion: text("observacion"),
+    liquidacionId: text("liquidacion_id").references(() => liquidaciones.id),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => profiles.userId),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    empleadoLiqIdx: index("descuentos_empleado_liq_idx").on(
+      table.empleadoId,
+      table.liquidacionId,
+    ),
+    empleadoFechaIdx: index("descuentos_empleado_fecha_idx").on(
+      table.empleadoId,
       table.fecha,
     ),
   }),

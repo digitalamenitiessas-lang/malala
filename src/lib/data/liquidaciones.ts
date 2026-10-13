@@ -10,6 +10,7 @@ import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import {
   anticipos as anticiposTable,
+  descuentos as descuentosTable,
   viaticos as viaticosTable,
   cierresCaja as cierresCajaTable,
   empleados as empleadosTable,
@@ -96,6 +97,7 @@ function mapLiquidacion(
     dias_viatico: row.diasViatico,
     total_viatico: row.totalViatico,
     total_anticipos: row.totalAnticipos,
+    total_descuentos: row.totalDescuentos,
     total_pagar: row.totalPagar,
     total_pagado: row.totalPagado ?? undefined,
     arrastre: row.arrastre,
@@ -142,6 +144,15 @@ export interface LiquidacionPreviewAnticipo {
   observacion?: string;
 }
 
+export interface LiquidacionPreviewDescuento {
+  id: string;
+  fecha: string;
+  monto: number;
+  /** Por qué se le descuenta. Lo que hace que el número se entienda. */
+  concepto: string;
+  observacion?: string;
+}
+
 export interface LiquidacionPreviewViatico {
   id: string;
   fecha: string;
@@ -171,6 +182,9 @@ export interface LiquidacionPreview {
   viatico_a_pagar: number;
   anticipos: LiquidacionPreviewAnticipo[];
   total_anticipos: number;
+  /** Cursos, productos: se restan igual, pero nunca salieron de la caja. */
+  descuentos: LiquidacionPreviewDescuento[];
+  total_descuentos: number;
   /**
    * Lo que quedó a favor de liquidaciones anteriores y se suma a esta.
    *
@@ -267,6 +281,13 @@ async function fetchValorHoraYAnticipos(args: {
   horasSugeridas: number;
   viaticoPorDia: number;
   anticipos: { id: string; fecha: string; monto: number; observacion?: string }[];
+  descuentos: {
+    id: string;
+    fecha: string;
+    monto: number;
+    concepto: string;
+    observacion?: string;
+  }[];
 }> {
   const db = getDb();
 
@@ -305,6 +326,25 @@ async function fetchValorHoraYAnticipos(args: {
       ),
     )
     .orderBy(asc(anticiposTable.fecha));
+
+  // Descuentos: lo que se le cobra sin que haya salido plata de la caja (un
+  // curso, un producto). Van aparte de los anticipos y no sumados, porque el
+  // anticipo ya salió del cajón y esto no. Mismo criterio de fecha: manda el
+  // día en que se descuenta, no el día en que se cargó el cargo.
+  const descuentoRows = await db
+    .select()
+    .from(descuentosTable)
+    .where(
+      and(
+        eq(descuentosTable.empleadoId, args.empleadoId),
+        eq(descuentosTable.sucursalId, args.sucursalId),
+        isNull(descuentosTable.liquidacionId),
+        sql`coalesce(${descuentosTable.fechaDescuento}::text,
+              to_char(${descuentosTable.fecha} at time zone 'America/Argentina/Buenos_Aires','YYYY-MM-DD'))
+            between ${args.desde} and ${args.hasta}`,
+      ),
+    )
+    .orderBy(asc(descuentosTable.fecha));
 
   // Las horas salen del horario semanal cargado en Disponibilidad pública, que
   // es el mismo que usa la reserva online. Es lo que pidió el salón: un solo
@@ -387,6 +427,13 @@ async function fetchValorHoraYAnticipos(args: {
       fecha: ymd(a.fecha),
       monto: a.monto,
       observacion: a.observacion ?? undefined,
+    })),
+    descuentos: descuentoRows.map((d) => ({
+      id: d.id,
+      fecha: ymd(d.fecha),
+      monto: d.monto,
+      concepto: d.concepto,
+      observacion: d.observacion ?? undefined,
     })),
   };
 }
@@ -504,14 +551,21 @@ export async function previewLiquidacion(input: {
   const dias = new Set(lineas.map((l) => l.fecha));
   const totalComision = lineas.reduce((s, l) => s + l.comision_monto, 0);
 
-  const { valorHora, tipoComision, horasSugeridas, sueldoBasicoSugerido, anticipos } =
-    await fetchValorHoraYAnticipos({
-      empleadoId: parsed.data.empleado_id,
-      sucursalId: parsed.data.sucursal_id,
-      desde: parsed.data.periodo_desde,
-      hasta: parsed.data.periodo_hasta,
-    });
+  const {
+    valorHora,
+    tipoComision,
+    horasSugeridas,
+    sueldoBasicoSugerido,
+    anticipos,
+    descuentos,
+  } = await fetchValorHoraYAnticipos({
+    empleadoId: parsed.data.empleado_id,
+    sucursalId: parsed.data.sucursal_id,
+    desde: parsed.data.periodo_desde,
+    hasta: parsed.data.periodo_hasta,
+  });
   const totalAnticipos = anticipos.reduce((s, a) => s + a.monto, 0);
+  const totalDescuentos = descuentos.reduce((s, d) => s + d.monto, 0);
 
   const arrastre = await getArrastrePendiente({
     empleadoId: parsed.data.empleado_id,
@@ -562,6 +616,8 @@ export async function previewLiquidacion(input: {
         .reduce((acc, v) => acc + v.monto, 0),
       anticipos,
       total_anticipos: totalAnticipos,
+      descuentos,
+      total_descuentos: totalDescuentos,
       arrastre,
     },
   };
@@ -636,12 +692,13 @@ export async function createLiquidacion(
     }
   }
 
-  const { valorHora, tipoComision, viaticoPorDia, anticipos } = await fetchValorHoraYAnticipos({
-    empleadoId: parsed.data.empleado_id,
-    sucursalId: parsed.data.sucursal_id,
-    desde: parsed.data.periodo_desde,
-    hasta: parsed.data.periodo_hasta,
-  });
+  const { valorHora, tipoComision, viaticoPorDia, anticipos, descuentos } =
+    await fetchValorHoraYAnticipos({
+      empleadoId: parsed.data.empleado_id,
+      sucursalId: parsed.data.sucursal_id,
+      desde: parsed.data.periodo_desde,
+      hasta: parsed.data.periodo_hasta,
+    });
 
   const dias = new Set(lineas.map((l) => l.fecha));
   const totalComision = lineas.reduce((s, l) => s + l.comision_monto, 0);
@@ -675,6 +732,7 @@ export async function createLiquidacion(
     .reduce((s, v) => s + v.monto, 0);
 
   const totalAnticipos = anticipos.reduce((s, a) => s + a.monto, 0);
+  const totalDescuentos = descuentos.reduce((s, d) => s + d.monto, 0);
   const liquidacionId = createId();
 
   let solapadaError: ReturnType<typeof errorSolapada> | null = null;
@@ -717,6 +775,7 @@ export async function createLiquidacion(
       sueldoBasico,
       viaticoAPagar,
       totalAnticipos,
+      totalDescuentos,
       arrastre,
     });
 
@@ -737,6 +796,7 @@ export async function createLiquidacion(
       diasViatico,
       totalViatico,
       totalAnticipos,
+      totalDescuentos,
       arrastre,
       totalPagar,
       estado: "pendiente",
@@ -752,6 +812,20 @@ export async function createLiquidacion(
           inArray(
             anticiposTable.id,
             anticipos.map((a) => a.id),
+          ),
+        );
+    }
+
+    // Los descuentos igual: sin esto el mismo curso se cobraría todas las
+    // semanas.
+    if (descuentos.length > 0) {
+      await tx
+        .update(descuentosTable)
+        .set({ liquidacionId })
+        .where(
+          inArray(
+            descuentosTable.id,
+            descuentos.map((d) => d.id),
           ),
         );
     }
@@ -1285,6 +1359,14 @@ export async function anularLiquidacion(
         .set({ liquidacionId: null })
         .where(eq(anticiposTable.liquidacionId, id));
 
+      // Y los descuentos: el curso sigue debiéndose, sólo que todavía no se
+      // le cobró. Sin esto quedarían apuntando a una liquidación borrada y no
+      // se le descontarían nunca más.
+      await tx
+        .update(descuentosTable)
+        .set({ liquidacionId: null })
+        .where(eq(descuentosTable.liquidacionId, id));
+
       // Borrar libera las líneas para futuras liquidaciones
       await tx.delete(liquidacionesTable).where(eq(liquidacionesTable.id, id));
     });
@@ -1483,6 +1565,8 @@ export interface ProyeccionEmpleado {
   sueldoBasico: number;
   viatico: number;
   anticipos: number;
+  /** Cursos, productos: bajan el total aunque nunca salieron de la caja. */
+  descuentos: number;
   /** Lo que quedó a favor de semanas anteriores por pagar redondeado. */
   arrastre: number;
   total: number;
@@ -1611,6 +1695,9 @@ export async function getProyeccionSemanal(args: {
     const comision = lineas.reduce((s, l) => s + l.comision_monto, 0);
     const sueldoHoras = datos.horasSugeridas * datos.valorHora;
     const anticipos = datos.anticipos.reduce((s, a) => s + a.monto, 0);
+    // Bajan lo que hay que juntar igual que un anticipo, aunque nunca hayan
+    // salido del cajón: son plata que no se le va a entregar el sábado.
+    const descuentos = datos.descuentos.reduce((s, d) => s + d.monto, 0);
     // Sólo los que todavía no se entregaron: los que ya se dieron salieron de
     // la caja en el momento y volver a contarlos seria pagarlos dos veces.
     const viatico = viaticos
@@ -1637,6 +1724,7 @@ export async function getProyeccionSemanal(args: {
       sueldoBasico: datos.sueldoBasicoSugerido,
       viaticoAPagar: viatico,
       totalAnticipos: anticipos,
+      totalDescuentos: descuentos,
       arrastre,
     });
 
@@ -1658,6 +1746,7 @@ export async function getProyeccionSemanal(args: {
       sueldoBasico: datos.sueldoBasicoSugerido,
       viatico,
       anticipos,
+      descuentos,
       arrastre,
       total: detalle.total,
       gana: detalle.gana,

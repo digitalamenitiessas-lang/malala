@@ -207,3 +207,56 @@ describe("arrastre de lo que quedó debiéndose", () => {
     expect(r.total).toBe(200_000 + 9_000 - 50_000 + 340);
   });
 });
+
+describe("descuentos que no salieron de la caja", () => {
+  const base = {
+    tipoComision: "porcentaje" as const,
+    totalComision: 300_000,
+    sueldoHoras: 100_000,
+    sueldoBasico: 0,
+    viaticoAPagar: 0,
+    totalAnticipos: 0,
+  };
+
+  it("el caso que lo pidió: un curso de $47.500 baja lo que se le paga", () => {
+    expect(calcularLiquidacion({ ...base, totalDescuentos: 47_500 }).total).toBe(
+      252_500,
+    );
+  });
+
+  it("sin descuentos el total no cambia", () => {
+    expect(calcularLiquidacion(base).total).toBe(300_000);
+    expect(calcularLiquidacion({ ...base, totalDescuentos: 0 }).total).toBe(
+      300_000,
+    );
+  });
+
+  it("no toca la base: el arreglo es el mismo", () => {
+    const r = calcularLiquidacion({ ...base, totalDescuentos: 47_500 });
+    expect(r.base).toBe(300_000);
+    expect(r.gana).toBe("comision");
+  });
+
+  it("se suman a los anticipos sin confundirse con ellos", () => {
+    // Los dos restan, pero uno ya salio del cajon y el otro no. La cuenta es
+    // la misma; lo que no puede pasar es que uno se cobre dos veces por estar
+    // contado en los dos lados.
+    const r = calcularLiquidacion({
+      ...base,
+      totalAnticipos: 100_000,
+      totalDescuentos: 47_500,
+    });
+    expect(r.total).toBe(300_000 - 100_000 - 47_500);
+  });
+
+  it("convive con viáticos y arrastre", () => {
+    const r = calcularLiquidacion({
+      ...base,
+      viaticoAPagar: 12_000,
+      totalAnticipos: 100_000,
+      totalDescuentos: 47_500,
+      arrastre: -660,
+    });
+    expect(r.total).toBe(300_000 + 12_000 - 100_000 - 47_500 - 660);
+  });
+});

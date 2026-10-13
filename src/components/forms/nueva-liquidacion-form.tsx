@@ -189,6 +189,7 @@ export function NuevaLiquidacionForm({
         sueldoBasico: basico,
         viaticoAPagar: totalViatico,
         totalAnticipos: preview.total_anticipos,
+        totalDescuentos: preview.total_descuentos,
         arrastre: preview.arrastre,
       })
     : null;
@@ -523,6 +524,33 @@ export function NuevaLiquidacionForm({
             </div>
           )}
 
+          {/* Descuentos: se restan igual que los anticipos, pero nunca salieron
+              de la caja. Van en su propia lista para que se entienda por qué
+              baja el total y por qué concepto. */}
+          {preview.descuentos.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                Descuentos del período (no salieron de la caja)
+              </p>
+              <ul className="divide-y divide-border rounded-md border border-border bg-cream/30">
+                {preview.descuentos.map((d) => (
+                  <li
+                    key={d.id}
+                    className="flex items-center justify-between px-3 py-2 text-sm"
+                  >
+                    <span className="text-muted-foreground">
+                      {formatYMD(d.fecha)} · {d.concepto}
+                      {d.observacion ? ` · ${d.observacion}` : ""}
+                    </span>
+                    <span className="tabular-nums text-warning">
+                      − {formatARS(d.monto)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Desglose total */}
           <div className="rounded-md border border-border bg-cream/40 p-4 space-y-1.5">
             {/* En el arreglo de profesional se cobra una de las dos, así que
@@ -557,6 +585,13 @@ export function NuevaLiquidacionForm({
               <DesgloseRow
                 label="Anticipos"
                 value={`− ${formatARS(preview.total_anticipos)}`}
+                muted
+              />
+            )}
+            {preview.total_descuentos > 0 && (
+              <DesgloseRow
+                label="Descuentos"
+                value={`− ${formatARS(preview.total_descuentos)}`}
                 muted
               />
             )}

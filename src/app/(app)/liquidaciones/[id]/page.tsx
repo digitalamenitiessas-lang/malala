@@ -177,6 +177,15 @@ export default async function LiquidacionDetallePage({
                 color="var(--warning)"
               />
             )}
+            {/* Cursos, productos: bajan igual, pero esa plata nunca salió de
+                la caja. Por eso va en su propia línea y no sumada arriba. */}
+            {liquidacion.total_descuentos > 0 && (
+              <KV
+                label="Descuentos"
+                value={`− ${formatARS(liquidacion.total_descuentos)}`}
+                color="var(--warning)"
+              />
+            )}
             {/* Lo que quedó pendiente de semanas anteriores por pagar
                 redondeado, para cualquiera de los dos lados. Va acá para que
                 el total cierre a la vista. */}

@@ -27,8 +27,10 @@ import type { TipoComision } from "@/lib/types";
  *
  * Los viáticos se suman y los anticipos se restan en los tres casos: no son
  * parte del arreglo, son plata que ya se le dio o que le corresponde aparte.
- * El arrastre también suma: es lo que quedó debiéndosele de la semana pasada
- * por pagar redondeado.
+ * Los descuentos también se restan, pero no son anticipos: esa plata nunca
+ * salió de la caja, es lo que el salón le cobra el sábado por un curso o un
+ * producto. El arrastre suma o resta: es lo que quedó pendiente de la semana
+ * pasada por pagar redondeado, para cualquiera de los dos lados.
  */
 export interface ArgsLiquidacion {
   tipoComision: TipoComision;
@@ -42,6 +44,15 @@ export interface ArgsLiquidacion {
   viaticoAPagar: number;
   /** Adelantos ya cobrados, que se descuentan. */
   totalAnticipos: number;
+  /**
+   * Lo que se le cobra sin que haya salido plata de la caja: un curso, un
+   * producto que se llevó.
+   *
+   * Va aparte de los anticipos y no sumado a ellos, porque no son lo mismo: el
+   * anticipo ya salió del cajón el día que se dio, esto no salió nunca. "Para
+   * muchos items que no salen de la caja hasta el día del pago del sábado".
+   */
+  totalDescuentos?: number;
   /**
    * Lo que quedo debiendole de liquidaciones anteriores.
    *
@@ -85,6 +96,10 @@ export function calcularLiquidacion(args: ArgsLiquidacion): DetalleLiquidacion {
     base,
     gana,
     total:
-      base + args.viaticoAPagar - args.totalAnticipos + (args.arrastre ?? 0),
+      base +
+      args.viaticoAPagar -
+      args.totalAnticipos -
+      (args.totalDescuentos ?? 0) +
+      (args.arrastre ?? 0),
   };
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { AnticiposPanel } from "@/components/anticipos-panel";
+import { DescuentosPanel } from "@/components/descuentos-panel";
 import { EditarAgendaProfesional } from "@/components/forms/editar-agenda-profesional";
 import { ServiciosProfesionalForm } from "@/components/forms/servicios-profesional-form";
 import { ViaticosPanel } from "@/components/viaticos-panel";
@@ -10,6 +11,7 @@ import { AccesoEmpleadoPanel } from "@/components/forms/acceso-empleado-panel";
 import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { listAnticipos } from "@/lib/data/anticipos";
+import { listDescuentos } from "@/lib/data/descuentos";
 import { listViaticos } from "@/lib/data/viaticos";
 import {
   crearAccesoEmpleado,
@@ -85,8 +87,9 @@ export default async function EditarEmpleadoPage({
   );
   const sucursal = await getActiveSucursal();
 
-  const [anticipos, viaticos, mediosPago, acceso, agendas] = await Promise.all([
+  const [anticipos, descuentos, viaticos, mediosPago, acceso, agendas] = await Promise.all([
     listAnticipos(id),
+    listDescuentos(id),
     listViaticos({ empleadoId: id }),
     sucursal
       ? listMediosPago({ sucursalId: sucursal.id, soloActivos: true, excluirGiftCard: true })
@@ -190,6 +193,11 @@ export default async function EditarEmpleadoPage({
         anticipos={anticipos}
         mediosPago={mediosPago}
       />
+
+      {/* Al lado de los anticipos porque se parecen —los dos bajan el sueldo—
+          pero son cosas distintas: el anticipo ya salió del cajón y el
+          descuento no sale nunca. */}
+      <DescuentosPanel empleadoId={empleado.id} descuentos={descuentos} />
 
       <ViaticosPanel
         empleadoId={empleado.id}

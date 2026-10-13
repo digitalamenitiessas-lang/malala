@@ -592,10 +592,15 @@ export interface Liquidacion {
   dias_viatico: number;
   total_viatico: number;
   total_anticipos: number; // anticipos descontados
-  total_pagar: number; // comisión + horas + básico + viáticos − anticipos + arrastre
+  /** Cursos, productos: lo que se le cobra sin que haya salido de la caja. */
+  total_descuentos: number;
+  total_pagar: number; // comisión + horas + básico + viáticos − anticipos − descuentos + arrastre
   /** Lo que se entregó. Sin valor = se pagó el total. */
   total_pagado?: number;
-  /** Lo que se le debía de antes y entró en esta liquidación. */
+  /**
+   * Lo que quedó pendiente de antes por pagar redondeado y entró acá.
+   * Positivo: el salón le debía. Negativo: ella debía.
+   */
   arrastre: number;
   estado: LiquidacionEstado;
   mp_id?: ID;
@@ -743,4 +748,27 @@ export interface GiftCardMovimiento {
   ingreso_id?: ID;
   descripcion?: string;
   usuario_id: ID;
+}
+
+/**
+ * Lo que se le cobra a una empleada sin que salga plata de la caja.
+ *
+ * Un curso, un producto que se llevó. No es un anticipo: el anticipo ya salió
+ * del cajón el día que se dio. "Para muchos items que no salen de la caja
+ * hasta el día del pago del sábado".
+ */
+export interface Descuento {
+  id: ID;
+  empleado_id: ID;
+  sucursal_id: ID;
+  fecha: string; // ISO — cuando se generó el cargo
+  /** Dia en que se descuenta, si se acordó para más adelante. YYYY-MM-DD. */
+  fecha_descuento?: string;
+  monto: number;
+  /** Por qué se le descuenta. Siempre tiene que haber uno. */
+  concepto: string;
+  liquidacion_id?: ID; // null mientras está pendiente de descontar
+  observacion?: string;
+  usuario_id: ID;
+  creado_en: string; // ISO
 }
