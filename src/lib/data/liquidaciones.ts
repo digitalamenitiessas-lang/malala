@@ -1367,6 +1367,16 @@ export async function anularLiquidacion(
         .set({ liquidacionId: null })
         .where(eq(descuentosTable.liquidacionId, id));
 
+      // Los viáticos, por lo mismo. Faltaba, y no era cosmético: viaticos
+      // .liquidacion_id es clave foránea, así que anular una liquidación que
+      // tuviera viáticos cargados fallaba entera con "Failed query: delete
+      // from liquidaciones". El flag `pagado` no se toca: dice si esa plata
+      // ya salió del cajón, que es otra cosa y sigue siendo cierta.
+      await tx
+        .update(viaticosTable)
+        .set({ liquidacionId: null })
+        .where(eq(viaticosTable.liquidacionId, id));
+
       // Borrar libera las líneas para futuras liquidaciones
       await tx.delete(liquidacionesTable).where(eq(liquidacionesTable.id, id));
     });
