@@ -421,13 +421,27 @@ export async function registrarViaticosEnRango(
     };
   }
 
+  /**
+   * El sábado puede pagarse distinto: "las chicas del centro cobran los
+   * viáticos día de semana $3.000 y los sábados $7.000". Antes se cargaba el
+   * rango con un solo monto y había que corregir el sábado a mano, uno por
+   * uno. Vacío o cero = el sábado cobra lo mismo que el resto.
+   */
+  const montoSabado = Number(formData.get("monto_sabado") ?? 0);
+  const esSabado = (ymd: string) => new Date(`${ymd}T12:00:00Z`).getUTCDay() === 6;
+
   let creados = 0;
   let salteados = 0;
   for (const fecha of fechas) {
     const fd = new FormData();
     fd.set("empleado_id", empleadoId);
     fd.set("fecha", fecha);
-    fd.set("monto", String(formData.get("monto") ?? ""));
+    fd.set(
+      "monto",
+      montoSabado > 0 && esSabado(fecha)
+        ? String(montoSabado)
+        : String(formData.get("monto") ?? ""),
+    );
     if (formData.get("pagado")) fd.set("pagado", "on");
     if (formData.get("mp_id")) fd.set("mp_id", String(formData.get("mp_id")));
     fd.set("observacion", String(formData.get("observacion") ?? ""));

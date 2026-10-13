@@ -48,6 +48,14 @@ export function ViaticosPanel({
   const [modo, setModo] = useState<"dia" | "rango">("dia");
   const [hastaFecha, setHastaFecha] = useState(hoyAr());
   const [monto, setMonto] = useState(0);
+  /**
+   * Monto distinto para los sabados. Vacio = el mismo que el resto.
+   *
+   * "Las chicas del centro cobran los viaticos dia de semana $3.000 y los
+   * sabados $7.000". Antes el rango cargaba el mismo monto todos los dias y
+   * habia que corregir el sabado a mano, uno por uno.
+   */
+  const [montoSabado, setMontoSabado] = useState(0);
   const [pagado, setPagado] = useState(true);
   const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
   const [observacion, setObservacion] = useState("");
@@ -113,6 +121,7 @@ export function ViaticosPanel({
       fd.set("desde", fecha);
       fd.set("hasta", hastaFecha);
       fd.set("fechas", diasElegidos.join(","));
+      if (montoSabado > 0) fd.set("monto_sabado", String(montoSabado));
     }
 
     run(
@@ -334,6 +343,23 @@ export function ViaticosPanel({
                 className="w-full rounded-md border border-border bg-card px-3 py-2 text-right text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
+            {/* El sábado se paga distinto. Antes había que cargar el rango y
+                después corregir el sábado a mano, uno por uno. */}
+            {modo === "rango" && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Monto del sábado
+                </label>
+                <CurrencyInput
+                  value={montoSabado}
+                  onChange={setMontoSabado}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-right text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dejalo en cero si el sábado cobra lo mismo.
+                </p>
+              </div>
+            )}
           </div>
 
           <label className="flex items-center gap-2 text-sm">
