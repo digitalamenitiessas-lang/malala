@@ -285,6 +285,8 @@ export async function emitirGiftCard(
     con_descuento: formData.get("con_descuento"),
     compradora: formData.get("compradora"),
     compradora_cliente_id: formData.get("compradora_cliente_id"),
+    compradora_empleado_id: formData.get("compradora_empleado_id"),
+    cuotas_fechas: formData.get("cuotas_fechas"),
     beneficiaria: formData.get("beneficiaria"),
     observacion: formData.get("observacion"),
     origen: formData.get("origen") ?? "venta",
