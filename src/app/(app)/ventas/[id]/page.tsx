@@ -249,8 +249,21 @@ export default async function VentaDetallePage({
                       {formatARS(l.subtotal)}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {/* Un producto puede tener comisión: la tiene si se le
+                          asignó vendedora. Antes acá iba siempre un guión, así
+                          que quien la asignaba seguía viendo "—" y daba por
+                          hecho que no había quedado. */}
                       {esProducto ? (
-                        <span className="text-xs">—</span>
+                        l.comision_monto > 0 ? (
+                          <>
+                            {formatARS(l.comision_monto)}
+                            <span className="block text-[10px] text-muted-foreground">
+                              {l.comision_pct}%
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs">—</span>
+                        )
                       ) : (
                         <>
                           {formatARS(l.comision_monto)}
