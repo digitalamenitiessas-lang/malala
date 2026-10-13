@@ -419,7 +419,18 @@ export async function listIngresos(
         .filter((linea) => linea.empleado_id === empleadoId)
         .map((linea) => linea.ingreso_id),
     );
-    lineas = lineas.filter((linea) => ingresoIdsPermitidos.has(linea.ingreso_id));
+    // SOLO sus líneas, no todas las del ticket.
+    //
+    // Antes se devolvían las ventas en las que ella participó, enteras. En un
+    // ticket que atienden dos profesionales eso le sumaba la comisión de la
+    // otra: "en Ángela me tendría que dar $42.000 no $53.700, y veo que en la
+    // venta de Facunda García quizás está el problema; hay dos profesionales
+    // que lo realizaron". Los $11.700 de diferencia eran exactamente las dos
+    // líneas de Camila en ese ticket.
+    //
+    // El total del ticket no se toca —sigue siendo el de la venta—, lo que se
+    // acota son las líneas, que es lo que se pidió al filtrar por ella.
+    lineas = lineas.filter((linea) => linea.empleado_id === empleadoId);
     const ingresos = ingresosRows
       .filter((item) => ingresoIdsPermitidos.has(item.id))
       .map(mapIngreso);
