@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
@@ -719,9 +719,27 @@ export async function anularGiftCard(
       descripcion: parsed.data.motivo,
       usuarioId: user.id,
     });
+
+    // Si la pagaba una empleada con su sueldo, los descuentos que todavía no
+    // se le cobraron se van con la tarjeta. Sin esto le seguirían saliendo
+    // del sueldo las cuotas de algo anulado, y nadie lo relacionaría.
+    //
+    // Los ya aplicados NO se tocan: esa plata ya se compensó contra un sueldo
+    // pagado, y sacarla dejaría esa liquidación sin explicación. Si hay que
+    // devolvérsela, va como un movimiento aparte.
+    await tx
+      .delete(descuentosTable)
+      .where(
+        and(
+          isNull(descuentosTable.liquidacionId),
+          ilike(descuentosTable.concepto, `Gift card ${tarjeta.codigo}%`),
+          eq(descuentosTable.sucursalId, tarjeta.sucursal_id),
+        ),
+      );
   });
 
   revalidatePath("/catalogos/gift-cards");
+  revalidatePath("/liquidaciones");
   return { ok: true };
 }
 
