@@ -34,13 +34,15 @@ export function MarcarPagadaForm({
   /**
    * Cuánto se le entrega de verdad. Arranca en el total, que es lo normal.
    *
-   * Pagan redondeado: "cuando me dice $237.340 una liquidación yo pago
-   * $237.000 (esa sobrante no lo pago)". Lo que no se paga queda a favor de la
-   * empleada y se suma solo a la liquidación siguiente.
+   * Redondean para los dos lados, según lo que haya en el cajón: "si me dice
+   * $153.760 yo pago $154.000. Así muchas veces. Y también a la inversa: si no
+   * tengo los $3.000 pago $150.000". Antes esto sólo aceptaba pagar de menos y
+   * las dejó trabadas en plena pagada del sábado.
    */
   const [totalPagado, setTotalPagado] = useState(totalPagar);
 
-  const aPagar = Math.min(Math.max(totalPagado, 0), totalPagar);
+  const aPagar = Math.max(totalPagado, 0);
+  /** Positivo: el salón le queda debiendo. Negativo: ella queda debiendo. */
   const quedaAFavor = totalPagar - aPagar;
 
   // Sólo se pide cuánto va por el SEGUNDO medio: el total ya está fijado por la
@@ -86,8 +88,9 @@ export function MarcarPagadaForm({
       <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
         Registrar pago
       </h2>
-      {/* Pagan redondeado y lo sobrante no se regala: queda a favor para la
-          semana siguiente. Antes había que pagar el total exacto. */}
+      {/* Redondean para los dos lados segun lo que haya en el cajon, asi que
+          acá se puede poner más o menos que el total. La diferencia, para
+          cualquier lado, entra sola en la liquidación siguiente. */}
       <div className="space-y-1.5">
         <label
           htmlFor="liq-total-pagado"
@@ -99,7 +102,6 @@ export function MarcarPagadaForm({
           id="liq-total-pagado"
           type="number"
           min={0}
-          max={totalPagar}
           step={1}
           value={totalPagado || ""}
           onChange={(e) => setTotalPagado(Number(e.target.value) || 0)}
@@ -107,13 +109,18 @@ export function MarcarPagadaForm({
         />
         {quedaAFavor > 0.01 ? (
           <p className="text-[11px] tabular-nums text-brown-700">
-            Quedan {formatARS(quedaAFavor)} a favor: se le suman solos a la
-            próxima liquidación.
+            Quedan {formatARS(quedaAFavor)} a favor de ella: se le suman solos a
+            la próxima liquidación.
+          </p>
+        ) : quedaAFavor < -0.01 ? (
+          <p className="text-[11px] tabular-nums text-brown-700">
+            Le estás dando {formatARS(-quedaAFavor)} de más: se le descuentan
+            solos de la próxima liquidación.
           </p>
         ) : (
           <p className="text-[11px] text-muted-foreground">
-            El total es {formatARS(totalPagar)}. Si le pagás redondeado, poné
-            acá lo que le das.
+            El total es {formatARS(totalPagar)}. Si redondeás, para arriba o
+            para abajo, poné acá lo que le das.
           </p>
         )}
       </div>

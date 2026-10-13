@@ -166,6 +166,37 @@ describe("arrastre de lo que quedó debiéndose", () => {
     expect(semana2.total).toBe(180_340);
   });
 
+  it("redondeado para ARRIBA: lo de más se le descuenta la semana siguiente", () => {
+    // "Si me dice $153.760 yo pago $154.000. Así muchas veces."
+    const semana1 = calcularLiquidacion({
+      ...base,
+      totalComision: 153_760,
+      sueldoHoras: 0,
+    });
+    expect(semana1.total).toBe(153_760);
+
+    const pagado = 154_000;
+    const semana2 = calcularLiquidacion({
+      ...base,
+      totalComision: 200_000,
+      sueldoHoras: 0,
+      arrastre: semana1.total - pagado, // −240
+    });
+    expect(semana2.total).toBe(199_760);
+  });
+
+  it("un arrastre negativo nunca deja el total por debajo de cero a escondidas", () => {
+    // Si lo adelantado se come toda la semana, el total queda negativo y eso
+    // tiene que verse: significa que sigue debiendo.
+    const r = calcularLiquidacion({
+      ...base,
+      totalComision: 1_000,
+      sueldoHoras: 0,
+      arrastre: -5_000,
+    });
+    expect(r.total).toBe(-4_000);
+  });
+
   it("convive con viáticos y anticipos", () => {
     const r = calcularLiquidacion({
       ...base,

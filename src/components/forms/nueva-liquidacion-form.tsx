@@ -201,7 +201,7 @@ export function NuevaLiquidacionForm({
       preview.total_viatico > 0 ||
       // Una semana sin trabajo pero con plata a favor igual se liquida: es
       // lo único que hay para pagarle.
-      preview.arrastre > 0);
+      Math.abs(preview.arrastre) > 0.01);
 
   return (
     <div className="space-y-6">
@@ -560,12 +560,22 @@ export function NuevaLiquidacionForm({
                 muted
               />
             )}
-            {/* Lo que quedó sin pagar de la liquidación anterior por redondeo.
-                Entra solo; se muestra para que el total no parezca un error. */}
-            {preview.arrastre > 0 && (
+            {/* Lo que quedó pendiente de la liquidación anterior por redondeo,
+                para cualquiera de los dos lados. Entra solo; se muestra para
+                que el total no parezca un error. */}
+            {Math.abs(preview.arrastre) > 0.01 && (
               <DesgloseRow
-                label="A favor de la semana pasada"
-                value={formatARS(preview.arrastre)}
+                label={
+                  preview.arrastre > 0
+                    ? "A favor de la semana pasada"
+                    : "Se le adelantó la semana pasada"
+                }
+                value={
+                  preview.arrastre > 0
+                    ? formatARS(preview.arrastre)
+                    : `− ${formatARS(-preview.arrastre)}`
+                }
+                muted={preview.arrastre < 0}
               />
             )}
             <div className="flex items-center justify-between border-t border-border pt-2 mt-1">

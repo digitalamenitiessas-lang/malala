@@ -177,13 +177,24 @@ export default async function LiquidacionDetallePage({
                 color="var(--warning)"
               />
             )}
-            {/* Lo que quedó debiéndosele de semanas anteriores por pagar
-                redondeado. Va acá para que el total cierre a la vista. */}
-            {liquidacion.arrastre > 0 && (
+            {/* Lo que quedó pendiente de semanas anteriores por pagar
+                redondeado, para cualquiera de los dos lados. Va acá para que
+                el total cierre a la vista. */}
+            {Math.abs(liquidacion.arrastre) > 0.01 && (
               <KV
-                label="A favor de la semana pasada"
-                value={formatARS(liquidacion.arrastre)}
-                color="var(--sage-700)"
+                label={
+                  liquidacion.arrastre > 0
+                    ? "A favor de la semana pasada"
+                    : "Se le adelantó la semana pasada"
+                }
+                value={
+                  liquidacion.arrastre > 0
+                    ? formatARS(liquidacion.arrastre)
+                    : `− ${formatARS(-liquidacion.arrastre)}`
+                }
+                color={
+                  liquidacion.arrastre > 0 ? "var(--sage-700)" : "var(--warning)"
+                }
               />
             )}
             <div className="pt-2 border-t border-border">
@@ -249,11 +260,13 @@ export default async function LiquidacionDetallePage({
                     </span>
                   </p>
                   <p className="text-xs pt-0.5" style={{ color: "var(--sage-700)" }}>
-                    Quedan{" "}
-                    {formatARS(
-                      liquidacion.total_pagar - liquidacion.total_pagado,
-                    )}{" "}
-                    a favor, se suman a la próxima liquidación.
+                    {liquidacion.total_pagar - liquidacion.total_pagado > 0
+                      ? `Quedan ${formatARS(
+                          liquidacion.total_pagar - liquidacion.total_pagado,
+                        )} a favor de ella, se suman a la próxima liquidación.`
+                      : `Se le dieron ${formatARS(
+                          liquidacion.total_pagado - liquidacion.total_pagar,
+                        )} de más, se descuentan de la próxima liquidación.`}
                   </p>
                 </div>
               )}

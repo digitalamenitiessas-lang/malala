@@ -617,15 +617,16 @@ export async function createLiquidacion(
   });
 
   if (lineas.length === 0 && horasTrabajadas <= 0 && diasViatico <= 0) {
-    // Salvo que le hayan quedado debiendo de antes: una semana sin trabajo
+    // Salvo que haya quedado algo pendiente de antes: una semana sin trabajo
     // pero con plata a favor igual se liquida, es lo único que hay para
-    // pagarle. (El número que vale es el que se vuelve a leer dentro de la
+    // pagarle; y si ella quedó debiendo, también hay que poder dejarlo
+    // asentado. (El número que vale es el que se vuelve a leer dentro de la
     // transacción; este es sólo para no cortarle el paso acá.)
     const aFavor = await getArrastrePendiente({
       empleadoId: parsed.data.empleado_id,
       sucursalId: parsed.data.sucursal_id,
     });
-    if (aFavor <= 0) {
+    if (Math.abs(aFavor) < 0.01) {
       return {
         ok: false,
         errors: {
@@ -1071,27 +1072,33 @@ export async function marcarLiquidacionPagada(
       // (los anticipos ya salieron de caja al registrarse). Solo genera egreso si
       // queda saldo a favor del empleado.
       /**
-       * Lo que se entrega, que puede ser menos que el total.
+       * Lo que se entrega, que puede ser distinto del total EN LOS DOS
+       * SENTIDOS.
        *
-       * El salon paga redondeado: "cuando me dice $237.340 yo pago $237.000".
-       * Esa diferencia no se regala, queda a favor de la empleada y entra en
-       * la liquidacion siguiente. Sin este campo habia que pagar el total
-       * exacto o perder el resto.
+       * Redondean para los dos lados, segun lo que haya en el cajon: "si me
+       * dice $153.760 yo pago $154.000. Asi muchas veces. Y tambien a la
+       * inversa: si no tengo los $3.000 pago $150.000". Al principio esto
+       * aceptaba solo pagar de menos, y el salon se topo con el tope en plena
+       * pagada del sabado.
+       *
+       * De menos: el salon le queda debiendo y se le suma la semana que viene.
+       * De mas: la empleada queda debiendo y se le descuenta. Es la misma
+       * cuenta con el signo cambiado.
        */
       const montoAPagar =
-        parsed.data.total_pagado != null &&
-        parsed.data.total_pagado >= 0 &&
-        parsed.data.total_pagado <= existing.totalPagar
+        parsed.data.total_pagado != null && parsed.data.total_pagado >= 0
           ? parsed.data.total_pagado
           : existing.totalPagar;
       const quedaAFavor = existing.totalPagar - montoAPagar;
-      // Que el egreso diga por qué sale menos que la liquidación: si no, el
-      // día que alguien revise la caja ve un sueldo pagado de menos y no hay
+      // Que el egreso diga por qué no coincide con la liquidación: si no, el
+      // día que alguien revise la caja ve un sueldo que no cierra y no hay
       // dónde leer la explicación.
       const observacionConSaldo =
-        quedaAFavor > 0.01
-          ? `${observacionEgreso} — queda a favor ${formatARS(quedaAFavor)}`
-          : observacionEgreso;
+        Math.abs(quedaAFavor) < 0.01
+          ? observacionEgreso
+          : quedaAFavor > 0
+            ? `${observacionEgreso} — queda a favor ${formatARS(quedaAFavor)}`
+            : `${observacionEgreso} — se le adelantaron ${formatARS(-quedaAFavor)}`;
       let egresoIdFinal: string | null = null;
 
       if (montoAPagar > 0.01) {
@@ -1155,10 +1162,13 @@ export async function marcarLiquidacionPagada(
           mpId: parsed.data.mp_id,
           mp2Id: parsed.data.mp2_id ?? null,
           valor2: parsed.data.mp2_id ? (Number(parsed.data.valor2) || 0) : null,
-          // Null cuando se pagó todo: guardar el mismo número dos veces invita
-          // a que queden desfasados.
+          // Null cuando se pagó justo: guardar el mismo número dos veces
+          // invita a que queden desfasados. Se guarda tanto si se pagó de
+          // menos como de más.
           totalPagado:
-            montoAPagar < existing.totalPagar - 0.01 ? montoAPagar : null,
+            Math.abs(montoAPagar - existing.totalPagar) < 0.01
+              ? null
+              : montoAPagar,
           fechaPago: ahora,
           observacion: parsed.data.observacion ?? null,
           egresoId: egresoIdFinal,
@@ -1202,6 +1212,38 @@ export async function anularLiquidacion(
   if (!existing) return { ok: false, errors: { _: ["No encontrada"] } };
   if (!scope.sucursalIdsPermitidas.includes(existing.sucursalId)) {
     return { ok: false, errors: { _: ["Sin acceso"] } };
+  }
+
+  // Si esta liquidación se pagó redondeada, su diferencia quedó a favor (o en
+  // contra) y pudo haberse saldado ya en una posterior. Anular BORRA la fila,
+  // así que la diferencia desaparecería pero el arrastre que la cobró seguiría
+  // contado: la cuenta quedaría torcida y alguien cobraría de menos sin que
+  // nada lo explique. Se corta acá, que es donde se puede decir por qué.
+  if (existing.totalPagado != null) {
+    const [posterior] = await db
+      .select({ id: liquidacionesTable.id })
+      .from(liquidacionesTable)
+      .where(
+        and(
+          eq(liquidacionesTable.empleadoId, existing.empleadoId),
+          eq(liquidacionesTable.sucursalId, existing.sucursalId),
+          gte(liquidacionesTable.periodoDesde, existing.periodoHasta),
+          ne(liquidacionesTable.id, id),
+          ne(liquidacionesTable.arrastre, 0),
+        ),
+      )
+      .limit(1);
+    if (posterior) {
+      return {
+        ok: false,
+        errors: {
+          _: [
+            "Esta liquidación se pagó redondeada y esa diferencia ya se saldó " +
+              "en una liquidación posterior. Anulá primero la posterior.",
+          ],
+        },
+      };
+    }
   }
 
   try {
@@ -1600,7 +1642,12 @@ export async function getProyeccionSemanal(args: {
 
     // Una empleada sin nada en la semana no se muestra: la lista es para ver
     // cuanto falta juntar, no un padron.
-    if (detalle.total === 0 && comision === 0 && sueldoHoras === 0 && arrastre === 0)
+    if (
+      detalle.total === 0 &&
+      comision === 0 &&
+      sueldoHoras === 0 &&
+      Math.abs(arrastre) < 0.01
+    )
       continue;
 
     filas.push({
@@ -1658,10 +1705,14 @@ function aYmd(v: unknown): string {
 }
 
 /**
- * Lo que el salón todavía le debe a una empleada de liquidaciones anteriores.
+ * Lo que quedó pendiente entre el salón y la empleada de semanas anteriores.
  *
- * Pagan redondeado: "cuando me dice $237.340 yo pago $237.000". Esa diferencia
- * no se regala, queda a favor para la semana siguiente.
+ * Redondean para los dos lados, según lo que haya en el cajón: "si me dice
+ * $153.760 yo pago $154.000. Así muchas veces. Y también a la inversa: si no
+ * tengo los $3.000 pago $150.000".
+ *
+ * POSITIVO: el salón le debe, se le suma.
+ * NEGATIVO: ella debe, se le descuenta.
  *
  * Se calcula como lo no pagado MENOS lo ya arrastrado. Sin restar lo arrastrado
  * la misma diferencia entraría en todas las liquidaciones siguientes, y se le
@@ -1689,11 +1740,6 @@ export async function getArrastrePendiente(
   `)) as unknown as { debido: number; ya_arrastrado: number }[];
 
   const pendiente = Number(row?.debido ?? 0) - Number(row?.ya_arrastrado ?? 0);
-  // Nunca negativo. Anular una liquidación la BORRA, así que si se anula una
-  // que se había pagado de menos, lo que se debía desaparece pero el arrastre
-  // que ya se cobró en la siguiente sigue contado, y la resta da negativo.
-  // Devolverlo así le descontaría plata del sueldo a alguien por un arreglo
-  // administrativo. En la duda, no se le saca.
-  if (pendiente < 0.01) return 0;
-  return pendiente;
+  // Centavos de redondeo no son una deuda de nadie.
+  return Math.abs(pendiente) < 0.01 ? 0 : pendiente;
 }
