@@ -162,6 +162,7 @@ function mapEmpleado(row: typeof empleadosTable.$inferSelect): Empleado {
     sueldo_basico_semanal: row.sueldoBasicoSemanal,
     valor_hora: row.valorHora,
     viatico_por_dia: row.viaticoPorDia,
+    viatico_sabado: row.viaticoSabado,
     horas_por_semana: row.horasPorSemana,
     dias_trabajo: row.diasTrabajo ?? [],
     dias_viatico: row.diasViatico ?? [],

@@ -22,6 +22,10 @@ interface Props {
   mediosPago: MedioPago[];
   /** Dias de la semana que trabaja (0=domingo). Acotan el rango. */
   diasTrabajo: number[];
+  /** Lo que cobra por dia segun su ficha, para no retipearlo cada semana. */
+  viaticoPorDia: number;
+  /** Lo que cobra el sabado, si es distinto. Cero = cobra lo mismo. */
+  viaticoSabado: number;
 }
 
 const DIA_CORTO = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
@@ -37,6 +41,8 @@ export function ViaticosPanel({
   viaticos,
   mediosPago,
   diasTrabajo,
+  viaticoPorDia,
+  viaticoSabado,
 }: Props) {
   const { pending, run } = useTransitionFeedback();
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +53,7 @@ export function ViaticosPanel({
   // Lo que cambia es cuántos clics cuesta cargar una semana entera.
   const [modo, setModo] = useState<"dia" | "rango">("dia");
   const [hastaFecha, setHastaFecha] = useState(hoyAr());
-  const [monto, setMonto] = useState(0);
+  const [monto, setMonto] = useState(viaticoPorDia);
   /**
    * Monto distinto para los sabados. Vacio = el mismo que el resto.
    *
@@ -55,7 +61,7 @@ export function ViaticosPanel({
    * sabados $7.000". Antes el rango cargaba el mismo monto todos los dias y
    * habia que corregir el sabado a mano, uno por uno.
    */
-  const [montoSabado, setMontoSabado] = useState(0);
+  const [montoSabado, setMontoSabado] = useState(viaticoSabado);
   const [pagado, setPagado] = useState(true);
   const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
   const [observacion, setObservacion] = useState("");

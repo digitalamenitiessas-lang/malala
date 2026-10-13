@@ -129,6 +129,11 @@ export const empleados = pgTable("empleados", {
   sueldoBasicoSemanal: doublePrecision("sueldo_basico_semanal").notNull().default(0),
   valorHora: doublePrecision("valor_hora").notNull().default(0),
   viaticoPorDia: doublePrecision("viatico_por_dia").notNull().default(0),
+  /**
+   * Lo que cobra el sabado, cuando es distinto del resto de la semana.
+   * "Dia de semana $3.000 y los sabados $7.000". Cero = cobra lo mismo.
+   */
+  viaticoSabado: doublePrecision("viatico_sabado").notNull().default(0),
   // Jornada: horas por día y días de la semana que trabaja (0=domingo … 6=sábado).
   horasPorSemana: doublePrecision("horas_por_semana").notNull().default(0),
   diasTrabajo: jsonb("dias_trabajo").$type<number[]>().notNull().default([]),

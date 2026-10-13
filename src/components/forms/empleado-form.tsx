@@ -159,6 +159,17 @@ export function EmpleadoForm({
             error={errors.viatico_por_dia}
             hint="Lo que cobra por cada día de viático. En 0 si no cobra."
           />
+          {/* El sábado puede pagarse distinto: "las chicas del centro cobran
+              los viáticos día de semana $3.000 y los sábados $7.000". Va acá y
+              no sólo en la pantalla de carga porque es donde el salón lo fue a
+              buscar: la ficha es donde está todo lo demás que cobra. */}
+          <CurrencyField
+            label="Viático del sábado"
+            name="viatico_sabado"
+            defaultValue={empleado?.viatico_sabado ?? 0}
+            error={errors.viatico_sabado}
+            hint="Sólo si el sábado cobra distinto. En 0 cobra lo mismo que el resto."
+          />
           <DiasViaticoField dias={empleado?.dias_viatico ?? []} />
           <Field
             label="Observación"

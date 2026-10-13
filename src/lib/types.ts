@@ -63,6 +63,8 @@ export interface Empleado {
   sueldo_basico_semanal: number; // legacy, ya no se usa en el cálculo
   valor_hora: number;
   viatico_por_dia: number;
+  /** Lo que cobra el sábado, si es distinto. Cero = cobra lo mismo. */
+  viatico_sabado: number;
   horas_por_semana: number;
   dias_trabajo: number[]; // 0=domingo … 6=sábado
   /** Días en que le corresponde viático (0=domingo). Aparte de dias_trabajo. */
