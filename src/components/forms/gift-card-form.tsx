@@ -95,7 +95,11 @@ export function GiftCardForm({
   // Sin cuenta —ni la del medio ni una elegida a mano— el cobro no impacta en
   // caja. El servidor lo permite igual (no frena la venta por configuración),
   // así que el aviso tiene que estar acá, antes de guardar.
-  const sinCuenta = cobraHoy && !!mp && !mp.cuenta_id && !cuentaId;
+  // Un medio que por diseño no mueve plata —cuenta corriente, descuento de
+  // sueldo— no lleva cuenta destino, así que pedirle una es un aviso que
+  // confunde: suena a configuración incompleta cuando está bien así.
+  const sinCuenta =
+    cobraHoy && !!mp && mp.mueve_plata && !mp.cuenta_id && !cuentaId;
 
   return (
     <CrudForm
