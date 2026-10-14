@@ -205,6 +205,7 @@ export default async function EditarEmpleadoPage({
         viaticos={viaticos}
         mediosPago={mediosPago}
         diasTrabajo={empleado.dias_trabajo}
+        diasViatico={empleado.dias_viatico}
         viaticoPorDia={empleado.viatico_por_dia}
         viaticoSabado={empleado.viatico_sabado}
       />

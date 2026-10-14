@@ -22,6 +22,8 @@ interface Props {
   mediosPago: MedioPago[];
   /** Dias de la semana que trabaja (0=domingo). Acotan el rango. */
   diasTrabajo: number[];
+  /** Dias en que cobra viatico, si son distintos de los que trabaja. */
+  diasViatico: number[];
   /** Lo que cobra por dia segun su ficha, para no retipearlo cada semana. */
   viaticoPorDia: number;
   /** Lo que cobra el sabado, si es distinto. Cero = cobra lo mismo. */
@@ -41,6 +43,7 @@ export function ViaticosPanel({
   viaticos,
   mediosPago,
   diasTrabajo,
+  diasViatico,
   viaticoPorDia,
   viaticoSabado,
 }: Props) {
@@ -72,7 +75,9 @@ export function ViaticosPanel({
   // servidor; acá se repite para poder mostrarlos y dejar destildar.
   const diasDelRango = useMemo(() => {
     if (modo !== "rango" || !fecha || !hastaFecha || hastaFecha < fecha) return [];
-    const trabaja = new Set(diasTrabajo);
+    // Los mismos dias que va a cargar el servidor: si la ficha declara dias
+    // de viatico se usan esos, si no todos los que trabaja.
+    const trabaja = new Set(diasViatico.length ? diasViatico : diasTrabajo);
     const out: string[] = [];
     const cur = new Date(`${fecha}T12:00:00Z`);
     const fin = new Date(`${hastaFecha}T12:00:00Z`);
@@ -81,7 +86,7 @@ export function ViaticosPanel({
       cur.setUTCDate(cur.getUTCDate() + 1);
     }
     return out;
-  }, [modo, fecha, hastaFecha, diasTrabajo]);
+  }, [modo, fecha, hastaFecha, diasTrabajo, diasViatico]);
 
   const diasElegidos = diasDelRango.filter((d) => !excluidas.includes(d));
 

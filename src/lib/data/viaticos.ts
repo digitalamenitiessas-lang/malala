@@ -370,14 +370,29 @@ export async function registrarViaticosEnRango(
 
   const db = getDb();
   const [empleado] = await db
-    .select({ diasTrabajo: empleadosTable.diasTrabajo })
+    .select({
+      diasTrabajo: empleadosTable.diasTrabajo,
+      diasViatico: empleadosTable.diasViatico,
+    })
     .from(empleadosTable)
     .where(eq(empleadosTable.id, empleadoId))
     .limit(1);
   if (!empleado) {
     return { ok: false, errors: { empleado_id: ["Empleada no encontrada"] } };
   }
-  const diasQueTrabaja = new Set(empleado.diasTrabajo ?? []);
+  /**
+   * Los días que cobra viático, si están declarados en la ficha.
+   *
+   * No son los mismos que los que trabaja: hay chicas que trabajan cinco días
+   * y cobran viático sólo el sábado. Ese campo existía en la ficha y no lo
+   * usaba nadie —lo leía el botón de carga masiva, que se saco— así que el
+   * salón lo configuraba y no pasaba nada. Vacío = todos los días que trabaja,
+   * que es como venía funcionando.
+   */
+  const diasQueTrabaja = new Set(
+    (empleado.diasViatico?.length ? empleado.diasViatico : empleado.diasTrabajo) ??
+      [],
+  );
   if (diasQueTrabaja.size === 0) {
     return {
       ok: false,
