@@ -6,13 +6,7 @@ import { getAccessScopeForUser } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
 import { formatARS } from "@/lib/utils";
 import { listSucursales } from "@/lib/data/sucursales";
-
-const UNIDAD_LABEL: Record<string, string> = {
-  ud: "ud",
-  ml: "ml",
-  g: "g",
-  aplicacion: "apl.",
-};
+import { StockTabla } from "@/components/stock-tabla";
 
 interface SearchParams {
   sucursal?: string;
@@ -124,90 +118,7 @@ export default async function StockPage({
         $ unitario), no lo que pagaste. Lo pagado queda en Gastos.
       </p>
 
-      <div className="bg-card border border-border rounded-md overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="text-left font-medium px-4 py-3">Insumo</th>
-              <th className="text-right font-medium px-4 py-3">Stock</th>
-              <th className="text-right font-medium px-4 py-3">Umbral</th>
-              <th className="text-right font-medium px-4 py-3">$ unitario</th>
-              <th className="text-right font-medium px-4 py-3">Valor en stock</th>
-              <th className="text-center font-medium px-4 py-3 w-28">Estado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rows.map(({ insumo, cantidad, estado }) => {
-              const valor =
-                insumo.precio_unitario != null
-                  ? cantidad * insumo.precio_unitario
-                  : null;
-              return (
-                <tr key={insumo.id} className="hover:bg-cream/30">
-                  <td className="px-4 py-3 font-medium">{insumo.nombre}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    <div>
-                      {cantidad.toLocaleString("es-AR")}{" "}
-                      {UNIDAD_LABEL[insumo.unidad_medida]}
-                    </div>
-                    {insumo.tamano_envase !== 1 && (
-                      <div className="text-[11px] text-muted-foreground">
-                        ≈{" "}
-                        {(cantidad / insumo.tamano_envase).toLocaleString(
-                          "es-AR",
-                          { maximumFractionDigits: 2 },
-                        )}{" "}
-                        env. de {insumo.tamano_envase}{" "}
-                        {UNIDAD_LABEL[insumo.unidad_medida]}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                    {insumo.umbral_stock_bajo}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                    {insumo.precio_unitario != null
-                      ? formatARS(insumo.precio_unitario)
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {valor != null ? formatARS(valor) : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {estado === "negativo" && (
-                      <span
-                        className="px-2 py-0.5 rounded text-xs font-medium"
-                        style={{
-                          backgroundColor: "rgb(168 74 61 / 0.12)",
-                          color: "var(--danger)",
-                        }}
-                      >
-                        Negativo
-                      </span>
-                    )}
-                    {estado === "bajo" && (
-                      <span
-                        className="px-2 py-0.5 rounded text-xs font-medium"
-                        style={{
-                          backgroundColor: "rgb(201 169 97 / 0.15)",
-                          color: "var(--warning)",
-                        }}
-                      >
-                        Bajo
-                      </span>
-                    )}
-                    {estado === "ok" && (
-                      <span className="bg-sage-100 text-sage-900 px-2 py-0.5 rounded text-xs font-medium">
-                        OK
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <StockTabla filas={rows} />
     </div>
   );
 }
