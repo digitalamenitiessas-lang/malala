@@ -389,12 +389,31 @@ async function fetchValorHoraYAnticipos(args: {
    * —su tipo de comisión, o no tener franjas si no atiende clientas—, no
    * anulando la única fuente que tiene el sistema para saber su jornada.
    */
-  const horasSugeridas =
-    franjas.length > 0
+  /**
+   * EXCEPCIÓN PARA EL ARREGLO MIXTO: ahí mandan las horas de la ficha.
+   *
+   * Para una profesional, sus franjas son su jornada y pagarlas está bien.
+   * Para alguien mixto NO son lo mismo: la agenda declara cuándo se le pueden
+   * reservar turnos —toda su jornada como profesional— y las horas que se le
+   * pagan son sólo su turno de encargada. Usar las franjas le pagaba el
+   * tiempo dos veces: como hora de encargada y como comisión de lo que
+   * atendió en esa misma hora.
+   *
+   * Valentina tenía 41,5 h semanales de agenda y es encargada 8,5: "estaba
+   * viendo lo de Valentina y no da". Su arreglo, dicho por el salón, es
+   * "8,5 hs encargada x $5.000, profesional fijo $50.000 más comisión, y
+   * también el 10% de venta de productos. Esto suma".
+   */
+  const horasDeFicha =
+    diasPorSemana > 0
+      ? (diasEnRango / diasPorSemana) * (empleado?.horasPorSemana ?? 0)
+      : 0;
+  const esMixto = (empleado?.tipoComision ?? "porcentaje") === "mixto";
+  const horasSugeridas = esMixto
+    ? horasDeFicha
+    : franjas.length > 0
       ? horasDeFranjasEnRango(args.desde, args.hasta, franjas)
-      : diasPorSemana > 0
-        ? (diasEnRango / diasPorSemana) * (empleado?.horasPorSemana ?? 0)
-        : 0;
+      : horasDeFicha;
 
   // El basico es semanal y el periodo se cuenta en SEMANAS, no en dias.
   //
