@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { expandirLineas, type LineaRepartible } from "./reparto-comision";
+import { lineaServicioSchema } from "@/lib/validations/ingreso";
 import { comisionMontoServicio } from "@/lib/data/ingresos-helpers";
 
 const linea = (o: Partial<LineaRepartible> = {}): LineaRepartible => ({
@@ -112,5 +113,69 @@ describe("repartir no cambia la plata ni el consumo", () => {
   it("con descuento y reparto desparejo tampoco cambia nada", () => {
     expect(totalComision([linea({ reparto: { empleado_id: "emp-b", parte: 70 } })], 6000))
       .toBeCloseTo(totalComision([linea()], 6000));
+  });
+});
+
+/**
+ * Una linea con la comision repartida se guarda como dos lineas de media
+ * cantidad. La validacion pedia un entero y las rechazaba: un ticket de dos
+ * servicios repartidos entre dos chicas moria con cuatro "expected int,
+ * received number" y el salon no podia guardar la venta ni cerrar la caja.
+ */
+describe("reparto de comisión: lo que sale tiene que poder guardarse", () => {
+  const linea = {
+    tipo: "servicio" as const,
+    tempId: "a",
+    empleado_id: "jessica",
+    precio: 180000,
+    cantidad: 1,
+    comision_pct: 30,
+    reparto: { empleado_id: "micaela", parte: 50 },
+  };
+
+  it("parte la cantidad en dos mitades", () => {
+    const r = expandirLineas([linea]);
+    expect(r).toHaveLength(2);
+    expect(r[0].cantidad).toBe(0.5);
+    expect(r[1].cantidad).toBe(0.5);
+  });
+
+  it("las dos mitades pasan la validación de la venta", () => {
+    for (const l of expandirLineas([linea])) {
+      const parsed = lineaServicioSchema.safeParse({
+        tipo: "servicio",
+        servicio_id: "sv1",
+        empleado_id: l.empleado_id,
+        precio_efectivo: l.precio,
+        cantidad: l.cantidad,
+        comision_pct: l.comision_pct,
+      });
+      expect(parsed.success).toBe(true);
+    }
+  });
+
+  it("las partes suman la cantidad original, sin perder nada", () => {
+    const r = expandirLineas([{ ...linea, cantidad: 3 }]);
+    expect(r[0].cantidad + r[1].cantidad).toBe(3);
+  });
+
+  it("un reparto desparejo también suma exacto", () => {
+    const r = expandirLineas([
+      { ...linea, reparto: { empleado_id: "micaela", parte: 70 } },
+    ]);
+    expect(r[0].cantidad).toBeCloseTo(0.7, 6);
+    expect(r[0].cantidad + r[1].cantidad).toBe(1);
+  });
+
+  it("una cantidad en cero o negativa sigue sin poder guardarse", () => {
+    const parsed = lineaServicioSchema.safeParse({
+      tipo: "servicio",
+      servicio_id: "sv1",
+      empleado_id: "jessica",
+      precio_efectivo: 1000,
+      cantidad: 0,
+      comision_pct: 30,
+    });
+    expect(parsed.success).toBe(false);
   });
 });

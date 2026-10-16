@@ -9,7 +9,12 @@ export const lineaServicioSchema = z.object({
   // cinco hijas y son cinco cortes: cargarlos como cinco líneas iguales es
   // perder tiempo en el mostrador. El precio de la línea es unitario; el
   // subtotal, la comisión y el consumo de insumos se multiplican por esto.
-  cantidad: z.coerce.number().int().positive().default(1),
+  // No lleva .int(): una línea con la comisión repartida se guarda como dos
+  // líneas de media cantidad cada una —ver ventas/reparto-comision— y el
+  // entero las rechazaba. Un ticket de dos servicios repartidos entre dos
+  // chicas moría con cuatro "expected int, received number" y no se podía
+  // guardar la venta ni cerrar la caja.
+  cantidad: z.coerce.number().positive().default(1),
   comision_pct: z.coerce.number().min(0).max(100),
   // true  → la empleada absorbe el descuento: comisión sobre el precio final pagado.
   // false → la empleada NO lo absorbe: comisión sobre el precio de lista (regular).
