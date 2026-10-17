@@ -1044,6 +1044,7 @@ export function NuevaVentaForm({
                   onPrecio={(v) => updateLinea(idx, { precio: v })}
                   onCantidad={(v) => updateLinea(idx, { cantidad: v })}
                   onPrecioTipo={(t) => handlePrecioTipoChange(idx, t)}
+                  onComisionPct={(v) => updateLinea(idx, { comision_pct: v })}
                   onReparto={(r) => updateLinea(idx, { reparto: r })}
                   partes={partesDe(l)}
                   onRemove={() => removeLinea(idx)}
@@ -1885,6 +1886,7 @@ function LineaServicioRow({
   onPrecio,
   onCantidad,
   onPrecioTipo,
+  onComisionPct,
   onReparto,
   partes,
   onRemove,
@@ -1901,6 +1903,7 @@ function LineaServicioRow({
   onPrecio: (v: number) => void;
   onCantidad: (v: number) => void;
   onPrecioTipo: (t: "lista" | "efectivo") => void;
+  onComisionPct: (v: number) => void;
   onReparto: (r: LineaServicioForm["reparto"]) => void;
   /** Comisión de cada una, ya calculada por el padre sobre la línea partida. */
   partes: { a: number; b: number } | null;
@@ -2008,7 +2011,27 @@ function LineaServicioRow({
           >
             {formatARS(comision)}
           </span>
-          {linea.servicio_id && (
+          {/* El porcentaje se edita acá mismo. Arranca en el de la ficha, que
+              es el caso normal, pero hay excepciones por línea: "cómo ingreso
+              una venta de Valen que en vez del 30% es del 40% porque es
+              clienta de ella". Antes sólo se podía en los productos, y en un
+              servicio había que guardar la venta y corregirla después. */}
+          {linea.servicio_id && linea.empleado_id && (
+            <div className="mt-0.5 flex items-center justify-end gap-1">
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                max="100"
+                value={linea.comision_pct}
+                onChange={(e) => onComisionPct(Number(e.target.value) || 0)}
+                aria-label="Porcentaje de comisión"
+                className="w-12 rounded-md border border-border bg-card px-1 py-0.5 text-right text-[11px] tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <span className="text-[10px] text-muted-foreground">%</span>
+            </div>
+          )}
+          {linea.servicio_id && !linea.empleado_id && (
             <p className="text-[10px] text-muted-foreground">
               {linea.comision_pct || 0}%
             </p>
