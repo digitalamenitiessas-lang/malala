@@ -301,6 +301,10 @@ export async function registrarCompraInsumo(
   fd.set("valor2", String(formData.get("valor2") ?? ""));
   fd.set("mp2_cuenta_id", String(formData.get("mp2_cuenta_id") ?? ""));
   fd.set("observacion", String(formData.get("observacion") ?? ""));
+  // El número de factura viaja igual que el resto: el gasto es el mismo, se
+  // cargue desde Gastos o desde la compra de insumo. "Independientemente del
+  // lugar desde donde cargue el gasto".
+  fd.set("comprobante", String(formData.get("comprobante") ?? ""));
   if (formData.get("pagado")) fd.set("pagado", "true");
 
   const result = await createEgreso(null, fd);

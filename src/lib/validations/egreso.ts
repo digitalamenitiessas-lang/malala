@@ -14,6 +14,24 @@ export const egresoSchema = z
     rubro_id: z.string().min(1, "Rubro requerido"),
     insumo_id: optStr,
     proveedor_id: optStr,
+    /**
+     * Número de factura o remito del proveedor.
+     *
+     * Opcional: hay gastos sin comprobante (un cadete, un kiosco) y obligarlo
+     * los trabaría. Pero cuando está, es lo que permite cruzar la cuenta
+     * corriente contra los papeles: "necesito poder ponerle datos de la factura
+     * que estoy ingresando y que aparezcan en la cuenta corriente del
+     * proveedor". Se normaliza el espacio de más, nada más: el formato lo pone
+     * el proveedor y no nos toca inventarle uno.
+     */
+    comprobante: z
+      .string()
+      .nullish()
+      .transform((s) => (s ?? "").trim().replace(/\s+/g, " ") || undefined)
+      .refine(
+        (s) => !s || s.length <= 40,
+        "El número de factura es demasiado largo",
+      ),
     cantidad: z.coerce.number().nonnegative().nullish(),
     valor: z.coerce.number().positive("El monto debe ser > 0"),
     // Opcional a propósito: si el gasto queda a pagar (cuenta corriente del

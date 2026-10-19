@@ -54,6 +54,7 @@ interface Props {
   insumos: Insumo[];
   defaultFecha: string; // YYYY-MM-DD
   defaultProveedorId?: string;
+  defaultComprobante?: string;
   defaultEsCompraInsumo?: boolean;
   action: (
     state: CreateEgresoResult | null,
@@ -74,6 +75,7 @@ export function EgresoForm({
   insumos,
   defaultFecha,
   defaultProveedorId,
+  defaultComprobante,
   defaultEsCompraInsumo,
   action,
   compraAction,
@@ -549,6 +551,18 @@ export function EgresoForm({
           </>
         )}
       </div>
+
+      {/* Número de factura. Va acá, fuera del bloque de compra de insumos, para
+          que esté siempre: "independientemente del lugar desde donde cargue el
+          gasto yo le pueda poner datos de la factura". Lo venían escribiendo en
+          observación y la misma factura quedó tipeada de tres formas. */}
+      <Field
+        label="Número de factura o remito (opcional)"
+        name="comprobante"
+        defaultValue={defaultComprobante}
+        error={errors.comprobante}
+        placeholder="0070-00436916"
+      />
 
       <div className="space-y-1.5">
         <label

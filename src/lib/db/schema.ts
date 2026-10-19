@@ -774,6 +774,10 @@ export const egresos = pgTable("egresos", {
   // Ver drizzle/0053.
   ingresoId: text("ingreso_id").references(() => ingresos.id, { onDelete: "set null" }),
   observacion: text("observacion"),
+  // Numero de factura o remito. Lo escribian a mano en observacion, cada vez
+  // con un formato distinto, asi que no se podia buscar una factura ni cruzar
+  // la cuenta corriente contra los papeles del proveedor. Ver drizzle/0068.
+  comprobante: text("comprobante"),
   pagado: boolean("pagado").notNull().default(false),
   // Anulado: el gasto no se borra, se marca, y las lecturas lo filtran. Ver
   // drizzle/0034_egresos_anulado.sql.

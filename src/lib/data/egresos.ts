@@ -73,6 +73,7 @@ function mapEgreso(row: typeof egresosTable.$inferSelect): Egreso {
     valor2: row.valor2 ?? undefined,
     mp2_cuenta_id: row.mp2CuentaId ?? undefined,
     observacion: row.observacion ?? undefined,
+    comprobante: row.comprobante ?? undefined,
     pagado: row.pagado,
     anulado: row.anulado,
     usuario_id: row.usuarioId,
@@ -331,6 +332,7 @@ export async function createEgreso(
     rubro_id: formData.get("rubro_id"),
     insumo_id: formData.get("insumo_id"),
     proveedor_id: prov.proveedorId || null,
+    comprobante: formData.get("comprobante"),
     cantidad: formData.get("cantidad"),
     valor: formData.get("valor"),
     mp_id: formData.get("mp_id"),
@@ -428,6 +430,7 @@ export async function createEgreso(
         valor2: data.mp2_id ? valor2 : null,
         mp2CuentaId: data.mp2_cuenta_id ?? null,
         observacion: data.observacion ?? null,
+        comprobante: data.comprobante ?? null,
         pagado: data.pagado,
         usuarioId: user.id,
       });

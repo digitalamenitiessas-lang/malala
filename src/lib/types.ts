@@ -519,6 +519,8 @@ export interface Egreso {
   valor2?: number;
   mp2_cuenta_id?: ID;
   observacion?: string;
+  /** Número de factura o remito del proveedor. Ver drizzle/0068. */
+  comprobante?: string;
   pagado: boolean;
   anulado: boolean;
   usuario_id: ID;

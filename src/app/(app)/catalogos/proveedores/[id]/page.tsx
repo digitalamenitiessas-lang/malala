@@ -368,6 +368,10 @@ export default async function EditarProveedorPage({
               <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Fecha</th>
+                  {/* La factura, en columna propia y no perdida adentro de la
+                      observación: es con lo que cruzan esta pantalla contra los
+                      papeles del proveedor. Ver drizzle/0068. */}
+                  <th className="px-4 py-3 text-left font-medium">Factura</th>
                   <th className="px-4 py-3 text-left font-medium">Detalle</th>
                   <th className="px-4 py-3 text-right font-medium">Cant.</th>
                   <th className="px-4 py-3 text-right font-medium">Monto</th>
@@ -380,6 +384,15 @@ export default async function EditarProveedorPage({
                   <tr key={row.egreso.id} className="hover:bg-cream/30">
                     <td className="px-4 py-3 tabular-nums text-muted-foreground">
                       {formatDateShort(row.egreso.fecha)}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {row.egreso.comprobante ? (
+                        <span className="font-medium">
+                          {row.egreso.comprobante}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     {/* Insumo Y observación, no uno u otro: en una compra el
                         insumo siempre está, así que mostrarlo en su lugar
