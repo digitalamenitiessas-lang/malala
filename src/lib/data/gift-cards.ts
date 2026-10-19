@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
@@ -149,6 +149,24 @@ export async function getGiftCard(id: string): Promise<GiftCard | null> {
  * Busca por código dentro de una sucursal. Case-insensitive porque el código lo
  * escribe una persona a mano y nadie se acuerda de las mayúsculas.
  */
+/**
+ * Busca una tarjeta por su código, IGNORANDO LAS ANULADAS.
+ *
+ * Sirve para una sola cosa: saber si el código ya está tomado al emitir. Y una
+ * anulada no lo tiene tomado — anular y reemitir es el caso normal cuando se
+ * cargó con el medio de pago equivocado, y la tarjeta física que se llevó la
+ * clienta sigue diciendo el mismo número.
+ *
+ * Mientras esto miraba también las anuladas, Yerba Buena lo resolvió sola
+ * agregándole una letra: GC-0223 anulada pasó a GC-0223D, y GC-0224 a "GC-024D",
+ * sin el segundo 2. "Por la vorágine del día decidimos ponerle así xq estaban
+ * anuladas y después no aparecían como opción". El costo de eso no se ve hoy:
+ * se ve el día que la clienta llega con una tarjeta que dice 0224, buscan 0224
+ * y les aparece la anulada.
+ *
+ * El índice único de la base lleva el mismo filtro (migración 0067), así que
+ * las dos puntas coinciden.
+ */
 export async function getGiftCardPorCodigo(
   sucursalId: string,
   codigo: string,
@@ -164,6 +182,7 @@ export async function getGiftCardPorCodigo(
     .where(
       and(
         eq(giftCardsTable.sucursalId, sucursalId),
+        ne(giftCardsTable.estado, "anulada"),
         sql`upper(${giftCardsTable.codigo}) = ${codigo.trim().toUpperCase()}`,
       ),
     )
