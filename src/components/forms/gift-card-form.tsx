@@ -7,7 +7,7 @@ import { CurrencyField, Field } from "./field";
 import { formatARS } from "@/lib/utils";
 import type { Cliente, CuentaBancaria, MedioPago } from "@/lib/types";
 import type { ActionResult } from "@/lib/data/_helpers";
-import { hoyAr } from "@/lib/fecha-ar";
+import { hoyAr, sumarDiasYmd } from "@/lib/fecha-ar";
 
 interface Props {
   sucursalId: string;
@@ -211,8 +211,21 @@ export function GiftCardForm({
             {/* La fecha vale para los tres casos, no solo para las viejas.
                 Una tarjeta o un pack que se vendio hace unos dias y se carga
                 recien hoy cobró ese dia: con la fecha de hoy, la plata entra
-                en la caja equivocada. */}
-            {origen !== "cortesia" && (
+                en la caja equivocada.
+
+                Para una venta normal va plegada detras de "+ Es de otro dia",
+                COPIANDO LITERALMENTE el patron y el texto del formulario de
+                ventas. Antes era un campo suelto titulado "Cuándo se vendió
+                (opcional)" debajo de las tres opciones de origen, cada una con
+                su parrafo: estaba, pero nadie lo encontraba. Elu la buscó y
+                escribió "necesito cargar dos GC que anulé el sábado, no me da
+                opción de poner que es de otro día, como al cargar servicios".
+                Pedia el nombre que ya conoce de ventas. Dos pantallas que
+                hacen lo mismo tienen que llamarlo igual.
+
+                En pre_sistema queda siempre visible: ahi la fecha es el punto
+                de la opcion, no una excepcion. */}
+            {origen === "pre_sistema" && (
               <div className="space-y-1.5">
                 <label
                   htmlFor="fecha_venta"
@@ -243,13 +256,51 @@ export function GiftCardForm({
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    {cobraHoy
-                      ? "Dejalo vacío si se vende hoy. Si se vendió otro día, la plata entra en la caja de ese día."
-                      : "El día en que se vendió de verdad, para saber de cuándo viene."}
+                    El día en que se vendió de verdad, para saber de cuándo
+                    viene.
                   </p>
                 )}
               </div>
             )}
+
+            {origen === "venta" &&
+              (!fechaVenta ? (
+                <button
+                  type="button"
+                  onClick={() => setFechaVenta(sumarDiasYmd(hoyAr(), -1))}
+                  className="text-[11px] text-muted-foreground hover:text-ink underline underline-offset-2 self-start"
+                >
+                  + Es de otro día
+                </button>
+              ) : (
+                <div className="rounded-md border border-warning/40 bg-warning/10 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Gift card de otro día
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFechaVenta("")}
+                      className="text-[11px] text-muted-foreground hover:text-destructive"
+                    >
+                      Es de hoy
+                    </button>
+                  </div>
+                  <input
+                    id="fecha_venta"
+                    name="fecha_venta"
+                    type="date"
+                    value={fechaVenta}
+                    max={hoyAr()}
+                    min={sumarDiasYmd(hoyAr(), -60)}
+                    onChange={(e) => setFechaVenta(e.currentTarget.value)}
+                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <p className="text-[10px] text-brown-700">
+                    La plata va a entrar en la caja de ese día, no en la de hoy.
+                  </p>
+                </div>
+              ))}
           </div>
 
           {/* Si hoy no entra plata no hay medio de pago ni cuenta que elegir:

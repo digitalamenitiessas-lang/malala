@@ -15,6 +15,7 @@ import {
   rubrosGasto as rubrosGastoTable,
 } from "@/lib/db/schema";
 import {
+  deleteMovimientosByRefTx,
   emitMovimientoBancarioTx,
   getCuentaIdForMpTx,
 } from "./movimientos-bancarios-helpers";
@@ -720,6 +721,55 @@ export async function anularGiftCard(
       usuarioId: user.id,
     });
 
+    /**
+     * La plata vuelve con la tarjeta.
+     *
+     * Esto faltaba, y es el mismo olvido en los dos lados: la anulación dejaba
+     * el cobro de la emisión intacto. La tarjeta quedaba sin valor pero su
+     * venta seguía sumando en la caja de ese día, así que el arqueo esperaba
+     * plata que nadie puso en el cajón ni en el banco.
+     *
+     * Apareció con el caso que lo motivó: dos tarjetas de $50.000 cargadas con
+     * el medio de pago equivocado, anuladas ocho minutos después para
+     * recargarlas en efectivo. Recargarlas habría contado esos $100.000 dos
+     * veces, una en Galicia y otra en caja. En total había 7 tarjetas anuladas
+     * con $372.500 de cobro sin revertir.
+     *
+     * Se borra en vez de contraasentar porque es lo que hacen anular ingreso,
+     * egreso, anticipo y liquidación: la operación no existió.
+     */
+    await deleteMovimientosByRefTx(tx, "gift_card_venta", tarjeta.id);
+
+    /**
+     * Fiada: el cargo en la cuenta corriente también se va.
+     *
+     * Si no, a la clienta le queda la deuda de una tarjeta que no puede
+     * canjear. El monto se lee del movimiento en vez de recalcularlo, para
+     * revertir exactamente lo que se cargó aunque haya tenido descuento.
+     */
+    const cargosCc = await tx
+      .select({
+        id: movimientosCcTable.id,
+        clienteId: movimientosCcTable.clienteId,
+        monto: movimientosCcTable.monto,
+      })
+      .from(movimientosCcTable)
+      .where(
+        and(
+          eq(movimientosCcTable.refTipo, "gift_card"),
+          eq(movimientosCcTable.refId, tarjeta.id),
+        ),
+      );
+    for (const cargo of cargosCc) {
+      await tx
+        .delete(movimientosCcTable)
+        .where(eq(movimientosCcTable.id, cargo.id));
+      await tx
+        .update(clientesTable)
+        .set({ saldoCc: sql`${clientesTable.saldoCc} - ${cargo.monto}` })
+        .where(eq(clientesTable.id, cargo.clienteId));
+    }
+
     // Si la pagaba una empleada con su sueldo, los descuentos que todavía no
     // se le cobraron se van con la tarjeta. Sin esto le seguirían saliendo
     // del sueldo las cuotas de algo anulado, y nadie lo relacionaría.
@@ -740,6 +790,10 @@ export async function anularGiftCard(
 
   revalidatePath("/catalogos/gift-cards");
   revalidatePath("/liquidaciones");
+  // La anulación ahora mueve plata, así que la caja y los bancos cambian.
+  revalidatePath("/caja");
+  revalidatePath("/bancos");
+  revalidatePath("/clientes");
   return { ok: true };
 }
 
