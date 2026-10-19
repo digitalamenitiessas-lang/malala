@@ -193,8 +193,11 @@ export default async function InsumosPage({
                           />
                         )}
                       {esAdmin(user.rol) && (
+                        // Sin prefetch: es el botón de cada una de las 343
+                        // filas. Mismo motivo que en TableActionLink.
                         <Link
                           href={`/catalogos/insumos/${i.id}`}
+                          prefetch={false}
                           className="text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
                         >
                           Editar
