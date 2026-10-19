@@ -20,6 +20,7 @@ import {
   type ActionResult,
 } from "./_helpers";
 import { createEgreso, type CreateEgresoResult } from "./egresos";
+import { resolverProveedorInline } from "./proveedores";
 
 function mapInsumo(
   row: typeof insumosTable.$inferSelect,
@@ -194,6 +195,12 @@ export async function registrarCompraInsumo(
   requireSupabaseRuntime(
     "La carga de compras requiere Supabase configurado.",
   );
+
+  // Alta inline del proveedor, antes que nada: si la compra crea también el
+  // insumo, éste se asocia al proveedor recién creado en el mismo paso.
+  const prov = await resolverProveedorInline(formData);
+  if (!prov.ok) return { ok: false, errors: prov.errors };
+  if (prov.proveedorId) formData.set("proveedor_id", prov.proveedorId);
 
   let insumoId = String(formData.get("insumo_id") ?? "");
 

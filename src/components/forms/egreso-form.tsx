@@ -37,6 +37,7 @@ const UNIDAD_LABEL: Record<string, string> = {
 
 // Opción especial del selector de insumo para darlo de alta en el momento.
 const NUEVO_INSUMO = "__nuevo__";
+const NUEVO_PROVEEDOR = "__nuevo_prov__";
 const UNIDAD_OPTIONS = [
   { value: "ml", label: "ml (mililitros)" },
   { value: "g", label: "g (gramos)" },
@@ -92,6 +93,7 @@ export function EgresoForm({
   const [nuevoUnidad, setNuevoUnidad] = useState("ml");
   const [nuevoTamano, setNuevoTamano] = useState<number>(0);
   const esNuevoInsumo = insumoId === NUEVO_INSUMO;
+  const esNuevoProveedor = proveedorId === NUEVO_PROVEEDOR;
 
   // Pago: monto total + hasta dos medios, cada uno con su cuenta (como en ventas).
   const [valorTotal, setValorTotal] = useState<number>(0);
@@ -248,13 +250,48 @@ export function EgresoForm({
               ? "Proveedor"
               : "Proveedor (opcional)"
         }
-        name="proveedor_id"
+        name={esNuevoProveedor ? "proveedor_select_ui" : "proveedor_id"}
         value={proveedorId}
         onChange={(e) => setProveedorId(e.currentTarget.value)}
         error={errors.proveedor_id}
-        options={proveedores.map((p) => ({ value: p.id, label: p.nombre }))}
+        options={[
+          { value: NUEVO_PROVEEDOR, label: "➕ Crear proveedor nuevo" },
+          ...proveedores.map((p) => ({ value: p.id, label: p.nombre })),
+        ]}
         placeholder="—"
       />
+
+      {/* Alta inline del proveedor, igual que la del insumo acá abajo. Cargar
+          una compra no debería obligar a salir al catálogo y volver a empezar:
+          "ahí estaría bueno que te dé la opción de agregar nuevo proveedor sin
+          tener que salir e ir a catálogo". */}
+      {esNuevoProveedor && (
+        <div className="space-y-4 rounded-md border border-dashed border-border bg-cream/30 p-4">
+          <input type="hidden" name="nuevo_proveedor" value="1" />
+          <p className="text-xs text-muted-foreground">
+            Se crea el proveedor y queda guardado para las próximas compras. Si
+            ya existe uno con el mismo nombre, se usa ese.
+          </p>
+          <Field
+            label="Nombre del proveedor"
+            name="nuevo_proveedor_nombre"
+            error={errors.nuevo_proveedor_nombre}
+            required={esNuevoProveedor}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field
+              label="Teléfono (opcional)"
+              name="nuevo_proveedor_telefono"
+              error={errors.nuevo_proveedor_telefono}
+            />
+            <Field
+              label="CUIT (opcional)"
+              name="nuevo_proveedor_cuit"
+              error={errors.nuevo_proveedor_cuit}
+            />
+          </div>
+        </div>
+      )}
 
       {esCompraInsumo && (
         <div className="space-y-4 rounded-md border border-border bg-card p-4">

@@ -40,6 +40,7 @@ import type {
   Sucursal,
 } from "@/lib/types";
 import type { EgresoConDetalle } from "./egresos-helpers";
+import { resolverProveedorInline } from "./proveedores";
 
 export interface EgresoFiltros {
   sucursalId?: string;
@@ -318,12 +319,18 @@ export async function createEgreso(
   const user = await requireRole(["admin", "encargada"]);
   const scope = buildAccessScope(user);
 
+  // Alta inline del proveedor, si el form la pidió. Va antes de validar para
+  // que el gasto siga con el proveedor recién creado y no haya que salir al
+  // catálogo a mitad de la carga.
+  const prov = await resolverProveedorInline(formData);
+  if (!prov.ok) return { ok: false, errors: prov.errors };
+
   const parsed = egresoSchema.safeParse({
     fecha: formData.get("fecha"),
     sucursal_id: formData.get("sucursal_id"),
     rubro_id: formData.get("rubro_id"),
     insumo_id: formData.get("insumo_id"),
-    proveedor_id: formData.get("proveedor_id"),
+    proveedor_id: prov.proveedorId || null,
     cantidad: formData.get("cantidad"),
     valor: formData.get("valor"),
     mp_id: formData.get("mp_id"),

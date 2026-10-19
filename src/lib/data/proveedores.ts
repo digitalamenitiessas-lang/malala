@@ -175,6 +175,101 @@ export async function createProveedor(
   return { ok: true };
 }
 
+/**
+ * Alta inline de un proveedor desde el formulario de gastos.
+ *
+ * Mismo criterio que el alta inline de insumos que ya vive en esa pantalla:
+ * cargar una compra no debería obligar a irse al catálogo, darlo de alta y
+ * volver a empezar el gasto. Pedido tal cual mientras arrancaban los controles
+ * de stock: "nos vamos a gastos, tildamos es compra de insumos y nos pide un
+ * proveedor, ahí estaría bueno que te dé la opción de agregar nuevo proveedor
+ * sin tener que salir e ir a catálogo".
+ *
+ * Devuelve el id a usar como `proveedor_id`. Si el form no pide alta inline,
+ * devuelve el que ya venía, así los dos caminos del gasto —compra de insumo y
+ * gasto común— pueden llamarla sin preguntar.
+ *
+ * El proveedor queda creado aunque el gasto después falle por otra validación:
+ * es lo mismo que hace el alta inline de insumos, y es preferible a perder el
+ * dato y que lo tengan que tipear de nuevo.
+ */
+export async function resolverProveedorInline(
+  formData: FormData,
+): Promise<
+  { ok: true; proveedorId: string } | { ok: false; errors: Record<string, string[]> }
+> {
+  const quiereNuevo =
+    formData.get("nuevo_proveedor") === "1" ||
+    formData.get("nuevo_proveedor") === "true";
+  if (!quiereNuevo) {
+    return { ok: true, proveedorId: String(formData.get("proveedor_id") ?? "") };
+  }
+
+  const nombre = String(formData.get("nuevo_proveedor_nombre") ?? "").trim();
+  if (!nombre) {
+    return {
+      ok: false,
+      errors: { nuevo_proveedor_nombre: ["Nombre del proveedor requerido"] },
+    };
+  }
+
+  // Si ya existe uno con ese nombre se reusa en vez de duplicarlo: escribir
+  // "Distribuidora Norte" dos veces partiría la cuenta corriente del mismo
+  // proveedor en dos, y esa deuda después no cierra contra nada. La búsqueda es
+  // sobre TODOS, no sobre los de la sucursal activa, porque el duplicado que
+  // importa evitar es justamente el del proveedor que ya existe en la otra.
+  const existente = await listProveedores();
+  const yaEsta = existente.find(
+    (p) => p.nombre.trim().toLowerCase() === nombre.toLowerCase(),
+  );
+  if (yaEsta) {
+    // Pero si era de la otra sucursal, hay que habilitarlo acá: si no, la
+    // compra queda hecha a un proveedor que no vuelve a aparecer en el
+    // selector de esta sucursal y el próximo que lo cargue lo duplica igual.
+    const user = await requireRole(["admin", "encargada"]);
+    const sucursalActiva = await getActiveSucursalForUser(user);
+    if (sucursalActiva) {
+      const habilitados = await listProveedores({
+        sucursalId: sucursalActiva.id,
+      });
+      if (!habilitados.some((p) => p.id === yaEsta.id)) {
+        await getDb()
+          .insert(proveedorSucursalTable)
+          .values({
+            id: crypto.randomUUID(),
+            proveedorId: yaEsta.id,
+            sucursalId: sucursalActiva.id,
+          });
+      }
+    }
+    return { ok: true, proveedorId: yaEsta.id };
+  }
+
+  const fd = new FormData();
+  fd.set("nombre", nombre);
+  fd.set("telefono", String(formData.get("nuevo_proveedor_telefono") ?? ""));
+  fd.set("cuit", String(formData.get("nuevo_proveedor_cuit") ?? ""));
+  const res = await createProveedor(fd);
+  if (!res.ok) {
+    // Los errores vuelven con los nombres del form de gastos, no con los del
+    // catálogo, para que se pinten sobre los campos que la persona ve.
+    const errs: Record<string, string[]> = {};
+    for (const [k, v] of Object.entries(res.errors)) {
+      errs[k === "nombre" ? "nuevo_proveedor_nombre" : `nuevo_proveedor_${k}`] = v;
+    }
+    return { ok: false, errors: errs };
+  }
+
+  const despues = await listProveedores();
+  const creado = despues.find(
+    (p) => p.nombre.trim().toLowerCase() === nombre.toLowerCase(),
+  );
+  if (!creado) {
+    return { ok: false, errors: { _: ["No se pudo crear el proveedor"] } };
+  }
+  return { ok: true, proveedorId: creado.id };
+}
+
 export async function updateProveedor(
   proveedorId: string,
   formData: FormData,
