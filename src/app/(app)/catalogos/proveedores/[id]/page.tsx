@@ -157,10 +157,27 @@ export default async function EditarProveedorPage({
             label="Ticket promedio"
             value={formatARS(totales.ticketPromedio)}
           />
+          {/* A un proveedor se le paga de dos formas y las dos cuentan: marcando
+              una factura como pagada, o pagando a cuenta sin decir qué factura
+              cubre. Esta tarjeta sumaba SÓLO las facturas marcadas, así que
+              quien paga a cuenta —lo normal con los que dejan la factura y se
+              cobran después— veía "Pagado $0" mientras abajo, en el historial,
+              estaban los pagos listados. Reportado mirando Question
+              Professional: tres pagos por $550.000 abajo y un cero arriba.
+
+              Con los dos sumados los tres números cierran entre sí:
+              total comprado − pagado = saldo. */}
           <Kpi
             label="Pagado"
-            value={formatARS(totales.pagado)}
+            value={formatARS(totales.pagado + totalPagos)}
             color="sage-700"
+            hint={
+              totales.pagado > 0 && totalPagos > 0
+                ? `${formatARS(totales.pagado)} en facturas + ${formatARS(totalPagos)} a cuenta`
+                : totalPagos > 0
+                  ? "Pagos a cuenta, sin factura asignada"
+                  : "Facturas marcadas como pagadas"
+            }
           />
           {/* El saldo es lo que importa y por eso dice de dónde sale: las
               facturas suman y los pagos restan. Sin eso, ver dos facturas

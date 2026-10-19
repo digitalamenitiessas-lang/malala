@@ -179,9 +179,14 @@ export function EgresoForm({
           onChange={(e) => setEsCompraInsumo(e.target.checked)}
           className="h-4 w-4 rounded border-border accent-sage-500"
         />
-        <span className="font-medium">Es compra de insumo</span>
+        {/* Dice "o producto" porque también cubre la reventa: para el sistema
+            los productos que se venden al público son insumos con tipo "venta"
+            y salen en este mismo selector. Con el rótulo anterior no se notaba,
+            y una compra de reventa se leía como que no correspondía acá: "No es
+            insumo. Es producto de reventa". */}
+        <span className="font-medium">Es compra de insumo o producto</span>
         <span className="text-xs text-muted-foreground">
-          (suma stock y actualiza el precio del insumo)
+          (suma stock y actualiza el precio — también para los de reventa)
         </span>
       </label>
 
