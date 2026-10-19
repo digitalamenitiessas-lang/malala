@@ -28,28 +28,34 @@ export function MarcarPagadaForm({
   // Segundo medio: parte en efectivo y parte por transferencia. Arranca
   // cerrado porque el caso normal es uno solo.
   const [mp2Id, setMp2Id] = useState("");
-  const [valor2, setValor2] = useState(0);
   /** Dia en que se pago de verdad. Vacio = ahora. */
   const [fecha, setFecha] = useState("");
   /**
-   * Cuánto se le entrega de verdad. Arranca en el total, que es lo normal.
+   * Cuánto se entrega por cada medio. SE SUMAN.
+   *
+   * Antes se pedía el total y, aparte, cuánto de ese total iba por el segundo
+   * medio: el primero era el resto. Es la convención inversa a la de ventas,
+   * donde los dos montos suman el ticket, y la gente aplicó la que ya conocía.
+   * Jo cargó $700.000 en "Cuánto se paga" creyendo que era el efectivo y
+   * $329.080 en transferencia, sobre un total de $1.029.080: el sistema
+   * entendió que había pagado $700.000 repartidos, le dejó un arrastre
+   * fantasma de $329.080 y la caja del sábado $329.080 de más. Le pasó lo
+   * mismo a Valentina en Centro la misma semana. Dos pantallas que piden dos
+   * montos tienen que sumarlos igual.
    *
    * Redondean para los dos lados, según lo que haya en el cajón: "si me dice
    * $153.760 yo pago $154.000. Así muchas veces. Y también a la inversa: si no
-   * tengo los $3.000 pago $150.000". Antes esto sólo aceptaba pagar de menos y
-   * las dejó trabadas en plena pagada del sábado.
+   * tengo los $3.000 pago $150.000". Por eso la suma puede no dar el total y
+   * la diferencia, para cualquier lado, cae en la liquidación siguiente.
    */
-  const [totalPagado, setTotalPagado] = useState(totalPagar);
+  const [monto1Input, setMonto1Input] = useState(totalPagar);
+  const [monto2Input, setMonto2Input] = useState(0);
 
-  const aPagar = Math.max(totalPagado, 0);
+  const monto1 = Math.max(monto1Input, 0);
+  const monto2 = mp2Id ? Math.max(monto2Input, 0) : 0;
+  const aPagar = monto1 + monto2;
   /** Positivo: el salón le queda debiendo. Negativo: ella queda debiendo. */
   const quedaAFavor = totalPagar - aPagar;
-
-  // Sólo se pide cuánto va por el SEGUNDO medio: el total ya está fijado por la
-  // liquidación, así que el primero es el resto. Pedir los dos montos dejaría
-  // que sumen otra cosa que el sueldo.
-  const monto2 = mp2Id ? Math.min(Math.max(valor2, 0), aPagar) : 0;
-  const monto1 = aPagar - monto2;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -89,40 +95,43 @@ export function MarcarPagadaForm({
         Registrar pago
       </h2>
       {/* Redondean para los dos lados segun lo que haya en el cajon, asi que
-          acá se puede poner más o menos que el total. La diferencia, para
+          la suma puede dar más o menos que el total. La diferencia, para
           cualquier lado, entra sola en la liquidación siguiente. */}
       <div className="space-y-1.5">
         <label
           htmlFor="liq-total-pagado"
           className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
         >
-          Cuánto se paga
+          {mp2Id
+            ? `Cuánto se paga con ${mediosPago.find((m) => m.id === mpId)?.codigo ?? "el 1°"}`
+            : "Cuánto se paga"}
         </label>
         <input
           id="liq-total-pagado"
           type="number"
           min={0}
           step={1}
-          value={totalPagado || ""}
-          onChange={(e) => setTotalPagado(Number(e.target.value) || 0)}
+          value={monto1Input || ""}
+          onChange={(e) => setMonto1Input(Number(e.target.value) || 0)}
           className="w-full rounded-md border border-border bg-card px-3 py-2 text-right text-sm tabular-nums"
         />
-        {quedaAFavor > 0.01 ? (
-          <p className="text-[11px] tabular-nums text-brown-700">
-            Quedan {formatARS(quedaAFavor)} a favor de ella: se le suman solos a
-            la próxima liquidación.
-          </p>
-        ) : quedaAFavor < -0.01 ? (
-          <p className="text-[11px] tabular-nums text-brown-700">
-            Le estás dando {formatARS(-quedaAFavor)} de más: se le descuentan
-            solos de la próxima liquidación.
-          </p>
-        ) : (
-          <p className="text-[11px] text-muted-foreground">
-            El total es {formatARS(totalPagar)}. Si redondeás, para arriba o
-            para abajo, poné acá lo que le das.
-          </p>
-        )}
+        {!mp2Id &&
+          (quedaAFavor > 0.01 ? (
+            <p className="text-[11px] tabular-nums text-brown-700">
+              Quedan {formatARS(quedaAFavor)} a favor de ella: se le suman solos
+              a la próxima liquidación.
+            </p>
+          ) : quedaAFavor < -0.01 ? (
+            <p className="text-[11px] tabular-nums text-brown-700">
+              Le estás dando {formatARS(-quedaAFavor)} de más: se le descuentan
+              solos de la próxima liquidación.
+            </p>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              El total es {formatARS(totalPagar)}. Si redondeás, para arriba o
+              para abajo, poné acá lo que le das.
+            </p>
+          ))}
       </div>
       <div className="space-y-1.5">
         <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -148,7 +157,7 @@ export function MarcarPagadaForm({
           value={mp2Id}
           onChange={(e) => {
             setMp2Id(e.target.value);
-            if (!e.target.value) setValor2(0);
+            if (!e.target.value) setMonto2Input(0);
           }}
           className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
         >
@@ -166,17 +175,48 @@ export function MarcarPagadaForm({
             <input
               type="number"
               min={0}
-              max={aPagar}
-              value={valor2 || ""}
-              onChange={(e) => setValor2(Number(e.target.value) || 0)}
-              placeholder="Cuánto por este medio"
+              step={1}
+              value={monto2Input || ""}
+              onChange={(e) => setMonto2Input(Number(e.target.value) || 0)}
+              placeholder={`Cuánto se paga con ${mediosPago.find((m) => m.id === mp2Id)?.codigo ?? "este medio"}`}
               className="w-full rounded-md border border-border bg-card px-3 py-2 text-right text-sm tabular-nums"
             />
-            <p className="text-[11px] tabular-nums text-muted-foreground">
-              {mediosPago.find((m) => m.id === mpId)?.codigo}{" "}
-              {formatARS(monto1)} · {mediosPago.find((m) => m.id === mp2Id)?.codigo}{" "}
-              {formatARS(monto2)}
-            </p>
+            {/* La suma, grande y arriba de todo. Es el numero que antes no
+                estaba y por el que dos liquidaciones salieron mal: hay que
+                poder confirmar de un vistazo que los dos montos dan el sueldo. */}
+            <div className="rounded-md border border-border bg-muted/40 p-2.5 space-y-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Total que se le entrega
+                </span>
+                <span className="text-sm font-semibold tabular-nums">
+                  {formatARS(aPagar)}
+                </span>
+              </div>
+              <p className="text-[11px] tabular-nums text-muted-foreground">
+                {mediosPago.find((m) => m.id === mpId)?.codigo}{" "}
+                {formatARS(monto1)} +{" "}
+                {mediosPago.find((m) => m.id === mp2Id)?.codigo}{" "}
+                {formatARS(monto2)}
+              </p>
+              {quedaAFavor > 0.01 ? (
+                <p className="text-[11px] tabular-nums text-brown-700">
+                  El sueldo es {formatARS(totalPagar)}: quedan{" "}
+                  {formatARS(quedaAFavor)} a favor de ella, que se le suman
+                  solos a la próxima liquidación.
+                </p>
+              ) : quedaAFavor < -0.01 ? (
+                <p className="text-[11px] tabular-nums text-brown-700">
+                  El sueldo es {formatARS(totalPagar)}: le estás dando{" "}
+                  {formatARS(-quedaAFavor)} de más, que se le descuentan solos
+                  de la próxima liquidación.
+                </p>
+              ) : (
+                <p className="text-[11px] text-sage-800">
+                  Coincide con el sueldo. No queda nada pendiente.
+                </p>
+              )}
+            </div>
           </>
         )}
       </div>
