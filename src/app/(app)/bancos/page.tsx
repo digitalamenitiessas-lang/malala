@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
 import { CurrencyField } from "@/components/forms/field";
 import { IngresoManualForm } from "@/components/forms/ingreso-manual-form";
+import { finDeDiaArISO, hoyAr, inicioDeDiaArISO } from "@/lib/fecha-ar";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -37,8 +38,15 @@ const tipoLabel: Record<string, string> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ cuenta?: string; sucursal?: string }>;
+  searchParams: Promise<{
+    cuenta?: string;
+    sucursal?: string;
+    desde?: string;
+    hasta?: string;
+  }>;
 }
+
+const ES_YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function BancosPage({ searchParams }: PageProps) {
   const user = await requireUser();
@@ -48,6 +56,22 @@ export default async function BancosPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const cuentaFiltro = sp.cuenta;
   const sucursalFiltro = sp.sucursal;
+  /**
+   * Rango de fechas, para poder cruzar contra el extracto del banco.
+   *
+   * Pedido por Belén: "no nos coinciden lo que dice en cuentas en el sistema
+   * con lo que realmente hay. Para poder comparar - filtrar movimientos de cada
+   * una". Sin esto la pantalla mostraba los últimos 150 movimientos y no había
+   * forma de aislar un mes: con Galicia de Yerba Buena en casi 400 movimientos,
+   * los primeros días no se alcanzaban a ver.
+   *
+   * El rango se interpreta en días argentinos, no UTC: con `new Date("2026-10-12")`
+   * el corte cae a las 21 h del día anterior y se cuelan los cobros de la noche
+   * en el día equivocado, que es justamente lo que se está tratando de conciliar.
+   */
+  const desde = ES_YMD.test(sp.desde ?? "") ? sp.desde! : "";
+  const hasta = ES_YMD.test(sp.hasta ?? "") ? sp.hasta! : "";
+  const hayRango = Boolean(desde || hasta);
 
   const [saldos, cuentas, movimientos, sucursalesAll] = await Promise.all([
     listSaldos({ sucursalId: sucursalFiltro }),
@@ -55,7 +79,12 @@ export default async function BancosPage({ searchParams }: PageProps) {
     listMovimientos({
       cuentaId: cuentaFiltro,
       sucursalId: sucursalFiltro,
-      limit: 150,
+      desde: desde ? inicioDeDiaArISO(desde) : undefined,
+      hasta: hasta ? finDeDiaArISO(hasta) : undefined,
+      // Con un rango elegido se muestra TODO lo del rango: el techo de 150 era
+      // para la vista "últimos movimientos", pero acá cortar la lista a la
+      // mitad de un mes convierte la conciliación en un número equivocado.
+      limit: hayRango ? 2000 : 150,
     }),
     listSucursales({ soloActivas: true }),
   ]);
@@ -85,6 +114,20 @@ export default async function BancosPage({ searchParams }: PageProps) {
   const totalImpuestos = movimientos.reduce(
     (acc, m) =>
       acc + (m.movimiento.tipo === "impuesto" ? Math.abs(m.movimiento.monto) : 0),
+    0,
+  );
+  /**
+   * Entró, salió y neto de lo que se está viendo. Es lo que se compara contra el
+   * extracto: "cuenta macro (ingreso - egreso) para poder buscar por fecha".
+   * Sumar cuarenta renglones a mano en el mostrador es donde aparecen las
+   * diferencias que después no se sabe de dónde salieron.
+   */
+  const entraron = movimientos.reduce(
+    (acc, m) => acc + (m.movimiento.monto > 0 ? m.movimiento.monto : 0),
+    0,
+  );
+  const salieron = movimientos.reduce(
+    (acc, m) => acc + (m.movimiento.monto < 0 ? m.movimiento.monto : 0),
     0,
   );
 
@@ -225,7 +268,7 @@ export default async function BancosPage({ searchParams }: PageProps) {
       )}
 
       <section>
-        <div className="flex items-baseline justify-between mb-3">
+        <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
           <h2 className="text-xs uppercase tracking-wider text-muted-foreground">
             Movimientos {cuentaFiltro ? "de la cuenta" : "recientes"}
           </h2>
@@ -238,6 +281,91 @@ export default async function BancosPage({ searchParams }: PageProps) {
             {movimientos.length} mov.
           </span>
         </div>
+
+        {/* Filtro por fecha. Es un form GET para que el rango quede en la URL:
+            así se puede guardar el link del mes que se está conciliando y
+            volver a abrirlo igual, en vez de recargar y perder el filtro. */}
+        <form
+          method="get"
+          className="mb-3 flex flex-wrap items-end gap-3 rounded-md border border-border bg-card p-3"
+        >
+          {cuentaFiltro && <input type="hidden" name="cuenta" value={cuentaFiltro} />}
+          {sucursalFiltro && (
+            <input type="hidden" name="sucursal" value={sucursalFiltro} />
+          )}
+          <div className="space-y-1">
+            <label
+              htmlFor="mov-desde"
+              className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
+            >
+              Desde
+            </label>
+            <input
+              id="mov-desde"
+              type="date"
+              name="desde"
+              defaultValue={desde}
+              max={hoyAr()}
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label
+              htmlFor="mov-hasta"
+              className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
+            >
+              Hasta
+            </label>
+            <input
+              id="mov-hasta"
+              type="date"
+              name="hasta"
+              defaultValue={hasta}
+              max={hoyAr()}
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-md bg-ink px-4 py-1.5 text-sm text-cream hover:opacity-90"
+          >
+            Filtrar
+          </button>
+          {hayRango && (
+            <a
+              href={`/bancos${cuentaFiltro ? `?cuenta=${cuentaFiltro}` : sucursalFiltro ? `?sucursal=${sucursalFiltro}` : ""}`}
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Quitar el filtro
+            </a>
+          )}
+        </form>
+
+        {/* Entró, salió y neto de lo que se ve. Es lo que se compara contra el
+            extracto del banco. */}
+        <div className="mb-3 grid gap-2 sm:grid-cols-3">
+          {[
+            { t: "Entró", v: entraron, c: "text-sage-800" },
+            { t: "Salió", v: salieron, c: "text-danger" },
+            { t: "Neto del período", v: entraron + salieron, c: "" },
+          ].map((x) => (
+            <div key={x.t} className="rounded-md border border-border bg-card p-3">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                {x.t}
+              </div>
+              <div className={`text-base font-semibold tabular-nums ${x.c}`}>
+                {fmtMoney(x.v)}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {hayRango && !cuentaFiltro && (
+          <p className="mb-3 text-[11px] text-muted-foreground">
+            Estás viendo todas las cuentas juntas. Para cruzar contra el extracto
+            de un banco, elegí primero la cuenta arriba.
+          </p>
+        )}
         <div className="bg-card border border-border rounded-md overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">

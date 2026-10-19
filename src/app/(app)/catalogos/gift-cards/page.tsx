@@ -17,7 +17,11 @@ import { GiftCardsSearch } from "./gift-cards-search";
 export default async function GiftCardsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string | string[] }>;
+  searchParams: Promise<{
+    q?: string | string[];
+    desde?: string | string[];
+    hasta?: string | string[];
+  }>;
 }) {
   const user = await requireUser();
   const scope = buildAccessScope(user);
@@ -29,14 +33,49 @@ export default async function GiftCardsPage({
   const qParam = Array.isArray(sp.q) ? sp.q[0] : sp.q;
   const q = qParam?.trim() || undefined;
 
+  /**
+   * Rango de emisión, para poder medir una campaña.
+   *
+   * "Quise filtrar las que vendí desde el 12/10 y no pude. Necesitamos poder
+   * filtrar y tener reporte de eso para saber cuántas vendo en cierta fecha.
+   * Por ej quise filtrar las que vendí por el día de la madre y medirlo."
+   */
+  const uno = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v) ?? "";
+  const ES_YMD = /^\d{4}-\d{2}-\d{2}$/;
+  const desdeRaw = uno(sp.desde);
+  const hastaRaw = uno(sp.hasta);
+  const desde = ES_YMD.test(desdeRaw) ? desdeRaw : "";
+  const hasta = ES_YMD.test(hastaRaw) ? hastaRaw : "";
+  const hayRango = Boolean(desde || hasta);
+
   const [giftCards, pasivo] = await Promise.all([
-    listGiftCards({ sucursalId: sucursal?.id, q }),
+    listGiftCards({
+      sucursalId: sucursal?.id,
+      q,
+      desde: desde || undefined,
+      hasta: hasta || undefined,
+    }),
     sucursal
       ? getPasivoGiftCards(sucursal.id)
       : Promise.resolve({ vigente: 0, vencido: 0, total: 0 }),
   ]);
 
   const hoy = hoyAr();
+
+  /**
+   * El reporte del período. Lo vendido no es la suma de los importes: una
+   * tarjeta con descuento se cobró menos que su valor, y las de cortesía y las
+   * de antes del sistema no entraron un peso hoy. Mezclarlas infla la campaña.
+   */
+  const delPeriodo = giftCards.filter((g) => g.estado !== "anulada");
+  const vendidas = delPeriodo.filter((g) => g.origen === "venta");
+  const totalCobrado = vendidas.reduce(
+    (acc, g) => acc + (g.cobrado ?? g.importe),
+    0,
+  );
+  const totalValor = vendidas.reduce((acc, g) => acc + g.importe, 0);
+  const nCortesia = delPeriodo.filter((g) => g.origen === "cortesia").length;
+  const nAnuladas = giftCards.length - delPeriodo.length;
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -48,7 +87,9 @@ export default async function GiftCardsPage({
           <p className="text-sm text-muted-foreground">
             {q
               ? `${giftCards.length} ${giftCards.length === 1 ? "resultado" : "resultados"} para “${q}”`
-              : `${giftCards.length} gift cards emitidas`}
+              : hayRango
+                ? `${giftCards.length} ${giftCards.length === 1 ? "gift card" : "gift cards"} en el período`
+                : `${giftCards.length} gift cards emitidas`}
           </p>
         </div>
         <Link
@@ -97,6 +138,106 @@ export default async function GiftCardsPage({
       </div>
 
       <GiftCardsSearch />
+
+      {/* Filtro por fecha de venta. Form GET para que el período quede en la
+          URL: el link de "las del día de la madre" se puede guardar y volver a
+          abrir igual. Conserva el texto buscado si lo hay. */}
+      <form
+        method="get"
+        className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-card p-3"
+      >
+        {q && <input type="hidden" name="q" value={q} />}
+        <div className="space-y-1">
+          <label
+            htmlFor="gc-desde"
+            className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
+          >
+            Vendidas desde
+          </label>
+          <input
+            id="gc-desde"
+            type="date"
+            name="desde"
+            defaultValue={desde}
+            max={hoy}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <label
+            htmlFor="gc-hasta"
+            className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
+          >
+            Hasta
+          </label>
+          <input
+            id="gc-hasta"
+            type="date"
+            name="hasta"
+            defaultValue={hasta}
+            max={hoy}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+          />
+        </div>
+        <button
+          type="submit"
+          className="rounded-md bg-ink px-4 py-1.5 text-sm text-cream hover:opacity-90"
+        >
+          Filtrar
+        </button>
+        {hayRango && (
+          <a
+            href={`/catalogos/gift-cards${q ? `?q=${encodeURIComponent(q)}` : ""}`}
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            Quitar el filtro
+          </a>
+        )}
+      </form>
+
+      {/* El reporte del período: cuántas se vendieron y por cuánta plata. Es lo
+          que se quería para medir una campaña. Sólo cuenta las VENDIDAS: las de
+          cortesía y las de antes del sistema no entraron plata, y las anuladas
+          no existieron. */}
+      {hayRango && (
+        <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-md border border-border bg-card p-3">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Vendidas en el período
+              </div>
+              <div className="text-base font-semibold tabular-nums">
+                {vendidas.length}
+              </div>
+            </div>
+            <div className="rounded-md border border-border bg-card p-3">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Plata que entró
+              </div>
+              <div className="text-base font-semibold tabular-nums">
+                {formatARS(totalCobrado)}
+              </div>
+            </div>
+            <div className="rounded-md border border-border bg-card p-3">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Valor a canjear
+              </div>
+              <div className="text-base font-semibold tabular-nums">
+                {formatARS(totalValor)}
+              </div>
+            </div>
+          </div>
+          {(totalValor !== totalCobrado || nCortesia > 0 || nAnuladas > 0) && (
+            <p className="text-[11px] text-muted-foreground">
+              {totalValor !== totalCobrado &&
+                `Se vendieron ${formatARS(totalValor)} de valor por ${formatARS(totalCobrado)}: la diferencia son las que llevaron descuento. `}
+              {nCortesia > 0 &&
+                `${nCortesia} de cortesía, que no suman porque no entró plata. `}
+              {nAnuladas > 0 && `${nAnuladas} anuladas, que no se cuentan.`}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-md overflow-x-auto">
         <table className="w-full min-w-[48rem] text-sm">

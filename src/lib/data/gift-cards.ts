@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
@@ -29,7 +29,7 @@ import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import type { GiftCard, GiftCardMovimiento } from "@/lib/types";
 import { esCanjeable, hoyAr } from "@/lib/gift-card-estado";
-import { sumarDiasYmd } from "@/lib/fecha-ar";
+import { finDeDiaArISO, inicioDeDiaArISO, sumarDiasYmd } from "@/lib/fecha-ar";
 import {
   giftCardAnularSchema,
   giftCardCodigoSchema,
@@ -90,6 +90,20 @@ export interface ListGiftCardsOpts {
    * canjeable (con aviso). Ver esCanjeable() en @/lib/gift-card-estado.
    */
   soloCanjeables?: boolean;
+  /**
+   * Rango de emisión, en días argentinos (YYYY-MM-DD).
+   *
+   * Filtra por CUÁNDO SE VENDIÓ, que es lo que se quiere medir: "quise filtrar
+   * las que vendí desde el 12/10 y no pude. Por ej quise filtrar las que vendí
+   * por el día de la madre y medirlo". Antes sólo se podía buscar por código o
+   * por nombre, así que una campaña no se podía contar.
+   *
+   * Se compara contra fecha_emision, que para una tarjeta cargada con fecha
+   * retroactiva es el día de la venta real y no el de la carga — justamente el
+   * que corresponde para medir la campaña.
+   */
+  desde?: string;
+  hasta?: string;
 }
 
 export async function listGiftCards(
@@ -119,6 +133,19 @@ export async function listGiftCards(
         ilike(giftCardsTable.compradora, patron),
         ilike(giftCardsTable.beneficiaria, patron),
       )!,
+    );
+  }
+  // El rango se corta en días argentinos y no en UTC: con el corte en UTC una
+  // tarjeta vendida a las 21 h cae en el día siguiente, y contar una campaña con
+  // los bordes corridos un día es el error que el filtro venía a evitar.
+  if (opts.desde) {
+    filters.push(
+      gte(giftCardsTable.fechaEmision, new Date(inicioDeDiaArISO(opts.desde))),
+    );
+  }
+  if (opts.hasta) {
+    filters.push(
+      lte(giftCardsTable.fechaEmision, new Date(finDeDiaArISO(opts.hasta))),
     );
   }
 
