@@ -335,26 +335,10 @@ export function InsumoForm({
                       />
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Medio de pago
-                    </label>
-                    <select
-                      name="compra_mp_id"
-                      className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm"
-                    >
-                      <option value="">
-                        {mediosDeCompra.length === 0
-                          ? "Cargá un medio en esta sucursal"
-                          : "Seleccioná"}
-                      </option>
-                      {mediosDeCompra.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.codigo} — {m.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* "Pagado" va ARRIBA del medio de pago: es lo que decide si
+                      el medio hace falta. Al revés, se lee como que el medio es
+                      obligatorio y la compra a cuenta corriente parece
+                      imposible. */}
                   <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
@@ -363,8 +347,44 @@ export function InsumoForm({
                       onChange={(e) => setCompraPagado(e.target.checked)}
                       className="h-4 w-4 rounded border-border accent-sage-500"
                     />
-                    <span>Pagado</span>
+                    <span>Ya está pagada</span>
                   </label>
+
+                  {/* El medio de pago sólo existe si la compra se pagó. Si
+                      queda a pagar no sale plata de ningún lado: la deuda va a
+                      la cuenta del proveedor. Mostrar el selector igual hacía
+                      que lo dejaran vacío —correctamente— y antes eso
+                      descartaba la compra entera en silencio. */}
+                  {compraPagado ? (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Medio de pago
+                      </label>
+                      <select
+                        name="compra_mp_id"
+                        required
+                        className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm"
+                      >
+                        <option value="">
+                          {mediosDeCompra.length === 0
+                            ? "Cargá un medio en esta sucursal"
+                            : "Seleccioná"}
+                        </option>
+                        {mediosDeCompra.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.codigo} — {m.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <p className="rounded-md border border-warning/40 bg-warning/10 p-2.5 text-[11px] text-brown-700">
+                      Queda <strong>a pagar</strong>: no sale plata de la caja y
+                      el monto se suma a la cuenta del proveedor. Acordate de
+                      elegir el proveedor más arriba, que es a quién se le va a
+                      deber.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

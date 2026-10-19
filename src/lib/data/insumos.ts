@@ -571,17 +571,53 @@ export async function createInsumo(formData: FormData): Promise<ActionResult> {
   }
   await syncProveedoresInsumo(insumoId, parsed.data.proveedor_ids);
 
-  // Compra inicial opcional
+  /**
+   * Compra inicial opcional.
+   *
+   * La condición mira "cargar_compra", el tilde que la persona puso, y NO la
+   * presencia del medio de pago.
+   *
+   * Antes exigía `mpInicial` acá mismo, así que una compra sin medio de pago no
+   * fallaba: se descartaba entera y en silencio, y la función devolvía ok. Y el
+   * medio de pago está vacío justo en el caso más normal de una compra a
+   * proveedor —la que no se pagó todavía y va a la cuenta corriente—, donde
+   * elegir uno no tendría sentido. Yerba Buena cargó así "Style Volume fix
+   * question 190ml": quedó el insumo creado con sus precios, y los $101.000 y
+   * los 4 envases se perdieron sin un solo cartel. Desde el mostrador se vio
+   * como que el botón se quedaba pensando.
+   *
+   * Ahora, si pidieron cargar la compra, la compra se intenta; si algo falta,
+   * el error vuelve a la pantalla en vez de desaparecer.
+   */
+  const quiereCompra = Boolean(formData.get("cargar_compra"));
   const cantidadInicial = Number(formData.get("compra_cantidad") ?? 0);
   const valorInicial = Number(formData.get("compra_valor") ?? 0);
   const sucursalInicial = String(formData.get("compra_sucursal_id") ?? "");
   const mpInicial = String(formData.get("compra_mp_id") ?? "");
-  if (
-    cantidadInicial > 0 &&
-    valorInicial > 0 &&
-    sucursalInicial &&
-    mpInicial
-  ) {
+  const compraPagada = Boolean(formData.get("compra_pagado"));
+
+  if (quiereCompra) {
+    const faltan: string[] = [];
+    if (!(cantidadInicial > 0)) faltan.push("la cantidad de envases");
+    if (!(valorInicial > 0)) faltan.push("el monto");
+    if (!sucursalInicial) faltan.push("la sucursal");
+    // El medio de pago sólo hace falta si la compra YA se pagó. Si queda a
+    // pagar, la deuda va a la cuenta del proveedor y no sale plata de ningún
+    // lado, así que no hay con qué completarlo.
+    if (compraPagada && !mpInicial) faltan.push("el medio de pago");
+    if (faltan.length > 0) {
+      return {
+        ok: false,
+        errors: {
+          _: [
+            `El insumo quedó creado, pero la compra inicial no se cargó: falta ${faltan.join(", ")}. Cargala desde Gastos.`,
+          ],
+        },
+      };
+    }
+  }
+
+  if (quiereCompra) {
     const fd = new FormData();
     fd.set("insumo_id", insumoId);
     fd.set("sucursal_id", sucursalInicial);
@@ -592,6 +628,22 @@ export async function createInsumo(formData: FormData): Promise<ActionResult> {
     if (formData.get("compra_pagado")) fd.set("pagado", "true");
     if (parsed.data.proveedor_ids.length === 1) {
       fd.set("proveedor_id", parsed.data.proveedor_ids[0]);
+    } else if (!compraPagada) {
+      // Una compra a pagar necesita a quién se le debe, y acá el único
+      // proveedor posible es el del insumo. Con cero o con varios no hay forma
+      // de adivinarlo, y la deuda quedaría sin dueño. Se avisa con el nombre
+      // del campo que hay que tocar, que está más arriba en esta misma
+      // pantalla, en vez de dejar que el error llegue como "proveedor_id".
+      return {
+        ok: false,
+        errors: {
+          _: [
+            parsed.data.proveedor_ids.length === 0
+              ? "El insumo quedó creado, pero la compra no: si queda a pagar hay que elegir el proveedor arriba, porque la deuda se carga a su cuenta."
+              : "El insumo quedó creado, pero la compra no: tiene varios proveedores y no se sabe a cuál cargarle la deuda. Cargá la compra desde Gastos eligiendo el proveedor.",
+          ],
+        },
+      };
     }
     const compraResult = await registrarCompraInsumo(null, fd);
     if (!compraResult.ok) {
