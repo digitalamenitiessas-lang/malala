@@ -8,19 +8,38 @@ import { CurrencyInput } from "@/components/forms/currency-input";
 import { LoadingButton } from "@/components/forms/field";
 import { formatARS, formatDate } from "@/lib/utils";
 import { registrarAnticipo, revertirAnticipo } from "@/lib/data/anticipos";
-import type { Anticipo, MedioPago } from "@/lib/types";
+import type { Anticipo, CuentaBancaria, MedioPago } from "@/lib/types";
 
 interface Props {
   empleadoId: string;
   anticipos: Anticipo[];
   mediosPago: MedioPago[];
+  cuentasBanco: CuentaBancaria[];
+}
+
+/**
+ * Si el medio puede salir de más de una cuenta.
+ *
+ * El efectivo sale del cajón y la cuenta corriente no mueve plata; el resto
+ * —transferencia, débito, crédito, cheque— puede salir de Galicia o de Macro.
+ * Mismo criterio que usan el formulario de gastos y el de ventas.
+ */
+function usaCuentaBanco(mp: MedioPago | undefined): boolean {
+  if (!mp) return false;
+  const cod = mp.codigo.toUpperCase();
+  return cod !== "EF" && cod !== "CC";
 }
 
 function fmtFecha(iso: string): string {
   return formatDate(iso);
 }
 
-export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
+export function AnticiposPanel({
+  empleadoId,
+  anticipos,
+  mediosPago,
+  cuentasBanco,
+}: Props) {
   const { pending, run } = useTransitionFeedback();
   // Dos toques: revertir devuelve plata a la caja, no sale de un clic al pasar.
   const [confirmando, setConfirmando] = useState<string | null>(null);
@@ -28,6 +47,8 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [monto, setMonto] = useState(0);
   const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
+  // Cuenta elegida. Vacio = la del medio por defecto.
+  const [mpCuentaId, setMpCuentaId] = useState("");
   const [observacion, setObservacion] = useState("");
   /**
    * Dia en que se le dio la plata. Vacio es hoy.
@@ -54,6 +75,9 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
     setAbierto(false);
     setMonto(0);
     setObservacion("");
+    // Sin esto, la cuenta del anticipo anterior queda elegida y el siguiente
+    // sale de ahí sin que nadie la haya vuelto a mirar.
+    setMpCuentaId("");
     setError(null);
   }
 
@@ -72,6 +96,7 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
     fd.set("empleado_id", empleadoId);
     fd.set("monto", String(monto));
     fd.set("mp_id", mpId);
+    if (mpCuentaId) fd.set("mp_cuenta_id", mpCuentaId);
     fd.set("observacion", observacion);
     if (fecha) fd.set("fecha", fecha);
     if (fechaDescuento) fd.set("fecha_descuento", fechaDescuento);
@@ -151,7 +176,12 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
               </label>
               <select
                 value={mpId}
-                onChange={(e) => setMpId(e.target.value)}
+                onChange={(e) => {
+                  setMpId(e.target.value);
+                  // Al cambiar de medio la cuenta elegida ya no aplica: si se
+                  // pasa a efectivo, dejarla pegada sacaría la plata del banco.
+                  setMpCuentaId("");
+                }}
                 className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
               >
                 {mediosPago.map((medio) => (
@@ -162,6 +192,41 @@ export function AnticiposPanel({ empleadoId, anticipos, mediosPago }: Props) {
               </select>
             </div>
           </div>
+
+          {/* De qué cuenta sale. "Transferencia" apunta a Galicia, pero el salón
+              también transfiere desde Macro: sin esto, todo anticipo por
+              transferencia descontaba de Galicia y los dos saldos quedaban mal.
+              Pedido tal cual: "me podrían habilitar poder elegir Galicia o Macro
+              en modo de pago transferencia cuando cargo un anticipo". */}
+          {usaCuentaBanco(mediosPago.find((m) => m.id === mpId)) && (
+            <div className="space-y-1.5">
+              <label
+                htmlFor="anticipo-cuenta"
+                className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+              >
+                De qué cuenta sale
+              </label>
+              {cuentasBanco.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No hay cuentas cargadas en esta sucursal.
+                </p>
+              ) : (
+                <select
+                  id="anticipo-cuenta"
+                  value={mpCuentaId}
+                  onChange={(e) => setMpCuentaId(e.target.value)}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm"
+                >
+                  <option value="">— Cuenta por defecto del medio —</option>
+                  {cuentasBanco.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
           {/* La fecha decide en qué liquidación se descuenta.
               Un anticipo que se corrige al día siguiente —revertir y volver a
               cargar— caía en el período siguiente: "se pagaron pero se le

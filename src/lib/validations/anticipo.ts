@@ -5,6 +5,19 @@ export const anticipoSchema = z.object({
   monto: z.coerce.number().positive("El monto debe ser mayor a 0"),
   mp_id: z.string().min(1, "Medio de pago requerido"),
   /**
+   * De qué cuenta sale, cuando el medio admite más de una.
+   *
+   * Vacío usa la cuenta por defecto del medio de pago. Hace falta porque
+   * "Transferencia" apunta a Galicia y el salón también transfiere desde Macro:
+   * sin esto, todo anticipo por transferencia salía de Galicia y el saldo de las
+   * dos cuentas quedaba mal. Pedido tal cual: "me podrían habilitar poder elegir
+   * Galicia o Macro en modo de pago transferencia cuando cargo un anticipo".
+   */
+  mp_cuenta_id: z
+    .string()
+    .nullish()
+    .transform((s) => (s ? s : undefined)),
+  /**
    * Día en que se le dio la plata. Vacío es hoy.
    *
    * La fecha decide en qué liquidación se descuenta, así que un anticipo que

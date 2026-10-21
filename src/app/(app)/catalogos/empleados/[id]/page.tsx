@@ -21,6 +21,7 @@ import {
   updateEmpleado,
 } from "@/lib/data/empleados";
 import { listMediosPago } from "@/lib/data/medios-pago";
+import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import {
   addProfesionalHorario,
   deleteProfesionalHorario,
@@ -87,12 +88,17 @@ export default async function EditarEmpleadoPage({
   );
   const sucursal = await getActiveSucursal();
 
-  const [anticipos, descuentos, viaticos, mediosPago, acceso, agendas] = await Promise.all([
+  const [anticipos, descuentos, viaticos, mediosPago, cuentasBanco, acceso, agendas] = await Promise.all([
     listAnticipos(id),
     listDescuentos(id),
     listViaticos({ empleadoId: id }),
     sucursal
       ? listMediosPago({ sucursalId: sucursal.id, soloActivos: true, excluirGiftCard: true })
+      : Promise.resolve([]),
+    // Para poder elegir de qué cuenta sale un anticipo por transferencia: el
+    // medio apunta a Galicia y el salón también transfiere desde Macro.
+    sucursal
+      ? listCuentas({ soloActivas: true, sucursalId: sucursal.id })
       : Promise.resolve([]),
     getAccesoDeEmpleado(id),
     listProfesionalAgendaConfigsByEmpleado(id, {
@@ -189,6 +195,9 @@ export default async function EditarEmpleadoPage({
       />
 
       <AnticiposPanel
+        // Sólo las bancarias, como en gastos: para una transferencia se elige
+        // entre Galicia y Macro, no "Caja Efectivo".
+        cuentasBanco={cuentasBanco.filter((c) => c.tipo === "banco")}
         empleadoId={empleado.id}
         anticipos={anticipos}
         mediosPago={mediosPago}

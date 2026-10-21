@@ -8,6 +8,7 @@ import {
   anticipos as anticiposTable,
   aperturasCaja as aperturasCajaTable,
   cierresCaja as cierresCajaTable,
+  cuentasBancarias as cuentasBancariasTable,
   egresos as egresosTable,
   empleados as empleadosTable,
   rubrosGasto as rubrosGastoTable,
@@ -90,6 +91,7 @@ export async function registrarAnticipo(
     empleado_id: formData.get("empleado_id"),
     monto: formData.get("monto"),
     mp_id: formData.get("mp_id"),
+    mp_cuenta_id: formData.get("mp_cuenta_id"),
     observacion: formData.get("observacion"),
     fecha: formData.get("fecha"),
     fecha_descuento: formData.get("fecha_descuento"),
@@ -187,12 +189,45 @@ export async function registrarAnticipo(
         rubroId: rubro.id,
         valor: data.monto,
         mpId: data.mp_id,
+        mp1CuentaId: data.mp_cuenta_id ?? null,
         observacion: observacionEgreso,
         pagado: true,
         usuarioId: user.id,
       });
 
-      const cuentaId = await getCuentaIdForMpTx(tx, data.mp_id);
+      /**
+       * De qué cuenta sale la plata.
+       *
+       * Si eligieron una, se usa esa; si no, la cuenta por defecto del medio.
+       * "Transferencia" apunta a Galicia, pero el salón también transfiere desde
+       * Macro, así que sin la opción todos los anticipos por transferencia
+       * salían de Galicia y los dos saldos quedaban mal.
+       *
+       * La cuenta elegida se valida contra la sucursal: un id de la otra
+       * sucursal descontaría de una caja que no es esta, y acá llega desde un
+       * formulario donde el id viaja en el form.
+       */
+      let cuentaId: string | null = null;
+      if (data.mp_cuenta_id) {
+        const [cuenta] = await tx
+          .select({ id: cuentasBancariasTable.id })
+          .from(cuentasBancariasTable)
+          .where(
+            and(
+              eq(cuentasBancariasTable.id, data.mp_cuenta_id),
+              eq(cuentasBancariasTable.sucursalId, sucursal.id),
+            ),
+          )
+          .limit(1);
+        if (!cuenta) {
+          throw new Error(
+            "La cuenta elegida no es de esta sucursal. Elegí una de las de acá.",
+          );
+        }
+        cuentaId = cuenta.id;
+      } else {
+        cuentaId = await getCuentaIdForMpTx(tx, data.mp_id);
+      }
       if (cuentaId) {
         await emitMovimientoBancarioTx(tx, {
           cuentaId,
