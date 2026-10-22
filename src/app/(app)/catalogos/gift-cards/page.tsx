@@ -246,7 +246,7 @@ export default async function GiftCardsPage({
               <th className="text-left font-medium px-4 py-3">Código</th>
               <th className="text-left font-medium px-4 py-3">Para</th>
               <th className="text-right font-medium px-4 py-3">Importe</th>
-              <th className="text-right font-medium px-4 py-3">Saldo</th>
+              <th className="text-right font-medium px-4 py-3">Saldo / sesiones</th>
               <th className="text-center font-medium px-4 py-3">Vence</th>
               <th className="text-center font-medium px-4 py-3">Estado</th>
               <th className="px-4 py-3 w-20"></th>
@@ -278,8 +278,24 @@ export default async function GiftCardsPage({
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                     {formatARS(g.importe)}
                   </td>
+                  {/* En un pack, lo que la clienta pregunta en el mostrador es
+                      cuántas sesiones le quedan, no cuántos pesos: "pasa que
+                      preguntan y empezamos a ver en distintas planillas". Se
+                      muestra acá, en la lista, para que buscar el nombre
+                      alcance y no haya que abrir la ficha de a una. */}
                   <td className="px-4 py-3 text-right tabular-nums font-medium">
-                    {formatARS(g.saldo)}
+                    {g.precio_sesion ? (
+                      <>
+                        <span>
+                          {Math.round(g.saldo / g.precio_sesion)} de {g.sesiones}
+                        </span>
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          sesiones · {formatARS(g.saldo)}
+                        </span>
+                      </>
+                    ) : (
+                      formatARS(g.saldo)
+                    )}
                   </td>
                   <td className="px-4 py-3 text-center tabular-nums text-muted-foreground">
                     {g.vence_el ?? "—"}

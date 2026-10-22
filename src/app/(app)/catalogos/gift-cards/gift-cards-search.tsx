@@ -43,7 +43,7 @@ export function GiftCardsSearch() {
         type="search"
         defaultValue={current}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Buscar por código o beneficiaria…"
+        placeholder="Buscar por código, quién la compró o para quién es…"
         className="w-full rounded-md border border-border bg-card py-2 pl-9 pr-9 text-sm outline-none focus:border-sage-700 focus:ring-1 focus:ring-sage-700"
         aria-label="Buscar gift cards"
       />
