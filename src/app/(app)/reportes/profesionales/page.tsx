@@ -56,11 +56,18 @@ export default async function ReportesProfesionalesPage({
   const promoPriceById = new Map(
     promociones.map((promo) => [promo.id, promo.precio_efectivo]),
   );
+  // Cuántos servicios incluye cada combo: sirve para no repartir el precio
+  // entero cuando el ticket trae sólo una parte del combo (se canjean en días
+  // distintos). Ver buildFacturadoPorLineaMap.
+  const promoComponentesById = new Map(
+    promociones.map((promo) => [promo.id, promo.componentes.length]),
+  );
 
   const weeklyGroups = resumenSemanalPorProfesional(ingresos, {
     desde: filtros.desde,
     hasta: filtros.hasta,
     promoPriceById,
+    promoComponentesById,
   });
   const totalFacturado = weeklyGroups.reduce(
     (sum, group) => sum + group.totals.facturado,

@@ -625,19 +625,26 @@ export function NuevaVentaForm({
 
   function removeLinea(idx: number) {
     setLineas((prev) => {
-      const objetivo = prev[idx];
-      // Si la línea pertenece a una promo, quitar una parte saca la promo entera.
-      const promoId =
-        objetivo?.tipo === "servicio" ? objetivo.promo_servicio_id : undefined;
-      let next: LineaForm[];
-      if (promoId) {
-        next = prev.filter(
-          (l) => !(l.tipo === "servicio" && l.promo_servicio_id === promoId),
-        );
-      } else {
-        if (prev.length <= 1) return prev;
-        next = prev.filter((_, i) => i !== idx);
-      }
+      if (prev.length <= 1) return prev;
+      /**
+       * De una promo se puede sacar un servicio suelto.
+       *
+       * Antes, tocar la cruz en cualquier parte de un combo lo sacaba entero:
+       * la idea era que nadie se quedara con un servicio al precio rebajado del
+       * combo sin haberlo comprado. Pero el salón deja usar los servicios de un
+       * combo en días distintos —se vende como gift card y la clienta viene
+       * cuando puede— y así no había forma de cargar media visita: "no me deja
+       * rellenar solo 1 o eliminar 1".
+       *
+       * La línea que queda conserva SU parte del combo, que es el precio
+       * correcto a cobrar hoy, y la comisión sale de esa parte. Las dos visitas
+       * juntas suman el precio del combo, ni más ni menos.
+       *
+       * La protección vieja tampoco protegía: una línea de servicio normal
+       * acepta cualquier precio, así que el servicio suelto a precio de combo
+       * se podía cargar igual, a mano.
+       */
+      const next = prev.filter((_, i) => i !== idx);
       // Nunca dejar el ticket sin líneas.
       return next.length > 0 ? next : [newLineaServicio()];
     });

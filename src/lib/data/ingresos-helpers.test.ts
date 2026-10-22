@@ -3,6 +3,7 @@ import {
   comisionMontoServicio,
   computeDescuento,
   computeRecargos,
+  buildFacturadoPorLineaMap,
 } from "./ingresos-helpers";
 
 describe("computeDescuento", () => {
@@ -229,5 +230,87 @@ describe("comisionMontoServicio", () => {
       descuentoMonto: 0,
     });
     expect(c).toBe(0);
+  });
+});
+
+/**
+ * Un combo se puede canjear en visitas distintas: el salón lo vende como gift
+ * card y deja usar cada servicio el día que la clienta pueda. Ahí el ticket
+ * trae UNA línea de un combo de dos, y cada línea ya tiene guardada su parte.
+ *
+ * El reparto de abajo existe para repartir el precio del combo entre sus
+ * líneas. Aplicado a un combo a medias le daba a esa única línea el precio
+ * COMPLETO: un combo de $50.000 usado en dos días figuraba como $100.000
+ * facturados, y las dos profesionales cobraban como si cada una hubiera hecho
+ * el combo entero.
+ */
+describe("buildFacturadoPorLineaMap: combos canjeados por partes", () => {
+  const COMBO = "combo-relax";
+  const linea = (id: string, subtotal: number, precioLista: number) =>
+    ({
+      id,
+      ingreso_id: "t1",
+      servicio_id: `sv-${id}`,
+      empleado_id: "emp",
+      precio_efectivo: subtotal,
+      cantidad: 1,
+      subtotal,
+      comision_pct: 30,
+      comision_monto: 0,
+      promo_servicio_id: COMBO,
+      soporta_descuento: true,
+      servicio: { precio_lista: precioLista } as never,
+      insumo: null,
+      empleado: null,
+      costoInsumos: 0,
+    }) as never;
+
+  const ticket = (lineas: unknown[]) =>
+    ({ ingreso: {}, cliente: null, mp1: null, mp2: null, lineas } as never);
+
+  const precios = new Map([[COMBO, 50000]]);
+  const componentes = new Map([[COMBO, 2]]);
+
+  it("con el combo entero reparte el precio del combo", () => {
+    const map = buildFacturadoPorLineaMap(
+      ticket([linea("a", 23684.21, 45000), linea("b", 26315.79, 50000)]),
+      precios,
+      componentes,
+    );
+    expect(map.get("a")! + map.get("b")!).toBeCloseTo(50000, 2);
+  });
+
+  it("con media visita NO le da el combo entero a la única línea", () => {
+    const map = buildFacturadoPorLineaMap(
+      ticket([linea("b", 26315.79, 50000)]),
+      precios,
+      componentes,
+    );
+    expect(map.get("b")).toBeCloseTo(26315.79, 2);
+    expect(map.get("b")).not.toBe(50000);
+  });
+
+  it("las dos visitas por separado suman el combo, no el doble", () => {
+    const visita1 = buildFacturadoPorLineaMap(
+      ticket([linea("a", 23684.21, 45000)]),
+      precios,
+      componentes,
+    );
+    const visita2 = buildFacturadoPorLineaMap(
+      ticket([linea("b", 26315.79, 50000)]),
+      precios,
+      componentes,
+    );
+    expect(visita1.get("a")! + visita2.get("b")!).toBeCloseTo(50000, 2);
+  });
+
+  it("sin el dato de componentes mantiene el comportamiento viejo", () => {
+    // Los tickets de antes siguen leyéndose igual: si no se sabe cuántos
+    // servicios tiene el combo, no se puede distinguir media visita.
+    const map = buildFacturadoPorLineaMap(
+      ticket([linea("b", 26315.79, 50000)]),
+      precios,
+    );
+    expect(map.get("b")).toBe(50000);
   });
 });

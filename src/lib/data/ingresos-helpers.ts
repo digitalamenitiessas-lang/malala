@@ -442,6 +442,19 @@ function roundMoney(value: number) {
 export function buildFacturadoPorLineaMap(
   row: IngresoConDetalle,
   promoPriceById?: Map<string, number>,
+  /**
+   * Cuántos servicios incluye cada promo.
+   *
+   * Hace falta para distinguir un combo entero de uno canjeado por partes. El
+   * salón deja usar los servicios de un combo en días distintos —se vende como
+   * gift card y la clienta viene cuando puede—, así que un ticket puede tener
+   * UNA sola línea de un combo de dos.
+   *
+   * Sin esto, el reparto de abajo le asignaba a esa única línea el precio
+   * COMPLETO del combo, y el combo se contaba una vez por cada visita: un
+   * combo de $50.000 usado en dos días figuraba como $100.000 facturados.
+   */
+  promoComponentesById?: Map<string, number>,
 ): Map<string, number> {
   const amounts = new Map<string, number>();
 
@@ -464,6 +477,21 @@ export function buildFacturadoPorLineaMap(
   for (const [promoId, promoLineas] of groupedByPromo.entries()) {
     const promoTotal = promoPriceById.get(promoId);
     if (promoTotal == null) continue;
+
+    /**
+     * Combo canjeado por partes: no se reparte nada.
+     *
+     * Si en este ticket hay menos líneas que servicios tiene el combo, lo que
+     * se cobró acá es sólo una porción, y cada línea ya tiene guardada SU parte
+     * —la pone el formulario al agregar la promo, prorrateada por el precio de
+     * lista de cada servicio—. Repartir de nuevo le daría a esa línea el precio
+     * entero del combo.
+     *
+     * Con el combo completo este reparto es redundante pero inofensivo: las
+     * partes ya suman el precio del combo. Se deja por los tickets viejos.
+     */
+    const componentes = promoComponentesById?.get(promoId);
+    if (componentes != null && promoLineas.length < componentes) continue;
 
     const totalWeight = promoLineas.reduce(
       (sum, linea) => sum + (linea.servicio?.precio_lista ?? linea.subtotal),
@@ -491,6 +519,8 @@ export function rendimientoPorEmpleado(
   opts?: {
     empleadoIds?: string[];
     promoPriceById?: Map<string, number>;
+    /** Cuántos servicios incluye cada promo. Ver buildFacturadoPorLineaMap. */
+    promoComponentesById?: Map<string, number>;
   },
 ): RendimientoEmpleadoRow[] {
   const allowedIds = opts?.empleadoIds ? new Set(opts.empleadoIds) : null;
@@ -500,6 +530,7 @@ export function rendimientoPorEmpleado(
     const facturadoPorLinea = buildFacturadoPorLineaMap(
       row,
       opts?.promoPriceById,
+      opts?.promoComponentesById,
     );
     for (const linea of row.lineas) {
       if (!linea.empleado) continue;
@@ -559,6 +590,8 @@ export function resumenSemanalPorProfesional(
     desde?: string;
     hasta?: string;
     promoPriceById?: Map<string, number>;
+    /** Cuántos servicios incluye cada promo. Ver buildFacturadoPorLineaMap. */
+    promoComponentesById?: Map<string, number>;
   },
 ): SemanaProfesionalGroup[] {
   const allowedIds = opts?.empleadoIds ? new Set(opts.empleadoIds) : null;
@@ -590,6 +623,7 @@ export function resumenSemanalPorProfesional(
     const facturadoPorLinea = buildFacturadoPorLineaMap(
       row,
       opts?.promoPriceById,
+      opts?.promoComponentesById,
     );
 
     for (const linea of row.lineas) {

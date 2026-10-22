@@ -52,13 +52,22 @@ export default async function ReportesEmpleadasPage({
   const promoPriceById = new Map(
     promociones.map((promo) => [promo.id, promo.precio_efectivo]),
   );
-  const filas = rendimientoPorEmpleado(ingresos, { promoPriceById });
+  // Cuántos servicios incluye cada combo: sirve para no repartir el precio
+  // entero cuando el ticket trae sólo una parte del combo (se canjean en días
+  // distintos). Ver buildFacturadoPorLineaMap.
+  const promoComponentesById = new Map(
+    promociones.map((promo) => [promo.id, promo.componentes.length]),
+  );
+  const filas = rendimientoPorEmpleado(ingresos, {
+    promoPriceById,
+    promoComponentesById,
+  });
   const totales = totalesRendimientoPorEmpleado(filas);
 
   // Detalle de servicios por empleada (para desplegar al tocar cada fila).
   const detalle: Record<string, DetalleLinea[]> = {};
   for (const row of ingresos) {
-    const facturadoPorLinea = buildFacturadoPorLineaMap(row, promoPriceById);
+    const facturadoPorLinea = buildFacturadoPorLineaMap(row, promoPriceById, promoComponentesById);
     for (const linea of row.lineas) {
       if (!linea.empleado || !linea.servicio) continue;
       (detalle[linea.empleado.id] ??= []).push({
