@@ -80,6 +80,9 @@ export function GiftCardForm({
   const [cuotas, setCuotas] = useState<string[]>([""]);
   // Controlados para poder decir, antes de guardar, cuanta deuda se genera.
   const [importe, setImporte] = useState(0);
+  // Pack de sesiones: ver el bloque del formulario y drizzle/0069.
+  const [esPack, setEsPack] = useState(false);
+  const [sesiones, setSesiones] = useState(0);
   const [cobrado, setCobrado] = useState(0);
   /**
    * Que la tarjeta vaya con descuento es una decision, no un campo que quedo
@@ -514,6 +517,75 @@ export function GiftCardForm({
             error={errors.vence_el}
             hint="30 días es lo habitual. Vacío = sin vencimiento."
           />
+
+          {/* Pack de sesiones.
+              Un pack es una cantidad de sesiones, no un monto. Mientras la
+              tarjeta guardaba sólo plata, cada sesión se cobraba descontando a
+              mano hasta el precio de sesión, y si no quedaba exacto el saldo se
+              desfasaba: de 14 canjes contra packs, 4 dieron el monto correcto.
+              Con esto cargado, el sistema frena el canje que no sea de una
+              sesión justa. */}
+          <div className="space-y-1.5 rounded-md border border-dashed border-border bg-cream/30 p-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={esPack}
+                onChange={(e) => {
+                  setEsPack(e.currentTarget.checked);
+                  if (!e.currentTarget.checked) setSesiones(0);
+                }}
+                className="h-4 w-4 rounded border-border accent-sage-500"
+              />
+              <span className="font-medium">Es un pack de sesiones</span>
+            </label>
+            {esPack ? (
+              <>
+                <label
+                  htmlFor="sesiones"
+                  className="block text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                >
+                  Cuántas sesiones incluye
+                </label>
+                <input
+                  id="sesiones"
+                  name="sesiones"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={sesiones || ""}
+                  onChange={(e) => setSesiones(Number(e.currentTarget.value) || 0)}
+                  required={esPack}
+                  className="w-full rounded-md border border-border bg-card px-3 py-2 text-right text-sm tabular-nums"
+                />
+                {errors.sesiones && (
+                  <p className="text-xs text-destructive">
+                    {errors.sesiones.join(", ")}
+                  </p>
+                )}
+                {/* El precio de sesión no se pide: sale de dividir el importe,
+                    así no puede quedar un pack que no sabe cuánto vale una. */}
+                {sesiones > 0 && importe > 0 ? (
+                  <p className="text-[11px] tabular-nums text-sage-800">
+                    Cada sesión va a valer{" "}
+                    <strong>{formatARS(importe / sesiones)}</strong>. Al canjear,
+                    el ticket tiene que quedar en ese monto exacto o el sistema
+                    te va a frenar.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    El precio de cada sesión sale de dividir el importe. Un pack
+                    de 4 por $120.000 son $30.000 por sesión; un 4x3 de $60.000
+                    en 4 sesiones son $15.000, con la gratis ya adentro.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Dejalo sin marcar para una gift card común, que se canjea por
+                cualquier monto hasta agotar el saldo.
+              </p>
+            )}
+          </div>
 
           <Field
             label="Quién la compra"

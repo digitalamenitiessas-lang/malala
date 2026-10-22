@@ -103,11 +103,31 @@ export default async function GiftCardPage({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-md border border-border bg-card p-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
-            Saldo disponible
+            {giftCard.precio_sesion ? "Sesiones que quedan" : "Saldo disponible"}
           </p>
-          <p className="mt-2 font-display text-3xl tabular-nums">
-            {formatARS(giftCard.saldo)}
-          </p>
+          {/* En un pack lo que importa son las sesiones, no los pesos: el
+              mostrador necesita saber si le queda una o ninguna, y leer eso de
+              un número en plata es lo que hizo que a un cliente le quedaran dos
+              masajes de regalo sin que nadie lo notara. */}
+          {giftCard.precio_sesion ? (
+            <>
+              <p className="mt-2 font-display text-3xl tabular-nums">
+                {Math.round(giftCard.saldo / giftCard.precio_sesion)}
+                <span className="text-base text-muted-foreground">
+                  {" "}
+                  de {giftCard.sesiones}
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground tabular-nums">
+                {formatARS(giftCard.saldo)} · cada sesión{" "}
+                {formatARS(giftCard.precio_sesion)}
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 font-display text-3xl tabular-nums">
+              {formatARS(giftCard.saldo)}
+            </p>
+          )}
         </div>
         <div className="rounded-md border border-border bg-card p-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">

@@ -719,6 +719,9 @@ export interface GiftCard {
   estado: GiftCardEstado;
   fecha_emision: string; // ISO
   vence_el?: string; // YYYY-MM-DD
+  /** Pack de sesiones: cuántas incluye y cuánto vale cada una. Ver drizzle/0069. */
+  sesiones?: number;
+  precio_sesion?: number;
   compradora?: string;
   /** Cliente que la compró, cuando quedó fiada a su cuenta corriente. */
   compradora_cliente_id?: string;

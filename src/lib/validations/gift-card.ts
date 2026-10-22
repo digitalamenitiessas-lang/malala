@@ -45,6 +45,27 @@ export const giftCardSchema = z.object({
   mp_id: optStr,
   mp_cuenta_id: optStr,
   vence_el: optStr,
+  /**
+   * Cantidad de sesiones, si la tarjeta es un pack.
+   *
+   * Sólo se pide esto: el precio de cada sesión sale de dividir el importe, así
+   * que no puede quedar inconsistente. Un pack de $120.000 en 4 sesiones son
+   * $30.000 cada una; el 4x3 de $60.000 en 4 sesiones son $15.000, que es
+   * justamente el precio con la sesión gratis adentro.
+   *
+   * Con esto cargado, cada canje tiene que ser exactamente de ese monto y el
+   * sistema frena si no (ver canjearGiftCardTx). Vacío = tarjeta de plata
+   * común, que acepta cualquier monto como siempre.
+   */
+  sesiones: z
+    .union([z.string(), z.number(), z.null(), z.undefined()])
+    .transform((v) =>
+      v === "" || v === null || v === undefined ? undefined : Number(v),
+    )
+    .refine(
+      (v) => v === undefined || (Number.isInteger(v) && v > 0 && v <= 50),
+      "La cantidad de sesiones tiene que ser un número entero mayor a 0",
+    ),
   /** Marcada = paga menos de lo que vale. Sin marcar, cobrado se ignora. */
   con_descuento: z
     .union([z.string(), z.boolean(), z.null(), z.undefined()])

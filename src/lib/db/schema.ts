@@ -1232,6 +1232,15 @@ export const giftCards = pgTable(
     origen: text("origen").notNull().default("venta"),
     /** Derivado de origen. Se sigue escribiendo pero ya no lo lee nadie. */
     emitidaPreSistema: boolean("emitida_pre_sistema").notNull().default(false),
+    /**
+     * Pack de sesiones: cuántas incluye y cuánto vale cada una.
+     *
+     * NULL las dos = tarjeta de plata común, se canjea por cualquier monto.
+     * Cargadas = cada canje tiene que ser exactamente de `precioSesion`, y lo
+     * que queda se lee en sesiones y no en pesos. Ver drizzle/0069.
+     */
+    sesiones: integer("sesiones"),
+    precioSesion: doublePrecision("precio_sesion"),
     usuarioId: uuid("usuario_id")
       .notNull()
       .references(() => profiles.userId),

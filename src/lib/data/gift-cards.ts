@@ -55,6 +55,8 @@ function mapGiftCard(row: typeof giftCardsTable.$inferSelect): GiftCard {
     estado: row.estado as GiftCard["estado"],
     fecha_emision: row.fechaEmision.toISOString(),
     vence_el: row.venceEl ?? undefined,
+    sesiones: row.sesiones ?? undefined,
+    precio_sesion: row.precioSesion ?? undefined,
     compradora: row.compradora ?? undefined,
     compradora_cliente_id: row.compradoraClienteId ?? undefined,
     beneficiaria: row.beneficiaria ?? undefined,
@@ -329,6 +331,7 @@ export async function emitirGiftCard(
     mp_id: formData.get("mp_id"),
     mp_cuenta_id: formData.get("mp_cuenta_id"),
     vence_el: formData.get("vence_el"),
+    sesiones: formData.get("sesiones"),
     con_descuento: formData.get("con_descuento"),
     compradora: formData.get("compradora"),
     compradora_cliente_id: formData.get("compradora_cliente_id"),
@@ -467,6 +470,13 @@ export async function emitirGiftCard(
         estado: "activa",
         fechaEmision: fecha,
         venceEl: parsed.data.vence_el ?? null,
+        // Pack: el precio de sesión sale de dividir el importe, no se pide
+        // aparte. Así no puede quedar un pack que no sabe cuánto vale una
+        // sesión, que es el agujero por el que se desfasaron los saldos.
+        sesiones: parsed.data.sesiones ?? null,
+        precioSesion: parsed.data.sesiones
+          ? Math.round((parsed.data.importe / parsed.data.sesiones) * 100) / 100
+          : null,
         compradora: parsed.data.compradora ?? null,
         compradoraClienteId: parsed.data.compradora_cliente_id ?? null,
         beneficiaria: parsed.data.beneficiaria ?? null,
@@ -872,6 +882,54 @@ export async function canjearGiftCardTx(
   tx: DbOrTx,
   args: CanjeGiftCardArgs,
 ): Promise<number> {
+  /**
+   * El ALTO de los packs.
+   *
+   * Un pack es una cantidad de SESIONES, pero la tarjeta guarda plata. Hasta
+   * ahora cada sesión se cobraba cargando el servicio a precio normal y
+   * descontando A MANO hasta el precio de sesión; si el descuento no quedaba
+   * exacto, el saldo bajaba de más o de menos. De 14 canjes contra packs sólo 4
+   * quedaron en el monto correcto, y hubo que recalcular los seis packs: uno
+   * tenía dos masajes de regalo y a otra le faltaba la sesión gratis de su 4x3.
+   *
+   * Acá se frena antes de descontar. Pedido tal cual: "podemos poner un ALTO
+   * que no te deje avanzar si no está bien cargada con el monto correcto?
+   * Llega el cierre y estamos cansadas y nada cierra".
+   *
+   * Sólo aplica a las tarjetas configuradas como pack; las de plata siguen
+   * aceptando cualquier monto.
+   */
+  const [pack] = await tx
+    .select({
+      sesiones: giftCardsTable.sesiones,
+      precioSesion: giftCardsTable.precioSesion,
+      codigo: giftCardsTable.codigo,
+      saldo: giftCardsTable.saldo,
+    })
+    .from(giftCardsTable)
+    .where(eq(giftCardsTable.id, args.giftCardId))
+    .limit(1);
+
+  if (pack?.precioSesion != null) {
+    const esperado = pack.precioSesion;
+    // Tolerancia de un centavo: el prorrateo de una promo deja decimales.
+    if (Math.abs(args.monto - esperado) > 0.01) {
+      const fmt = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
+      throw new Error(
+        `${pack.codigo} es un pack: cada sesión se cobra ${fmt(esperado)} y este ticket ` +
+          `queda en ${fmt(args.monto)}. Ajustá el descuento para que el total sea ` +
+          `${fmt(esperado)} y volvé a intentar. Si de verdad corresponde otro monto, ` +
+          `cobralo con otro medio de pago.`,
+      );
+    }
+    const quedan = Math.round(pack.saldo / esperado);
+    if (quedan <= 0) {
+      throw new Error(
+        `${pack.codigo} ya no tiene sesiones disponibles: se usaron todas.`,
+      );
+    }
+  }
+
   const filas = await tx
     .update(giftCardsTable)
     .set({
