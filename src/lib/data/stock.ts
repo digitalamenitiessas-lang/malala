@@ -437,6 +437,10 @@ export type MovimientoConDetalle = MovimientoStock & {
 export async function listMovimientos(opts?: {
   sucursalId?: string;
   insumoId?: string;
+  tipo?: TipoMovimientoStock;
+  /** Instantes ISO; para días argentinos usar inicioDeDiaArISO/finDeDiaArISO. */
+  desde?: string;
+  hasta?: string;
   limit?: number;
 }): Promise<MovimientoConDetalle[]> {
   const user = await requireUser();
@@ -455,6 +459,15 @@ export async function listMovimientos(opts?: {
   }
   if (opts?.insumoId) {
     filters.push(eq(movimientosStockTable.insumoId, opts.insumoId));
+  }
+  if (opts?.tipo) {
+    filters.push(eq(movimientosStockTable.tipo, opts.tipo));
+  }
+  if (opts?.desde) {
+    filters.push(gte(movimientosStockTable.fecha, new Date(opts.desde)));
+  }
+  if (opts?.hasta) {
+    filters.push(lte(movimientosStockTable.fecha, new Date(opts.hasta)));
   }
 
   const db = getDb();
