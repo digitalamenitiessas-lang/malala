@@ -40,18 +40,19 @@ export const liquidacionPagoSchema = z.object({
    *
    * El salón paga redondeado: "cuando me dice $237.340 yo pago $237.000 (esa
    * sobrante no lo pago)". La diferencia queda a favor de la empleada y entra
-   * en la liquidación siguiente. Vacío o cero = se paga el total.
+   * en la liquidación siguiente. Vacío = se paga el total.
    *
-   * Va como string u opcional y no con coerce directo: un CurrencyField manda
-   * "0" cuando está vacío, y ese cero significa "no lo tocaron", no "no le
-   * pago nada".
+   * CERO ES UN MONTO, no "no lo tocaron". Es lo que se entrega cuando los
+   * descuentos superan lo que cobró y el total da negativo; tirarlo como vacío
+   * hacía desaparecer esa deuda (ver resolverPago). El formulario manda
+   * siempre la suma de lo que se entrega, así que un 0 es un 0 de verdad.
    */
   total_pagado: z
     .union([z.string(), z.number(), z.null(), z.undefined()])
     .transform((v) => {
       if (v === "" || v === null || v === undefined) return undefined;
       const n = Number(v);
-      return Number.isFinite(n) && n > 0 ? n : undefined;
+      return Number.isFinite(n) && n >= 0 ? n : undefined;
     }),
   /**
    * Segundo medio, opcional: parte en efectivo y parte por transferencia es
@@ -98,6 +99,16 @@ export const liquidacionPagoSchema = z.object({
   }
 });
 
-export type LiquidacionPreviewInput = z.infer<typeof liquidacionPreviewSchema>;
+/**
+ * La observación de un anticipo o un descuento, editada después de cargarlo.
+ * Vacía la borra.
+ */
+export const observacionEditableSchema = z
+  .string()
+  .max(500, "Máximo 500 caracteres")
+  .nullish()
+  .transform((s) => (s ?? "").trim() || null);
+
+export type LiquidacionPreviewInput =z.infer<typeof liquidacionPreviewSchema>;
 export type LiquidacionCreateInput = z.infer<typeof liquidacionCreateSchema>;
 export type LiquidacionPagoInput = z.infer<typeof liquidacionPagoSchema>;

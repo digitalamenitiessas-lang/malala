@@ -22,6 +22,7 @@ import {
   getCuentaIdForMpTx,
 } from "./movimientos-bancarios-helpers";
 import { anticipoSchema } from "@/lib/validations/anticipo";
+import { observacionEditableSchema } from "@/lib/validations/liquidacion";
 import type { Anticipo } from "@/lib/types";
 import {
   fechaArDeISO,
@@ -278,6 +279,53 @@ export async function registrarAnticipo(
   revalidatePath("/caja");
   revalidatePath("/bancos");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Cambia sólo la observación de un anticipo.
+ *
+ * Se puede aunque ya esté descontado en una liquidación: la observación no
+ * cambia ningún número —ni el monto, ni el egreso, ni la caja—, y justamente
+ * al liquidar es cuando aparece lo que hay que aclarar. Lo pidieron desde
+ * Yerba Buena: sólo se podía escribir al cargarlo.
+ */
+export async function actualizarObservacionAnticipo(
+  anticipoId: string,
+  observacion: string | null,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  requireSupabaseRuntime("Los anticipos requieren Supabase configurado.");
+
+  const parsed = observacionEditableSchema.safeParse(observacion);
+  if (!parsed.success) {
+    return { ok: false, errors: { observacion: fieldErrors(parsed.error)._ ?? [] } };
+  }
+
+  const scope = buildAccessScope(user);
+  const db = getDb();
+  const [ant] = await db
+    .select({
+      empleadoId: anticiposTable.empleadoId,
+      sucursalId: anticiposTable.sucursalId,
+      liquidacionId: anticiposTable.liquidacionId,
+    })
+    .from(anticiposTable)
+    .where(eq(anticiposTable.id, anticipoId))
+    .limit(1);
+  if (!ant) return { ok: false, errors: { _: ["Anticipo no encontrado"] } };
+  if (!isSucursalAllowed(scope, ant.sucursalId)) {
+    return { ok: false, errors: { _: ["Sin acceso a esa sucursal"] } };
+  }
+
+  await db
+    .update(anticiposTable)
+    .set({ observacion: parsed.data })
+    .where(eq(anticiposTable.id, anticipoId));
+
+  revalidatePath(`/catalogos/empleados/${ant.empleadoId}`);
+  revalidatePath("/liquidaciones");
+  if (ant.liquidacionId) revalidatePath(`/liquidaciones/${ant.liquidacionId}`);
   return { ok: true };
 }
 

@@ -103,3 +103,38 @@ export function calcularLiquidacion(args: ArgsLiquidacion): DetalleLiquidacion {
       (args.arrastre ?? 0),
   };
 }
+
+export interface PagoResuelto {
+  /** Lo que sale de la caja. Nunca negativo: a una empleada no se le cobra en el mostrador. */
+  montoAPagar: number;
+  /**
+   * Lo que se guarda en liquidaciones.total_pagado. Null cuando se pagó justo
+   * el total; si no, lo entregado, que es de donde getArrastrePendiente saca
+   * la diferencia para la liquidación siguiente.
+   */
+  totalPagado: number | null;
+  /** Positivo: el salón le queda debiendo. Negativo: ella queda debiendo. */
+  quedaAFavor: number;
+}
+
+/**
+ * Cuánto se entrega al marcar pagada una liquidación, y qué queda pendiente.
+ *
+ * `pedido` es lo que cargaron en el formulario; undefined es "lo que diga la
+ * liquidación". Cero es un monto válido y no "no lo tocaron": es exactamente
+ * lo que se entrega cuando los descuentos superan lo que cobró.
+ *
+ * El caso que lo motivó: un total de −$15.000 (un curso más caro que la
+ * semana). El formulario mandaba 0 y prometía "se le descuentan solos de la
+ * próxima", pero el 0 se tiraba como vacío, se tomaba el total negativo como
+ * lo pagado, total_pagado quedaba null y la deuda desaparecía.
+ */
+export function resolverPago(totalPagar: number, pedido?: number): PagoResuelto {
+  const montoAPagar =
+    pedido != null && pedido >= 0 ? pedido : Math.max(totalPagar, 0);
+  return {
+    montoAPagar,
+    totalPagado: Math.abs(montoAPagar - totalPagar) < 0.01 ? null : montoAPagar,
+    quedaAFavor: totalPagar - montoAPagar,
+  };
+}

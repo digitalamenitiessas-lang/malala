@@ -42,7 +42,12 @@ import {
 } from "@/lib/validations/liquidacion";
 import { fieldErrors, requireRole } from "./_helpers";
 import { formatARS } from "@/lib/utils";
-import { calcularLiquidacion } from "@/lib/liquidacion-formula";
+import { calcularLiquidacion, resolverPago } from "@/lib/liquidacion-formula";
+import {
+  diasTrabajadosEnPeriodo,
+  esDePeriodoAnterior,
+  pisoDePendientes,
+} from "@/lib/liquidacion-periodo";
 import { listEmpleados } from "./empleados";
 import { listSaldos } from "./cuentas-bancarias";
 import {
@@ -135,6 +140,12 @@ export interface LiquidacionPreviewLinea {
   precio: number;
   comision_pct: number;
   comision_monto: number;
+  /**
+   * Es de antes del período y no se había liquidado: se cargó tarde, o quedó
+   * afuera de la liquidación de su semana. Entra igual; se marca para que no
+   * parezca un error.
+   */
+  anterior: boolean;
 }
 
 export interface LiquidacionPreviewAnticipo {
@@ -142,6 +153,8 @@ export interface LiquidacionPreviewAnticipo {
   fecha: string;
   monto: number;
   observacion?: string;
+  /** Se tendría que haber descontado en un período anterior. */
+  anterior: boolean;
 }
 
 export interface LiquidacionPreviewDescuento {
@@ -151,6 +164,8 @@ export interface LiquidacionPreviewDescuento {
   /** Por qué se le descuenta. Lo que hace que el número se entienda. */
   concepto: string;
   observacion?: string;
+  /** Se tendría que haber descontado en un período anterior. */
+  anterior: boolean;
 }
 
 export interface LiquidacionPreviewViatico {
@@ -159,6 +174,8 @@ export interface LiquidacionPreviewViatico {
   monto: number;
   pagado: boolean;
   observacion?: string;
+  /** Es de un día de antes del período. */
+  anterior: boolean;
 }
 
 export interface LiquidacionPreview {
@@ -194,10 +211,41 @@ export interface LiquidacionPreview {
   arrastre: number;
 }
 
+/**
+ * El `desde` de la primera liquidación de la empleada en la sucursal, como
+ * piso de lo que se busca sin liquidar (ver liquidacion-periodo).
+ */
+async function getPisoPendientes(
+  args: { empleadoId: string; sucursalId: string; desde: string },
+  db: DbOrTx = getDb(),
+): Promise<string> {
+  const [row] = await db
+    .select({ primera: sql<unknown>`min(${liquidacionesTable.periodoDesde})` })
+    .from(liquidacionesTable)
+    .where(
+      and(
+        eq(liquidacionesTable.empleadoId, args.empleadoId),
+        eq(liquidacionesTable.sucursalId, args.sucursalId),
+      ),
+    );
+  return pisoDePendientes(row?.primera ? aYmd(row.primera) : null, args.desde);
+}
+
+/**
+ * Las líneas sin liquidar hasta `hasta`, aunque sean de antes de `desde`.
+ *
+ * Antes se miraba sólo [desde, hasta], y una venta cargada después de liquidar
+ * su semana no entraba nunca: su período ya estaba tomado y el siguiente no la
+ * miraba. Lo que evita pagarla dos veces es que la línea queda enganchada a su
+ * liquidación (liquidacion_lineas.ingreso_linea_id es único), no la fecha.
+ */
 async function fetchLineasPendientes(args: {
   sucursalId: string;
   empleadoId: string;
+  /** Donde arranca el período: lo de antes se marca como anterior. */
   desde: string;
+  /** Desde donde se busca. Ver getPisoPendientes. */
+  piso: string;
   hasta: string;
 }): Promise<LiquidacionPreviewLinea[]> {
   const db = getDb();
@@ -212,7 +260,6 @@ async function fetchLineasPendientes(args: {
       precio: ingresoLineasTable.precioEfectivo,
       pct: ingresoLineasTable.comisionPct,
       monto: ingresoLineasTable.comisionMonto,
-      yaLiquidada: liquidacionLineasTable.id,
     })
     .from(ingresoLineasTable)
     .innerJoin(ingresosTable, eq(ingresoLineasTable.ingresoId, ingresosTable.id))
@@ -230,23 +277,57 @@ async function fetchLineasPendientes(args: {
         eq(ingresoLineasTable.empleadoId, args.empleadoId),
         eq(ingresosTable.sucursalId, args.sucursalId),
         eq(ingresosTable.anulado, false),
-        gte(ingresosTable.fecha, new Date(isoStart(args.desde))),
+        gte(ingresosTable.fecha, new Date(isoStart(args.piso))),
         lte(ingresosTable.fecha, new Date(isoEnd(args.hasta))),
+        isNull(liquidacionLineasTable.id),
       ),
     );
 
   return rows
-    .filter((r) => r.yaLiquidada === null)
-    .map((r) => ({
-      ingreso_linea_id: r.lineaId,
-      ingreso_id: r.ingresoId,
-      fecha: ymd(r.fecha),
-      servicio_nombre: r.servicioNombre ?? r.insumoNombre ?? "—",
-      precio: r.precio,
-      comision_pct: r.pct,
-      comision_monto: r.monto,
-    }))
+    .map((r) => {
+      const fecha = ymd(r.fecha);
+      return {
+        ingreso_linea_id: r.lineaId,
+        ingreso_id: r.ingresoId,
+        fecha,
+        servicio_nombre: r.servicioNombre ?? r.insumoNombre ?? "—",
+        precio: r.precio,
+        comision_pct: r.pct,
+        comision_monto: r.monto,
+        anterior: esDePeriodoAnterior(fecha, args.desde),
+      };
+    })
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+/**
+ * Viáticos cargados día por día que todavía no entraron en una liquidación,
+ * hasta `hasta` y desde el piso: igual que las líneas, uno cargado tarde para
+ * un día ya liquidado tiene que entrar en la siguiente.
+ */
+async function fetchViaticosPendientes(args: {
+  empleadoId: string;
+  sucursalId: string;
+  desde: string;
+  piso: string;
+  hasta: string;
+}) {
+  const rows = await getDb()
+    .select()
+    .from(viaticosTable)
+    .where(
+      and(
+        eq(viaticosTable.empleadoId, args.empleadoId),
+        eq(viaticosTable.sucursalId, args.sucursalId),
+        gte(viaticosTable.fecha, args.piso),
+        lte(viaticosTable.fecha, args.hasta),
+        isNull(viaticosTable.liquidacionId),
+      ),
+    );
+  return rows.map((v) => ({
+    ...v,
+    anterior: esDePeriodoAnterior(v.fecha, args.desde),
+  }));
 }
 
 /** "09:30" → 570. */
@@ -273,6 +354,8 @@ async function fetchValorHoraYAnticipos(args: {
   empleadoId: string;
   sucursalId: string;
   desde: string;
+  /** Desde donde se buscan anticipos y descuentos sin liquidar. */
+  piso: string;
   hasta: string;
 }): Promise<{
   valorHora: number;
@@ -280,14 +363,8 @@ async function fetchValorHoraYAnticipos(args: {
   sueldoBasicoSugerido: number;
   horasSugeridas: number;
   viaticoPorDia: number;
-  anticipos: { id: string; fecha: string; monto: number; observacion?: string }[];
-  descuentos: {
-    id: string;
-    fecha: string;
-    monto: number;
-    concepto: string;
-    observacion?: string;
-  }[];
+  anticipos: LiquidacionPreviewAnticipo[];
+  descuentos: LiquidacionPreviewDescuento[];
 }> {
   const db = getDb();
 
@@ -320,9 +397,12 @@ async function fetchValorHoraYAnticipos(args: {
         // encargada "se descuenta el 24/10", pero ACA se filtraba por la fecha
         // de entrega, asi que el anticipo caia igual en la liquidacion de esta
         // semana y le descontaba del sueldo plata que no correspondia todavia.
+        //
+        // Desde el piso y no desde el `desde`: uno cargado tarde, con el dia de
+        // descuento en una semana ya liquidada, no se descontaba nunca.
         sql`coalesce(${anticiposTable.fechaDescuento}::text,
               to_char(${anticiposTable.fecha} at time zone 'America/Argentina/Buenos_Aires','YYYY-MM-DD'))
-            between ${args.desde} and ${args.hasta}`,
+            between ${args.piso} and ${args.hasta}`,
       ),
     )
     .orderBy(asc(anticiposTable.fecha));
@@ -341,7 +421,7 @@ async function fetchValorHoraYAnticipos(args: {
         isNull(descuentosTable.liquidacionId),
         sql`coalesce(${descuentosTable.fechaDescuento}::text,
               to_char(${descuentosTable.fecha} at time zone 'America/Argentina/Buenos_Aires','YYYY-MM-DD'))
-            between ${args.desde} and ${args.hasta}`,
+            between ${args.piso} and ${args.hasta}`,
       ),
     )
     .orderBy(asc(descuentosTable.fecha));
@@ -441,11 +521,13 @@ async function fetchValorHoraYAnticipos(args: {
     sueldoBasicoSugerido,
     horasSugeridas,
     viaticoPorDia: empleado?.viaticoPorDia ?? 0,
+    // "Anterior" por el día en que se descuenta, que es por el que se filtra.
     anticipos: anticipoRows.map((a) => ({
       id: a.id,
       fecha: ymd(a.fecha),
       monto: a.monto,
       observacion: a.observacion ?? undefined,
+      anterior: esDePeriodoAnterior(a.fechaDescuento ?? ymd(a.fecha), args.desde),
     })),
     descuentos: descuentoRows.map((d) => ({
       id: d.id,
@@ -453,6 +535,7 @@ async function fetchValorHoraYAnticipos(args: {
       monto: d.monto,
       concepto: d.concepto,
       observacion: d.observacion ?? undefined,
+      anterior: esDePeriodoAnterior(d.fechaDescuento ?? ymd(d.fecha), args.desde),
     })),
   };
 }
@@ -560,14 +643,20 @@ export async function previewLiquidacion(input: {
   });
   if (solapada) return errorSolapada(solapada);
 
+  const piso = await getPisoPendientes({
+    empleadoId: parsed.data.empleado_id,
+    sucursalId: parsed.data.sucursal_id,
+    desde: parsed.data.periodo_desde,
+  });
+
   const lineas = await fetchLineasPendientes({
     sucursalId: parsed.data.sucursal_id,
     empleadoId: parsed.data.empleado_id,
     desde: parsed.data.periodo_desde,
+    piso,
     hasta: parsed.data.periodo_hasta,
   });
 
-  const dias = new Set(lineas.map((l) => l.fecha));
   const totalComision = lineas.reduce((s, l) => s + l.comision_monto, 0);
 
   const {
@@ -581,6 +670,7 @@ export async function previewLiquidacion(input: {
     empleadoId: parsed.data.empleado_id,
     sucursalId: parsed.data.sucursal_id,
     desde: parsed.data.periodo_desde,
+    piso,
     hasta: parsed.data.periodo_hasta,
   });
   const totalAnticipos = anticipos.reduce((s, a) => s + a.monto, 0);
@@ -594,18 +684,13 @@ export async function previewLiquidacion(input: {
   // Viáticos cargados día por día. Ya no se estima como "días × monto fijo": ese
   // camino adivinaba la asistencia contando ventas y no dejaba que el monto
   // variara de un día a otro.
-  const viaticosPeriodo = await getDb()
-    .select()
-    .from(viaticosTable)
-    .where(
-      and(
-        eq(viaticosTable.empleadoId, parsed.data.empleado_id),
-        eq(viaticosTable.sucursalId, parsed.data.sucursal_id),
-        gte(viaticosTable.fecha, parsed.data.periodo_desde),
-        lte(viaticosTable.fecha, parsed.data.periodo_hasta),
-        isNull(viaticosTable.liquidacionId),
-      ),
-    );
+  const viaticosPeriodo = await fetchViaticosPendientes({
+    empleadoId: parsed.data.empleado_id,
+    sucursalId: parsed.data.sucursal_id,
+    desde: parsed.data.periodo_desde,
+    piso,
+    hasta: parsed.data.periodo_hasta,
+  });
 
   return {
     ok: true,
@@ -617,7 +702,11 @@ export async function previewLiquidacion(input: {
       lineas,
       total_comision: totalComision,
       total_servicios: lineas.length,
-      dias_trabajados: dias.size,
+      dias_trabajados: diasTrabajadosEnPeriodo(
+        lineas.map((l) => l.fecha),
+        parsed.data.periodo_desde,
+        parsed.data.periodo_hasta,
+      ),
       valor_hora: valorHora,
       tipo_comision: tipoComision,
       horas_sugeridas: horasSugeridas,
@@ -628,6 +717,7 @@ export async function previewLiquidacion(input: {
         monto: v.monto,
         pagado: v.pagado,
         observacion: v.observacion ?? undefined,
+        anterior: v.anterior,
       })),
       total_viatico: viaticosPeriodo.reduce((acc, v) => acc + v.monto, 0),
       viatico_a_pagar: viaticosPeriodo
@@ -684,10 +774,17 @@ export async function createLiquidacion(
   const horasTrabajadas = parsed.data.horas_trabajadas;
   const diasViatico = parsed.data.dias_viatico;
 
+  const piso = await getPisoPendientes({
+    empleadoId: parsed.data.empleado_id,
+    sucursalId: parsed.data.sucursal_id,
+    desde: parsed.data.periodo_desde,
+  });
+
   const lineas = await fetchLineasPendientes({
     sucursalId: parsed.data.sucursal_id,
     empleadoId: parsed.data.empleado_id,
     desde: parsed.data.periodo_desde,
+    piso,
     hasta: parsed.data.periodo_hasta,
   });
 
@@ -716,10 +813,15 @@ export async function createLiquidacion(
       empleadoId: parsed.data.empleado_id,
       sucursalId: parsed.data.sucursal_id,
       desde: parsed.data.periodo_desde,
+      piso,
       hasta: parsed.data.periodo_hasta,
     });
 
-  const dias = new Set(lineas.map((l) => l.fecha));
+  const diasTrabajados = diasTrabajadosEnPeriodo(
+    lineas.map((l) => l.fecha),
+    parsed.data.periodo_desde,
+    parsed.data.periodo_hasta,
+  );
   const totalComision = lineas.reduce((s, l) => s + l.comision_monto, 0);
   const sueldoHoras = horasTrabajadas * valorHora;
   const sueldoBasico = parsed.data.sueldo_basico;
@@ -727,18 +829,13 @@ export async function createLiquidacion(
   // Viáticos del período: los que se cargaron día por día, no un fijo por una
   // cantidad de días adivinada. Se toman sólo los que no entraron todavía en
   // otra liquidación.
-  const viaticosPeriodo = await getDb()
-    .select()
-    .from(viaticosTable)
-    .where(
-      and(
-        eq(viaticosTable.empleadoId, parsed.data.empleado_id),
-        eq(viaticosTable.sucursalId, parsed.data.sucursal_id),
-        gte(viaticosTable.fecha, parsed.data.periodo_desde),
-        lte(viaticosTable.fecha, parsed.data.periodo_hasta),
-        isNull(viaticosTable.liquidacionId),
-      ),
-    );
+  const viaticosPeriodo = await fetchViaticosPendientes({
+    empleadoId: parsed.data.empleado_id,
+    sucursalId: parsed.data.sucursal_id,
+    desde: parsed.data.periodo_desde,
+    piso,
+    hasta: parsed.data.periodo_hasta,
+  });
 
   // El total de viáticos entra en lo que la empleada COBRÓ en el período: es
   // parte de su ingreso y por eso se muestra.
@@ -805,7 +902,7 @@ export async function createLiquidacion(
       periodoDesde: parsed.data.periodo_desde,
       periodoHasta: parsed.data.periodo_hasta,
       totalServicios: lineas.length,
-      diasTrabajados: dias.size,
+      diasTrabajados,
       totalComision,
       horasTrabajadas,
       valorHora,
@@ -898,6 +995,10 @@ export interface LiquidacionConDetalle {
   medioPago: MedioPago | null;
   cerrado_por_nombre: string;
   lineas: LiquidacionLinea[];
+  /** Los anticipos que se descontaron en esta liquidación. */
+  anticipos: Omit<LiquidacionPreviewAnticipo, "anterior">[];
+  /** Los descuentos que se aplicaron en esta liquidación. */
+  descuentos: Omit<LiquidacionPreviewDescuento, "anterior">[];
 }
 
 export interface LiquidacionListItem {
@@ -1033,6 +1134,22 @@ export async function getLiquidacion(
     .where(eq(liquidacionLineasTable.liquidacionId, id))
     .orderBy(asc(liquidacionLineasTable.fecha));
 
+  // Uno por uno y no sólo el total: sin esto, en el detalle de una
+  // liquidación pagada no había dónde ver qué anticipo o qué curso se le
+  // descontó, ni leer su observación.
+  const [anticipoRows, descuentoRows] = await Promise.all([
+    db
+      .select()
+      .from(anticiposTable)
+      .where(eq(anticiposTable.liquidacionId, id))
+      .orderBy(asc(anticiposTable.fecha)),
+    db
+      .select()
+      .from(descuentosTable)
+      .where(eq(descuentosTable.liquidacionId, id))
+      .orderBy(asc(descuentosTable.fecha)),
+  ]);
+
   let medioPago: MedioPago | null = null;
   if (row.liq.mpId) {
     const [mp] = await db
@@ -1050,6 +1167,19 @@ export async function getLiquidacion(
     medioPago,
     cerrado_por_nombre: row.usuarioNombre ?? "Sistema",
     lineas: lineas.map(mapLinea),
+    anticipos: anticipoRows.map((a) => ({
+      id: a.id,
+      fecha: ymd(a.fecha),
+      monto: a.monto,
+      observacion: a.observacion ?? undefined,
+    })),
+    descuentos: descuentoRows.map((d) => ({
+      id: d.id,
+      fecha: ymd(d.fecha),
+      monto: d.monto,
+      concepto: d.concepto,
+      observacion: d.observacion ?? undefined,
+    })),
   };
 }
 
@@ -1089,6 +1219,20 @@ export async function marcarLiquidacionPagada(
   }
   if (existing.estado !== "pendiente") {
     return { ok: false, errors: { _: ["La liquidación no está pendiente"] } };
+  }
+  // Cero es un monto válido (ver resolverPago), pero sólo tiene sentido cuando
+  // no hay nada que darle. Con un sueldo a cobrar, un 0 es un campo borrado:
+  // marcarla pagada pasaría todo el sueldo a la semana que viene sin que nadie
+  // lo haya decidido.
+  if (parsed.data.total_pagado === 0 && existing.totalPagar > 0.01) {
+    return {
+      ok: false,
+      errors: {
+        total_pagado: [
+          "Poné cuánto le das. Si todavía no se le paga, dejá la liquidación pendiente.",
+        ],
+      },
+    };
   }
 
   const [empleado] = await db
@@ -1178,12 +1322,15 @@ export async function marcarLiquidacionPagada(
        * De menos: el salon le queda debiendo y se le suma la semana que viene.
        * De mas: la empleada queda debiendo y se le descuenta. Es la misma
        * cuenta con el signo cambiado.
+       *
+       * Con total negativo no sale nada de la caja y lo que debe queda
+       * guardado como pagado en 0, que es lo que lo arrastra a la próxima.
        */
-      const montoAPagar =
-        parsed.data.total_pagado != null && parsed.data.total_pagado >= 0
-          ? parsed.data.total_pagado
-          : existing.totalPagar;
-      const quedaAFavor = existing.totalPagar - montoAPagar;
+      const {
+        montoAPagar,
+        totalPagado,
+        quedaAFavor,
+      } = resolverPago(existing.totalPagar, parsed.data.total_pagado);
       // Que el egreso diga por qué no coincide con la liquidación: si no, el
       // día que alguien revise la caja ve un sueldo que no cierra y no hay
       // dónde leer la explicación.
@@ -1259,10 +1406,7 @@ export async function marcarLiquidacionPagada(
           // Null cuando se pagó justo: guardar el mismo número dos veces
           // invita a que queden desfasados. Se guarda tanto si se pagó de
           // menos como de más.
-          totalPagado:
-            Math.abs(montoAPagar - existing.totalPagar) < 0.01
-              ? null
-              : montoAPagar,
+          totalPagado,
           fechaPago: ahora,
           observacion: parsed.data.observacion ?? null,
           egresoId: egresoIdFinal,
@@ -1664,6 +1808,8 @@ export async function getProyeccionSemanal(args: {
     .select({
       empleadoId: liquidacionesTable.empleadoId,
       hasta: sql<string>`max(${liquidacionesTable.periodoHasta})`,
+      // El piso de lo que queda sin liquidar: ver getPisoPendientes.
+      primera: sql<string>`min(${liquidacionesTable.periodoDesde})`,
     })
     .from(liquidacionesTable)
     .where(
@@ -1674,6 +1820,9 @@ export async function getProyeccionSemanal(args: {
     )
     .groupBy(liquidacionesTable.empleadoId);
   const ultimaPorEmpleado = new Map(ultimas.map((u) => [u.empleadoId, u.hasta]));
+  const primeraPorEmpleado = new Map(
+    ultimas.map((u) => [u.empleadoId, u.primera]),
+  );
 
   const filas: ProyeccionEmpleado[] = [];
   let desdeReal = args.hasta;
@@ -1687,18 +1836,31 @@ export async function getProyeccionSemanal(args: {
     const desde = ultima ? sumarDiasYmd(aYmd(ultima), 1) : args.desde;
     if (desde > args.hasta) continue; // ya está paga hasta hoy
     if (desde < desdeReal) desdeReal = desde;
+    // Lo que quedó sin liquidar de semanas ya pagadas también hay que juntarlo:
+    // el sábado se lo va a llevar la liquidación igual.
+    const primera = primeraPorEmpleado.get(emp.id);
+    const piso = pisoDePendientes(primera ? aYmd(primera) : null, desde);
 
-    const [lineas, datos] = await Promise.all([
+    const [lineas, datos, viaticos] = await Promise.all([
       fetchLineasPendientes({
         sucursalId: args.sucursalId,
         empleadoId: emp.id,
         desde,
+        piso,
         hasta: args.hasta,
       }),
       fetchValorHoraYAnticipos({
         empleadoId: emp.id,
         sucursalId: args.sucursalId,
         desde,
+        piso,
+        hasta: args.hasta,
+      }),
+      fetchViaticosPendientes({
+        empleadoId: emp.id,
+        sucursalId: args.sucursalId,
+        desde,
+        piso,
         hasta: args.hasta,
       }),
     ]);
@@ -1708,19 +1870,6 @@ export async function getProyeccionSemanal(args: {
       empleadoId: emp.id,
       sucursalId: args.sucursalId,
     });
-
-    const viaticos = await getDb()
-      .select()
-      .from(viaticosTable)
-      .where(
-        and(
-          eq(viaticosTable.empleadoId, emp.id),
-          eq(viaticosTable.sucursalId, args.sucursalId),
-          gte(viaticosTable.fecha, desde),
-          lte(viaticosTable.fecha, args.hasta),
-          isNull(viaticosTable.liquidacionId),
-        ),
-      );
 
     const comision = lineas.reduce((s, l) => s + l.comision_monto, 0);
     const sueldoHoras = datos.horasSugeridas * datos.valorHora;
