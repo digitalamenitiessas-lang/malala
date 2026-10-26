@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   cuentaImpuestos as cuentaImpuestosTable,
@@ -100,6 +100,12 @@ async function emitImpuestosCuentaTx(tx: DbOrTx, args: EmitMovArgs) {
   }
 }
 
+/**
+ * Borra el movimiento de un origen y sus impuestos (que comparten ref_id pero
+ * llevan ref_tipo "impuesto"). Filtra por ref_tipo además de ref_id: sin eso,
+ * cualquier otro movimiento que apunte al mismo id —una anulación, por
+ * ejemplo— se iba con el delete.
+ */
 export async function deleteMovimientosByRefTx(
   tx: DbOrTx,
   refTipo: string,
@@ -107,7 +113,12 @@ export async function deleteMovimientosByRefTx(
 ) {
   await tx
     .delete(movimientosBancariosTable)
-    .where(eq(movimientosBancariosTable.refId, refId));
+    .where(
+      and(
+        eq(movimientosBancariosTable.refId, refId),
+        inArray(movimientosBancariosTable.refTipo, [refTipo, "impuesto"]),
+      ),
+    );
 }
 
 export async function getCuentaIdForMpTx(

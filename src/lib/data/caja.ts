@@ -252,9 +252,11 @@ export async function getEstadoCajaDelDia(
 
   const movs = await db
     .select({
+      id: movimientosBancariosTable.id,
       cuentaId: movimientosBancariosTable.cuentaId,
       monto: movimientosBancariosTable.monto,
       refTipo: movimientosBancariosTable.refTipo,
+      refId: movimientosBancariosTable.refId,
     })
     .from(movimientosBancariosTable)
     .where(
@@ -265,11 +267,19 @@ export async function getEstadoCajaDelDia(
       ),
     );
 
+  // Un ingreso manual anulado y su contra-asiento caen el mismo día y se
+  // cancelan: contarlos sumaría lo mismo en ingresos y en egresos sin que
+  // haya pasado plata.
+  const anulados = new Set(
+    movs.filter((m) => m.refTipo === "anulacion_manual").map((m) => m.refId),
+  );
+
   const ingByCuenta = new Map<string, number>();
   const egByCuenta = new Map<string, number>();
   for (const m of movs) {
     // El ajuste de apertura fija el saldo inicial, no es un movimiento del día.
     if (m.refTipo === "apertura") continue;
+    if (m.refTipo === "anulacion_manual" || anulados.has(m.id)) continue;
     if (m.monto >= 0) {
       ingByCuenta.set(m.cuentaId, (ingByCuenta.get(m.cuentaId) ?? 0) + m.monto);
     } else {

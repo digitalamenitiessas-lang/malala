@@ -2,7 +2,7 @@
 
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { finDeDiaArISO, hoyAr } from "@/lib/fecha-ar";
+import { fechaArDeISO, finDeDiaArISO, formatYmdAr, hoyAr } from "@/lib/fecha-ar";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   cuentasBancarias as cuentasBancariasTable,
@@ -15,7 +15,8 @@ import {
   transferenciaSchema,
   ingresoManualSchema,
 } from "@/lib/validations/cuenta-bancaria";
-import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
+import { failure, fieldErrors, requireRole, type ActionResult } from "./_helpers";
+import { getCierreQueBloqueaFecha } from "./caja";
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import type { CuentaBancaria, MovimientoBancario } from "@/lib/types";
@@ -205,6 +206,8 @@ export interface MovimientoDetalle {
   cuenta: CuentaBancaria | null;
   sucursalNombre?: string;
   usuarioNombre?: string;
+  /** Sólo en ingresos manuales que se anularon: el ajuste que los deshizo. */
+  anulacion?: { descripcion?: string; usuarioNombre?: string };
 }
 
 export async function listMovimientos(
@@ -248,7 +251,27 @@ export async function listMovimientos(
   const sucursalIds = Array.from(
     new Set(movs.map((m) => m.sucursal_id).filter(Boolean)),
   ) as string[];
-  const userIds = Array.from(new Set(movs.map((m) => m.usuario_id)));
+  // El contra-asiento puede quedar fuera de la página (otro filtro, el
+  // límite), así que se busca aparte para poder marcar el original.
+  const manualIds = movs.filter((m) => m.ref_tipo === "manual").map((m) => m.id);
+  const anulacionRows =
+    manualIds.length > 0
+      ? await db
+          .select()
+          .from(movimientosBancariosTable)
+          .where(
+            and(
+              eq(movimientosBancariosTable.refTipo, "anulacion_manual"),
+              inArray(movimientosBancariosTable.refId, manualIds),
+            ),
+          )
+      : [];
+  const userIds = Array.from(
+    new Set([
+      ...movs.map((m) => m.usuario_id),
+      ...anulacionRows.map((a) => a.usuarioId),
+    ]),
+  );
 
   const [cuentasRows, sucRows, profRows] = await Promise.all([
     cuentaIds.length > 0
@@ -274,12 +297,22 @@ export async function listMovimientos(
   const cuentaById = new Map(cuentasRows.map((c) => [c.id, mapCuenta(c)]));
   const sucById = new Map(sucRows.map((s) => [s.id, s.nombre]));
   const userById = new Map(profRows.map((p) => [p.userId, p.nombre]));
+  const anulacionByOriginal = new Map(
+    anulacionRows.map((a) => [
+      a.refId,
+      {
+        descripcion: a.descripcion ?? undefined,
+        usuarioNombre: userById.get(a.usuarioId),
+      },
+    ]),
+  );
 
   return movs.map((m) => ({
     movimiento: m,
     cuenta: cuentaById.get(m.cuenta_id) ?? null,
     sucursalNombre: m.sucursal_id ? sucById.get(m.sucursal_id) : undefined,
     usuarioNombre: userById.get(m.usuario_id),
+    anulacion: anulacionByOriginal.get(m.id),
   }));
 }
 
@@ -464,6 +497,24 @@ export async function registrarIngresoManual(
       return { ok: false, errors: { cuenta_id: ["Sin acceso a esa cuenta"] } };
     }
 
+    // Con fecha pasada se puede caer en un día que ya se cerró: el arqueo de
+    // ese día quedó congelado y este ingreso aparecería en el saldo sin estar
+    // en ningún cierre.
+    const cierre = await getCierreQueBloqueaFecha(
+      cuenta.sucursalId,
+      data.fecha ?? hoyAr(),
+    );
+    if (cierre) {
+      return {
+        ok: false,
+        errors: {
+          fecha: [
+            `La caja del ${formatYmdAr(cierre.fecha)} ya está cerrada. Reabrí ese cierre desde Caja o cargá el ingreso con otra fecha.`,
+          ],
+        },
+      };
+    }
+
     await db.insert(movimientosBancariosTable).values({
       id: createId(),
       cuentaId: cuenta.id,
@@ -485,6 +536,98 @@ export async function registrarIngresoManual(
         _: [error instanceof Error ? error.message : "No se pudo registrar"],
       },
     };
+  }
+
+  revalidatePath("/bancos");
+  revalidatePath("/caja");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Deshace un ingreso manual cargado por error.
+ *
+ * Pedido por la encargada de Yerba Buena: cargó un ingreso que no era y no
+ * tuvo cómo sacarlo. No se borra: se asienta un ajuste por el mismo monto en
+ * negativo, con la misma fecha y apuntando al original (ref_tipo
+ * "anulacion_manual", ref_id = id del ingreso). Así el saldo vuelve solo —
+ * cualquier suma de movimientos lo ve— y en la lista quedan los dos renglones,
+ * el que entró y el que lo anuló con su motivo. El arqueo del día descarta el
+ * par (ver getEstadoCajaDelDia) para no inflar ingresos y egresos.
+ *
+ * Sólo ingresos manuales: los movimientos que nacen de una venta, un gasto o
+ * una gift card se anulan desde su pantalla, que además revierte lo demás.
+ */
+export async function anularIngresoManual(
+  movimientoId: string,
+  motivo: string,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+  const nota = motivo?.trim();
+  if (!nota) {
+    return { ok: false, errors: { motivo: ["Contá por qué se anula"] } };
+  }
+
+  const db = getDb();
+  const [mov] = await db
+    .select()
+    .from(movimientosBancariosTable)
+    .where(eq(movimientosBancariosTable.id, movimientoId))
+    .limit(1);
+  if (!mov) return failure("Movimiento no encontrado");
+  if (!mov.sucursalId || !isSucursalAllowed(scope, mov.sucursalId)) {
+    return failure("No tenés acceso a ese movimiento");
+  }
+  if (mov.refTipo !== "manual" || mov.tipo !== "ingreso") {
+    return failure(
+      "Sólo se pueden anular acá los ingresos cargados a mano. Este movimiento se anula desde la pantalla que lo generó.",
+    );
+  }
+
+  const ymd = fechaArDeISO(mov.fecha.toISOString());
+  const cierre = await getCierreQueBloqueaFecha(mov.sucursalId, ymd);
+  if (cierre) {
+    return failure(
+      `La caja del ${formatYmdAr(cierre.fecha)} ya está cerrada y este ingreso entró en ese arqueo. Reabrí ese cierre desde Caja y volvé a intentarlo.`,
+    );
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      // Se vuelve a mirar pegado al insert: un doble clic no tiene que dejar
+      // dos contra-asientos.
+      const [yaAnulado] = await tx
+        .select({ id: movimientosBancariosTable.id })
+        .from(movimientosBancariosTable)
+        .where(
+          and(
+            eq(movimientosBancariosTable.refTipo, "anulacion_manual"),
+            eq(movimientosBancariosTable.refId, mov.id),
+          ),
+        )
+        .limit(1);
+      if (yaAnulado) throw new Error("Este ingreso ya estaba anulado");
+
+      await tx.insert(movimientosBancariosTable).values({
+        id: createId(),
+        cuentaId: mov.cuentaId,
+        // Misma fecha que el original: el par cae en el mismo día y el saldo
+        // "al cierre de" cualquier fecha queda bien.
+        fecha: mov.fecha,
+        tipo: "ajuste",
+        monto: -mov.monto,
+        sucursalId: mov.sucursalId,
+        refTipo: "anulacion_manual",
+        refId: mov.id,
+        descripcion: `Anulación de "${mov.descripcion ?? "ingreso manual"}": ${nota}`,
+        usuarioId: user.id,
+      });
+    });
+  } catch (error) {
+    return failure(
+      error instanceof Error ? error.message : "No se pudo anular",
+    );
   }
 
   revalidatePath("/bancos");
