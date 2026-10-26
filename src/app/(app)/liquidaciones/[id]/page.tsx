@@ -11,6 +11,7 @@ import { listMediosPago } from "@/lib/data/medios-pago";
 import { formatARS, formatDateTime } from "@/lib/utils";
 import { MarcarPagadaForm } from "@/components/forms/marcar-pagada-form";
 import { AnularLiquidacionForm } from "@/components/forms/anular-liquidacion-form";
+import { ObservacionEditable } from "@/components/forms/observacion-editable";
 
 function formatYMD(ymd: string): string {
   const [y, m, d] = ymd.split("-");
@@ -35,7 +36,8 @@ export default async function LiquidacionDetallePage({
   const data = await getLiquidacion(id);
   if (!data) notFound();
 
-  const { liquidacion, empleado, sucursal, medioPago, lineas } = data;
+  const { liquidacion, empleado, sucursal, medioPago, lineas, anticipos, descuentos } =
+    data;
   const efectivo = await getEfectivoEsperadoPeriodo({
     sucursalId: liquidacion.sucursal_id,
     desde: liquidacion.periodo_desde,
@@ -85,7 +87,8 @@ export default async function LiquidacionDetallePage({
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-2 bg-card border border-border rounded-md overflow-hidden">
+        <div className="lg:col-span-2 space-y-6">
+        <section className="bg-card border border-border rounded-md overflow-hidden">
           <div className="px-5 py-3 border-b border-border bg-cream/40">
             <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
               Detalle del período
@@ -136,6 +139,66 @@ export default async function LiquidacionDetallePage({
             </table>
           )}
         </section>
+
+        {/* Qué anticipo y qué curso se le descontó, uno por uno. La
+            observación se puede corregir acá aunque ya esté pagada: no cambia
+            ningún número. */}
+        {(anticipos.length > 0 || descuentos.length > 0) && (
+          <section className="bg-card border border-border rounded-md overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-cream/40">
+              <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
+                Anticipos y descuentos
+              </h2>
+            </div>
+            <ul className="divide-y divide-border text-sm">
+              {anticipos.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center justify-between gap-3 px-4 py-2"
+                >
+                  <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-muted-foreground">
+                    <span>
+                      <span className="tabular-nums">{formatYMD(a.fecha)}</span>{" "}
+                      · Anticipo
+                    </span>
+                    <ObservacionEditable
+                      tipo="anticipo"
+                      id={a.id}
+                      observacion={a.observacion}
+                      refrescar
+                    />
+                  </span>
+                  <span className="shrink-0 tabular-nums" style={{ color: "var(--warning)" }}>
+                    − {formatARS(a.monto)}
+                  </span>
+                </li>
+              ))}
+              {descuentos.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex items-center justify-between gap-3 px-4 py-2"
+                >
+                  <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-muted-foreground">
+                    <span>
+                      <span className="tabular-nums">{formatYMD(d.fecha)}</span>{" "}
+                      · {d.concepto}
+                    </span>
+                    <ObservacionEditable
+                      tipo="descuento"
+                      id={d.id}
+                      observacion={d.observacion}
+                      refrescar
+                    />
+                  </span>
+                  <span className="shrink-0 tabular-nums" style={{ color: "var(--warning)" }}>
+                    − {formatARS(d.monto)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        </div>
 
         <aside className="space-y-4">
           <section className="bg-card border border-border rounded-md p-5 space-y-3">
@@ -273,7 +336,11 @@ export default async function LiquidacionDetallePage({
                       ? `Quedan ${formatARS(
                           liquidacion.total_pagar - liquidacion.total_pagado,
                         )} a favor de ella, se suman a la próxima liquidación.`
-                      : `Se le dieron ${formatARS(
+                      : liquidacion.total_pagar < 0
+                        ? `Los descuentos superaron lo que cobró: queda debiendo ${formatARS(
+                            liquidacion.total_pagado - liquidacion.total_pagar,
+                          )}, se descuentan de la próxima liquidación.`
+                        : `Se le dieron ${formatARS(
                           liquidacion.total_pagado - liquidacion.total_pagar,
                         )} de más, se descuentan de la próxima liquidación.`}
                   </p>

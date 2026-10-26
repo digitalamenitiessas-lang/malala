@@ -48,7 +48,9 @@ export function MarcarPagadaForm({
    * tengo los $3.000 pago $150.000". Por eso la suma puede no dar el total y
    * la diferencia, para cualquier lado, cae en la liquidación siguiente.
    */
-  const [monto1Input, setMonto1Input] = useState(totalPagar);
+  // Con total negativo (los descuentos superaron lo que cobró) no hay nada que
+  // entregarle: arranca en cero y no en un número negativo en el campo.
+  const [monto1Input, setMonto1Input] = useState(Math.max(totalPagar, 0));
   const [monto2Input, setMonto2Input] = useState(0);
 
   const monto1 = Math.max(monto1Input, 0);
@@ -56,12 +58,28 @@ export function MarcarPagadaForm({
   const aPagar = monto1 + monto2;
   /** Positivo: el salón le queda debiendo. Negativo: ella queda debiendo. */
   const quedaAFavor = totalPagar - aPagar;
+  /** Los descuentos superaron lo que cobró: ella debe, no se le entrega nada. */
+  const totalNegativo = totalPagar < -0.01;
+  // Para el aviso de "queda debiendo": con total negativo no es que se le dé
+  // de más, es que ya debía.
+  const mensajeDebe = totalNegativo
+    ? `Queda debiendo ${formatARS(-quedaAFavor)}: se le descuenta sola de la próxima liquidación.`
+    : `Le estás dando ${formatARS(-quedaAFavor)} de más: se le descuentan solos de la próxima liquidación.`;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (mp2Id && !(monto2 > 0)) {
       setError("Poné cuánto se paga con el segundo medio");
+      return;
+    }
+    // El 0 ahora se toma como un 0 (hace falta para el total negativo), así
+    // que un campo borrado con sueldo a cobrar se frena acá y no pasa todo el
+    // sueldo a la semana que viene.
+    if (totalPagar > 0.01 && aPagar <= 0.01) {
+      setError(
+        "Poné cuánto le das. Si todavía no se le paga, dejá la liquidación pendiente.",
+      );
       return;
     }
     const fd = new FormData();
@@ -94,6 +112,13 @@ export function MarcarPagadaForm({
       <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
         Registrar pago
       </h2>
+      {totalNegativo && (
+        <p className="rounded-md border border-border bg-muted/40 p-2.5 text-[11px] text-brown-700">
+          Los descuentos superan lo que cobró: no hay nada que entregarle. Al
+          marcarla pagada, los {formatARS(-totalPagar)} que debe pasan solos a
+          la próxima liquidación.
+        </p>
+      )}
       {/* Redondean para los dos lados segun lo que haya en el cajon, asi que
           la suma puede dar más o menos que el total. La diferencia, para
           cualquier lado, entra sola en la liquidación siguiente. */}
@@ -123,8 +148,7 @@ export function MarcarPagadaForm({
             </p>
           ) : quedaAFavor < -0.01 ? (
             <p className="text-[11px] tabular-nums text-brown-700">
-              Le estás dando {formatARS(-quedaAFavor)} de más: se le descuentan
-              solos de la próxima liquidación.
+              {mensajeDebe}
             </p>
           ) : (
             <p className="text-[11px] text-muted-foreground">
@@ -207,9 +231,7 @@ export function MarcarPagadaForm({
                 </p>
               ) : quedaAFavor < -0.01 ? (
                 <p className="text-[11px] tabular-nums text-brown-700">
-                  El sueldo es {formatARS(totalPagar)}: le estás dando{" "}
-                  {formatARS(-quedaAFavor)} de más, que se le descuentan solos
-                  de la próxima liquidación.
+                  El sueldo es {formatARS(totalPagar)}. {mensajeDebe}
                 </p>
               ) : (
                 <p className="text-[11px] text-sage-800">

@@ -12,6 +12,7 @@ import { getActiveSucursalForUser, requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
 import { descuentoSchema } from "@/lib/validations/descuento";
+import { observacionEditableSchema } from "@/lib/validations/liquidacion";
 import type { Descuento } from "@/lib/types";
 
 function createId() {
@@ -137,6 +138,53 @@ export async function registrarDescuento(
 
   revalidatePath(`/catalogos/empleados/${parsed.data.empleado_id}`);
   revalidatePath("/liquidaciones");
+  return { ok: true };
+}
+
+/**
+ * Cambia sólo la observación de un descuento.
+ *
+ * Se puede aunque ya esté aplicado en una liquidación: la observación no
+ * cambia ningún número, y justamente al liquidar es cuando aparece lo que
+ * hay que aclarar. Lo pidieron desde Yerba Buena: sólo se podía escribir al
+ * cargarlo.
+ */
+export async function actualizarObservacionDescuento(
+  descuentoId: string,
+  observacion: string | null,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  requireSupabaseRuntime("Los descuentos requieren Supabase configurado.");
+
+  const parsed = observacionEditableSchema.safeParse(observacion);
+  if (!parsed.success) {
+    return { ok: false, errors: { observacion: fieldErrors(parsed.error)._ ?? [] } };
+  }
+
+  const scope = buildAccessScope(user);
+  const db = getDb();
+  const [desc] = await db
+    .select({
+      empleadoId: descuentosTable.empleadoId,
+      sucursalId: descuentosTable.sucursalId,
+      liquidacionId: descuentosTable.liquidacionId,
+    })
+    .from(descuentosTable)
+    .where(eq(descuentosTable.id, descuentoId))
+    .limit(1);
+  if (!desc) return { ok: false, errors: { _: ["Descuento no encontrado"] } };
+  if (!isSucursalAllowed(scope, desc.sucursalId)) {
+    return { ok: false, errors: { _: ["Sin acceso a esa sucursal"] } };
+  }
+
+  await db
+    .update(descuentosTable)
+    .set({ observacion: parsed.data })
+    .where(eq(descuentosTable.id, descuentoId));
+
+  revalidatePath(`/catalogos/empleados/${desc.empleadoId}`);
+  revalidatePath("/liquidaciones");
+  if (desc.liquidacionId) revalidatePath(`/liquidaciones/${desc.liquidacionId}`);
   return { ok: true };
 }
 

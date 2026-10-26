@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { calcularLiquidacion, type ArgsLiquidacion } from "./liquidacion-formula";
+import {
+  calcularLiquidacion,
+  resolverPago,
+  type ArgsLiquidacion,
+} from "./liquidacion-formula";
 
 const args = (o: Partial<ArgsLiquidacion> = {}): ArgsLiquidacion => ({
   tipoComision: "porcentaje",
@@ -258,5 +262,65 @@ describe("descuentos que no salieron de la caja", () => {
       arrastre: -660,
     });
     expect(r.total).toBe(300_000 + 12_000 - 100_000 - 47_500 - 660);
+  });
+});
+
+/**
+ * Un total negativo: los descuentos superaron lo que ganó. No se le entrega
+ * nada, y lo que quedó debiendo tiene que pasar a la próxima. Antes el 0 que
+ * mandaba el formulario se tiraba como vacío y la deuda desaparecía.
+ */
+describe("pago de una liquidación con total negativo", () => {
+  /** La cuenta de getArrastrePendiente para una liquidación pagada. */
+  const debido = (totalPagar: number, totalPagado: number | null) =>
+    totalPagar - (totalPagado ?? totalPagar);
+
+  it("pagar 0 guarda el 0 y la deuda pasa a la próxima", () => {
+    const total = calcularLiquidacion(
+      args({ totalComision: 20_000, totalDescuentos: 35_000 }),
+    ).total;
+    expect(total).toBe(-15_000);
+
+    const pago = resolverPago(total, 0);
+    expect(pago.montoAPagar).toBe(0);
+    expect(pago.totalPagado).toBe(0);
+    expect(pago.quedaAFavor).toBe(-15_000);
+    expect(debido(total, pago.totalPagado)).toBe(-15_000);
+
+    // La semana siguiente se le descuenta.
+    const proxima = calcularLiquidacion(
+      args({ totalComision: 100_000, arrastre: debido(total, pago.totalPagado) }),
+    );
+    expect(proxima.total).toBe(85_000);
+  });
+
+  it("sin monto cargado tampoco se pierde: no se entrega nada y queda la deuda", () => {
+    const pago = resolverPago(-15_000);
+    expect(pago.montoAPagar).toBe(0);
+    expect(pago.totalPagado).toBe(0);
+    expect(debido(-15_000, pago.totalPagado)).toBe(-15_000);
+  });
+
+  it("si igual le dan algo, se suma a lo que debe", () => {
+    const pago = resolverPago(-15_000, 5_000);
+    expect(pago.montoAPagar).toBe(5_000);
+    expect(debido(-15_000, pago.totalPagado)).toBe(-20_000);
+  });
+});
+
+describe("pago de una liquidación con total positivo", () => {
+  it("pagar justo no guarda nada aparte", () => {
+    expect(resolverPago(237_340, 237_340)).toEqual({
+      montoAPagar: 237_340,
+      totalPagado: null,
+      quedaAFavor: 0,
+    });
+    expect(resolverPago(237_340).totalPagado).toBeNull();
+  });
+
+  it("redondeado para abajo queda a favor de ella", () => {
+    const pago = resolverPago(237_340, 237_000);
+    expect(pago.totalPagado).toBe(237_000);
+    expect(pago.quedaAFavor).toBe(340);
   });
 });

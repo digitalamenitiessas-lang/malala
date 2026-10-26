@@ -12,6 +12,19 @@ import {
 import type { Empleado, Sucursal } from "@/lib/types";
 import { formatARS } from "@/lib/utils";
 import { calcularLiquidacion } from "@/lib/liquidacion-formula";
+import { ObservacionEditable } from "@/components/forms/observacion-editable";
+
+/** Lo que entra en esta liquidación pero es de un período anterior. */
+function MarcaAnterior() {
+  return (
+    <span
+      className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-800"
+      title="No se había liquidado: se cargó después de liquidar su semana, o quedó afuera. Entra en esta."
+    >
+      de períodos anteriores
+    </span>
+  );
+}
 
 interface Props {
   sucursalId: string;
@@ -194,6 +207,38 @@ export function NuevaLiquidacionForm({
       })
     : null;
   const totalPagar = detalle?.total ?? 0;
+  // Lo que entra de antes del período: se avisa arriba, para que un número
+  // más alto de lo esperado no parezca un error.
+  const anteriores = preview
+    ? preview.lineas.filter((l) => l.anterior).length +
+      preview.anticipos.filter((a) => a.anterior).length +
+      preview.descuentos.filter((d) => d.anterior).length +
+      preview.viaticos.filter((v) => v.anterior).length
+    : 0;
+
+  function actualizarObservacion(
+    tipo: "anticipos" | "descuentos",
+    id: string,
+    observacion: string | undefined,
+  ) {
+    setPreview((p) => {
+      if (!p) return p;
+      if (tipo === "anticipos") {
+        return {
+          ...p,
+          anticipos: p.anticipos.map((a) =>
+            a.id === id ? { ...a, observacion } : a,
+          ),
+        };
+      }
+      return {
+        ...p,
+        descuentos: p.descuentos.map((d) =>
+          d.id === id ? { ...d, observacion } : d,
+        ),
+      };
+    });
+  }
   const puedeGuardar =
     !!preview &&
     (preview.lineas.length > 0 ||
@@ -318,6 +363,15 @@ export function NuevaLiquidacionForm({
             </span>
           </div>
 
+          {anteriores > 0 && (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Entran {anteriores === 1 ? "1 movimiento" : `${anteriores} movimientos`}{" "}
+              de antes del {formatYMD(preview.periodo_desde)} que no se habían
+              liquidado (por ejemplo, una venta cargada después de liquidar su
+              semana). Están marcados abajo.
+            </p>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Kpi label="Servicios" value={String(preview.total_servicios)} />
             <Kpi label="Días trabajados" value={String(preview.dias_trabajados)} />
@@ -351,6 +405,7 @@ export function NuevaLiquidacionForm({
                     <tr key={l.ingreso_linea_id}>
                       <td className="px-3 py-2 tabular-nums text-muted-foreground">
                         {formatYMD(l.fecha)}
+                        {l.anterior && <MarcaAnterior />}
                       </td>
                       <td className="px-3 py-2">{l.servicio_nombre}</td>
                       <td className="px-3 py-2 text-right tabular-nums">
@@ -471,6 +526,7 @@ export function NuevaLiquidacionForm({
                     >
                       <div className="min-w-0">
                         <span className="tabular-nums">{v.fecha}</span>
+                        {v.anterior && <MarcaAnterior />}
                         {v.observacion && (
                           <span className="ml-2 text-xs text-muted-foreground">
                             {v.observacion}
@@ -509,13 +565,21 @@ export function NuevaLiquidacionForm({
                 {preview.anticipos.map((a) => (
                   <li
                     key={a.id}
-                    className="flex items-center justify-between px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
                   >
-                    <span className="text-muted-foreground">
-                      {formatYMD(a.fecha)}
-                      {a.observacion ? ` · ${a.observacion}` : ""}
+                    <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-muted-foreground">
+                      <span className="tabular-nums">
+                        {formatYMD(a.fecha)}
+                        {a.anterior && <MarcaAnterior />}
+                      </span>
+                      <ObservacionEditable
+                        tipo="anticipo"
+                        id={a.id}
+                        observacion={a.observacion}
+                        onGuardada={(o) => actualizarObservacion("anticipos", a.id, o)}
+                      />
                     </span>
-                    <span className="tabular-nums text-warning">
+                    <span className="shrink-0 tabular-nums text-warning">
                       − {formatARS(a.monto)}
                     </span>
                   </li>
@@ -536,13 +600,22 @@ export function NuevaLiquidacionForm({
                 {preview.descuentos.map((d) => (
                   <li
                     key={d.id}
-                    className="flex items-center justify-between px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
                   >
-                    <span className="text-muted-foreground">
-                      {formatYMD(d.fecha)} · {d.concepto}
-                      {d.observacion ? ` · ${d.observacion}` : ""}
+                    <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-muted-foreground">
+                      <span>
+                        <span className="tabular-nums">{formatYMD(d.fecha)}</span>{" "}
+                        · {d.concepto}
+                        {d.anterior && <MarcaAnterior />}
+                      </span>
+                      <ObservacionEditable
+                        tipo="descuento"
+                        id={d.id}
+                        observacion={d.observacion}
+                        onGuardada={(o) => actualizarObservacion("descuentos", d.id, o)}
+                      />
                     </span>
-                    <span className="tabular-nums text-warning">
+                    <span className="shrink-0 tabular-nums text-warning">
                       − {formatARS(d.monto)}
                     </span>
                   </li>
@@ -624,6 +697,13 @@ export function NuevaLiquidacionForm({
                 {formatARS(totalPagar)}
               </span>
             </div>
+            {totalPagar < -0.01 && (
+              <p className="text-[11px] text-brown-700 pt-1">
+                Los descuentos superan lo que cobró: no se le entrega nada y
+                los {formatARS(-totalPagar)} que debe pasan solos a la próxima
+                liquidación.
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-3 pt-2">
