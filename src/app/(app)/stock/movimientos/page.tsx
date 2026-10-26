@@ -1,5 +1,5 @@
 import { listMovimientos } from "@/lib/data/stock";
-import { formatDateTime } from "@/lib/utils";
+import { formatARS, formatDateTime } from "@/lib/utils";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -8,6 +8,7 @@ const TIPO_LABEL: Record<string, string> = {
   ajuste_manual: "Ajuste manual",
   transferencia_entrada: "Transferencia ↘",
   transferencia_salida: "Transferencia ↗",
+  uso_interno: "Uso interno",
 };
 
 const TIPO_COLOR: Record<string, string> = {
@@ -16,6 +17,8 @@ const TIPO_COLOR: Record<string, string> = {
   ajuste_manual: "bg-cream text-stone-700",
   transferencia_entrada: "bg-sage-50 text-sage-900",
   transferencia_salida: "bg-cream text-stone-700",
+  // Distinto del ajuste a propósito: un retiro para el salón no es un faltante.
+  uso_interno: "bg-warning/15 text-brown-700",
 };
 
 export default async function MovimientosPage() {
@@ -82,6 +85,15 @@ export default async function MovimientosPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {m.motivo ?? "—"}
+                    {m.tipo === "uso_interno" && (
+                      <span className="block text-xs">
+                        {m.empleado_nombre ? `Retiró ${m.empleado_nombre}` : null}
+                        {m.empleado_nombre && m.costo_unitario != null ? " · " : null}
+                        {m.costo_unitario != null
+                          ? `${formatARS(-m.cantidad * m.costo_unitario)} a costo`
+                          : null}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {m.usuario_nombre}

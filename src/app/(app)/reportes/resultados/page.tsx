@@ -5,6 +5,7 @@ import { buildAccessScope } from "@/lib/auth/access";
 import { listIngresos } from "@/lib/data/ingresos";
 import { listEgresos } from "@/lib/data/egresos";
 import { getComisionesPagadasEnPeriodo } from "@/lib/data/liquidaciones";
+import { listConsumoInterno } from "@/lib/data/stock";
 import { listSucursales } from "@/lib/data/sucursales";
 import { formatARS } from "@/lib/utils";
 import { GRUPO_NOMBRE } from "@/lib/grupos-gasto";
@@ -44,7 +45,7 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
   const sp = await searchParams;
   const filtros = parseReporteFiltros(sp, scope);
 
-  const [sucursalesAll, ingresos, egresos, comisionesPagadas] = await Promise.all([
+  const [sucursalesAll, ingresos, egresos, comisionesPagadas, consumoInterno] = await Promise.all([
     listSucursales({ soloActivas: true }),
     listIngresos({
       sucursalId: filtros.sucursalId,
@@ -61,7 +62,13 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
       desde: filtros.desdeIso,
       hasta: filtros.hastaIso,
     }),
+    listConsumoInterno({
+      sucursalId: filtros.sucursalId,
+      desde: filtros.desdeIso,
+      hasta: filtros.hastaIso,
+    }),
   ]);
+  const totalConsumoInterno = consumoInterno.reduce((a, r) => a + r.costo, 0);
 
   const sucursales = sucursalesAll.filter((s) =>
     scope.sucursalIdsPermitidas.includes(s.id),
@@ -228,6 +235,47 @@ export default async function ReportesResultadosPage({ searchParams }: PageProps
           </tbody>
         </table>
       </div>
+
+      {/* Informativo, fuera del cuadro: el producto ya entró como gasto el día
+          que se compró. Restarlo de nuevo sería contarlo dos veces; lo que
+          interesa es ver qué parte de la mercadería de venta se usó adentro. */}
+      {consumoInterno.length > 0 && (
+        <div className="overflow-x-auto rounded-md border border-border bg-card">
+          <table className="w-full min-w-[42rem] text-sm">
+            <tbody className="divide-y divide-border">
+              <tr className="bg-cream/30">
+                <td className="px-4 py-2.5">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Consumo interno de productos de venta
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Retirados de la góndola para usar en el salón, a costo. Ya
+                    están dentro de las compras: no se restan otra vez.
+                  </p>
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-xs text-muted-foreground w-16">
+                  {pct(totalConsumoInterno)}
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-sm w-36">
+                  {formatARS(totalConsumoInterno)}
+                </td>
+              </tr>
+              {consumoInterno.map((r) => (
+                <tr key={`${r.insumo_id}|${r.empleado_id ?? ""}`}>
+                  <td className="px-4 py-2.5 pl-10 text-sm text-muted-foreground">
+                    {r.insumo_nombre}
+                    <span className="text-xs"> · {r.empleado_nombre}</span>
+                  </td>
+                  <td className="w-16" />
+                  <td className="px-4 py-2.5 text-right tabular-nums text-sm text-muted-foreground w-36">
+                    {formatARS(r.costo)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {deuda > 0.5 && (
         <div className="rounded-md border border-border bg-cream/40 p-4">

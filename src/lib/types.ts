@@ -26,7 +26,8 @@ export type TipoMovimientoStock =
   | "venta"
   | "ajuste_manual"
   | "transferencia_entrada"
-  | "transferencia_salida";
+  | "transferencia_salida"
+  | "uso_interno";
 
 export interface Sucursal {
   id: ID;
@@ -459,6 +460,10 @@ export interface MovimientoStock {
   ref_id?: ID;
   usuario_id: ID;
   fecha: string; // ISO
+  /** Costo por unidad base congelado al momento (sólo uso_interno). */
+  costo_unitario?: number;
+  /** Empleada que retiró el producto (sólo uso_interno). */
+  empleado_id?: ID;
 }
 
 export interface Ingreso {
