@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
 import { CurrencyField } from "@/components/forms/field";
 import { IngresoManualForm } from "@/components/forms/ingreso-manual-form";
+import { AnularIngresoManual } from "@/components/forms/anular-ingreso-manual";
 import { finDeDiaArISO, hoyAr, inicioDeDiaArISO } from "@/lib/fecha-ar";
 import { formatDateTime } from "@/lib/utils";
 
@@ -122,14 +123,28 @@ export default async function BancosPage({ searchParams }: PageProps) {
    * Sumar cuarenta renglones a mano en el mostrador es donde aparecen las
    * diferencias que después no se sabe de dónde salieron.
    */
-  const entraron = movimientos.reduce(
+  // Un ingreso manual anulado y su anulación no son plata que se movió: en el
+  // extracto no aparecen. Se sacan de Entró/Salió cuando están los dos en la
+  // lista (si falta uno, el neto dejaría de cuadrar).
+  const idsEnLista = new Set(movimientos.map((m) => m.movimiento.id));
+  const parAnulado = new Set<string>();
+  for (const m of movimientos) {
+    const ref = m.movimiento.ref_id;
+    if (m.movimiento.ref_tipo === "anulacion_manual" && ref && idsEnLista.has(ref)) {
+      parAnulado.add(m.movimiento.id);
+      parAnulado.add(ref);
+    }
+  }
+  const contables = movimientos.filter((m) => !parAnulado.has(m.movimiento.id));
+  const entraron = contables.reduce(
     (acc, m) => acc + (m.movimiento.monto > 0 ? m.movimiento.monto : 0),
     0,
   );
-  const salieron = movimientos.reduce(
+  const salieron = contables.reduce(
     (acc, m) => acc + (m.movimiento.monto < 0 ? m.movimiento.monto : 0),
     0,
   );
+  const puedeAnular = ["admin", "superadmin", "encargada"].includes(user.rol);
 
   async function transferir(formData: FormData): Promise<void> {
     "use server";
@@ -388,37 +403,80 @@ export default async function BancosPage({ searchParams }: PageProps) {
                   </td>
                 </tr>
               ) : (
-                movimientos.map((m) => (
-                  <tr key={m.movimiento.id} className="hover:bg-cream/30">
-                    <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                      {fmtFecha(m.movimiento.fecha)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span>{m.cuenta?.nombre ?? "—"}</span>
-                      {multipleSucursales && m.cuenta && (
-                        <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {sucursalNombreById.get(m.cuenta.sucursal_id) ?? ""}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">
-                      {tipoLabel[m.movimiento.tipo] ?? m.movimiento.tipo}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {m.movimiento.descripcion ?? "—"}
-                    </td>
-                    <td
+                movimientos.map((m) => {
+                  const esManual = m.movimiento.ref_tipo === "manual";
+                  const esAnulacion = m.movimiento.ref_tipo === "anulacion_manual";
+                  const anulado = esManual && Boolean(m.anulacion);
+                  return (
+                    <tr
+                      key={m.movimiento.id}
                       className={
-                        "px-4 py-3 text-right tabular-nums font-medium " +
-                        (m.movimiento.monto >= 0
-                          ? "text-sage-700"
-                          : "text-warning")
+                        anulado || esAnulacion
+                          ? "bg-destructive/5 hover:bg-destructive/10"
+                          : "hover:bg-cream/30"
                       }
                     >
-                      {fmtMoney(m.movimiento.monto)}
-                    </td>
-                  </tr>
-                ))
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                        {fmtFecha(m.movimiento.fecha)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span>{m.cuenta?.nombre ?? "—"}</span>
+                        {multipleSucursales && m.cuenta && (
+                          <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {sucursalNombreById.get(m.cuenta.sucursal_id) ?? ""}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs uppercase tracking-wider text-muted-foreground">
+                        {esAnulacion
+                          ? "Anulación"
+                          : (tipoLabel[m.movimiento.tipo] ?? m.movimiento.tipo)}
+                        {anulado && (
+                          <span className="ml-2 rounded-sm bg-destructive/15 px-1.5 py-0.5 text-[10px] text-destructive">
+                            Anulado
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <span className={anulado ? "line-through" : undefined}>
+                          {m.movimiento.descripcion ?? "—"}
+                        </span>
+                        {anulado && m.anulacion && (
+                          <p className="mt-1 text-xs text-destructive">
+                            {m.anulacion.descripcion}
+                            {m.anulacion.usuarioNombre
+                              ? ` · ${m.anulacion.usuarioNombre}`
+                              : ""}
+                          </p>
+                        )}
+                        {esManual &&
+                          !anulado &&
+                          m.movimiento.tipo === "ingreso" &&
+                          puedeAnular && (
+                            <div className="mt-1">
+                              <AnularIngresoManual
+                                movimientoId={m.movimiento.id}
+                                monto={m.movimiento.monto}
+                                concepto={m.movimiento.descripcion}
+                              />
+                            </div>
+                          )}
+                      </td>
+                      <td
+                        className={
+                          "px-4 py-3 text-right tabular-nums font-medium " +
+                          (anulado
+                            ? "text-muted-foreground line-through"
+                            : m.movimiento.monto >= 0
+                              ? "text-sage-700"
+                              : "text-warning")
+                        }
+                      >
+                        {fmtMoney(m.movimiento.monto)}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
