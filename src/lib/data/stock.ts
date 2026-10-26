@@ -1,18 +1,23 @@
 "use server";
 
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import {
+  empleados as empleadosTable,
   insumos as insumosTable,
   movimientosStock as movimientosStockTable,
   profiles as profilesTable,
   stockSucursal as stockSucursalTable,
   sucursales as sucursalesTable,
 } from "@/lib/db/schema";
-import { ajusteManualSchema } from "@/lib/validations/stock";
+import {
+  ajusteManualSchema,
+  retiroUsoInternoSchema,
+} from "@/lib/validations/stock";
+import { costoRetiroUsoInterno } from "@/lib/stock-uso-interno";
 import { failure, fieldErrors, requireRole, type ActionResult } from "./_helpers";
 import type {
   Insumo,
@@ -68,6 +73,8 @@ function mapMovimiento(
     ref_id: row.refId ?? undefined,
     usuario_id: row.usuarioId,
     fecha: row.fecha.toISOString(),
+    costo_unitario: row.costoUnitario ?? undefined,
+    empleado_id: row.empleadoId ?? undefined,
   };
 }
 
@@ -139,6 +146,9 @@ export async function applyMovementTx(
     ref_tipo?: string;
     ref_id?: string;
     usuario_id: string;
+    /** Costo por unidad base a congelar en el movimiento (uso interno). */
+    costo_unitario?: number;
+    empleado_id?: string;
   },
 ): Promise<{ stock: StockSucursal; movimiento: MovimientoStock }> {
   const [existing] = await tx
@@ -188,6 +198,8 @@ export async function applyMovementTx(
       refId: args.ref_id ?? null,
       usuarioId: args.usuario_id,
       fecha: new Date(),
+      costoUnitario: args.costo_unitario ?? null,
+      empleadoId: args.empleado_id ?? null,
     })
     .returning();
 
@@ -204,7 +216,8 @@ export async function applyMovementTx(
  * recibe sucursal_id y usuario_id del que llama, o sea que además falsificaba
  * la autoría del movimiento, que es la fuente de la auditoría de stock.
  *
- * Su único llamador es createAjusteManual, acá abajo, que sí valida admin.
+ * Sus llamadores son createAjusteManual y createRetiroUsoInterno, acá abajo,
+ * que validan rol.
  */
 async function applyMovement(args: {
   insumo_id: string;
@@ -215,6 +228,8 @@ async function applyMovement(args: {
   ref_tipo?: string;
   ref_id?: string;
   usuario_id: string;
+  costo_unitario?: number;
+  empleado_id?: string;
 }): Promise<{ stock: StockSucursal; movimiento: MovimientoStock }> {
   const db = getDb();
   return db.transaction((tx) => applyMovementTx(tx, args));
@@ -253,10 +268,170 @@ export async function createAjusteManual(
   return { ok: true };
 }
 
+/**
+ * Un producto de venta que se saca de la góndola para usarlo en el salón (ej.
+ * el Twel de Question). Antes se cargaba como ajuste manual y en la bitácora no
+ * se distinguía de un faltante.
+ *
+ * Baja el stock y deja el costo congelado, para el reporte de consumo interno.
+ * NO genera egreso: la plata ya salió cuando se compró el producto.
+ */
+export async function createRetiroUsoInterno(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const parsed = retiroUsoInternoSchema.safeParse({
+    insumo_id: formData.get("insumo_id"),
+    sucursal_id: formData.get("sucursal_id"),
+    empleado_id: formData.get("empleado_id"),
+    cantidad: formData.get("cantidad"),
+    motivo: formData.get("motivo"),
+  });
+  if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
+  const data = parsed.data;
+
+  const sucursalActiva = await getActiveSucursal();
+  if (!sucursalActiva || data.sucursal_id !== sucursalActiva.id) {
+    return failure("Solo podés retirar stock de tu sucursal activa.");
+  }
+
+  const db = getDb();
+  const [insumo] = await db
+    .select()
+    .from(insumosTable)
+    .where(eq(insumosTable.id, data.insumo_id))
+    .limit(1);
+  if (!insumo || insumo.sucursalId !== data.sucursal_id) {
+    return failure("El producto no es de esta sucursal.");
+  }
+  // Los de bacha ya se consumen por receta: retirarlos acá los contaría dos
+  // veces en el costo del salón.
+  if (insumo.tipo !== "venta") {
+    return failure("Solo se retiran para uso interno los productos de venta.");
+  }
+
+  const [empleado] = await db
+    .select({ id: empleadosTable.id, activo: empleadosTable.activo })
+    .from(empleadosTable)
+    .where(eq(empleadosTable.id, data.empleado_id))
+    .limit(1);
+  if (!empleado?.activo) {
+    return { ok: false, errors: { empleado_id: ["Empleada no válida"] } };
+  }
+
+  // La cantidad viene en ENVASES, como en las compras; el stock se lleva en la
+  // unidad base del insumo.
+  const { delta, costoUnitario } = costoRetiroUsoInterno(
+    {
+      tamanoEnvase: insumo.tamanoEnvase,
+      precioEnvase: insumo.precioEnvase,
+      precioUnitario: insumo.precioUnitario,
+    },
+    data.cantidad,
+  );
+
+  await applyMovement({
+    insumo_id: insumo.id,
+    sucursal_id: data.sucursal_id,
+    delta,
+    tipo: "uso_interno",
+    motivo: data.motivo,
+    usuario_id: user.id,
+    costo_unitario: costoUnitario,
+    empleado_id: empleado.id,
+  });
+
+  revalidatePath("/stock");
+  revalidatePath("/stock/movimientos");
+  revalidatePath("/reportes/resultados");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export type ConsumoInternoRow = {
+  insumo_id: string;
+  insumo_nombre: string;
+  empleado_id: string | null;
+  empleado_nombre: string;
+  /** En unidad base del insumo (positivo). */
+  cantidad: number;
+  costo: number;
+};
+
+/**
+ * Lo que se retiró de productos de venta para usar en el salón, a costo,
+ * agrupado por producto y empleada. Es informativo: ese costo ya está dentro de
+ * las compras del período en que se compró el producto.
+ */
+export async function listConsumoInterno(filtros: {
+  sucursalId?: string;
+  desde?: string;
+  hasta?: string;
+}): Promise<ConsumoInternoRow[]> {
+  const user = await requireUser();
+  const scope = buildAccessScope(user);
+  if (!scope.puedeVerReportes) return [];
+  if (filtros.sucursalId && !isSucursalAllowed(scope, filtros.sucursalId)) {
+    return [];
+  }
+
+  const filters = [
+    eq(movimientosStockTable.tipo, "uso_interno"),
+    inArray(movimientosStockTable.sucursalId, scope.sucursalIdsPermitidas),
+  ];
+  if (filtros.sucursalId) {
+    filters.push(eq(movimientosStockTable.sucursalId, filtros.sucursalId));
+  }
+  if (filtros.desde) {
+    filters.push(gte(movimientosStockTable.fecha, new Date(filtros.desde)));
+  }
+  if (filtros.hasta) {
+    filters.push(lte(movimientosStockTable.fecha, new Date(filtros.hasta)));
+  }
+
+  const db = getDb();
+  const rows = await db
+    .select({
+      insumoId: movimientosStockTable.insumoId,
+      insumoNombre: insumosTable.nombre,
+      empleadoId: movimientosStockTable.empleadoId,
+      empleadoNombre: empleadosTable.nombre,
+      cantidad: movimientosStockTable.cantidad,
+      costoUnitario: movimientosStockTable.costoUnitario,
+    })
+    .from(movimientosStockTable)
+    .innerJoin(insumosTable, eq(movimientosStockTable.insumoId, insumosTable.id))
+    .leftJoin(
+      empleadosTable,
+      eq(movimientosStockTable.empleadoId, empleadosTable.id),
+    )
+    .where(and(...filters));
+
+  const agrupado = new Map<string, ConsumoInternoRow>();
+  for (const row of rows) {
+    const key = `${row.insumoId}|${row.empleadoId ?? ""}`;
+    const cur = agrupado.get(key) ?? {
+      insumo_id: row.insumoId,
+      insumo_nombre: row.insumoNombre,
+      empleado_id: row.empleadoId,
+      empleado_nombre: row.empleadoNombre ?? "Sin indicar",
+      cantidad: 0,
+      costo: 0,
+    };
+    // La cantidad del movimiento es negativa (es una salida).
+    const cantidad = -row.cantidad;
+    cur.cantidad += cantidad;
+    cur.costo += cantidad * (row.costoUnitario ?? 0);
+    agrupado.set(key, cur);
+  }
+  return [...agrupado.values()].sort((a, b) => b.costo - a.costo);
+}
+
 export type MovimientoConDetalle = MovimientoStock & {
   insumo_nombre: string;
   sucursal_nombre: string;
   usuario_nombre: string;
+  empleado_nombre?: string;
 };
 
 export async function listMovimientos(opts?: {
@@ -289,6 +464,7 @@ export async function listMovimientos(opts?: {
       insumoNombre: insumosTable.nombre,
       sucursalNombre: sucursalesTable.nombre,
       usuarioNombre: profilesTable.nombre,
+      empleadoNombre: empleadosTable.nombre,
     })
     .from(movimientosStockTable)
     .innerJoin(insumosTable, eq(movimientosStockTable.insumoId, insumosTable.id))
@@ -300,6 +476,10 @@ export async function listMovimientos(opts?: {
       profilesTable,
       eq(movimientosStockTable.usuarioId, profilesTable.userId),
     )
+    .leftJoin(
+      empleadosTable,
+      eq(movimientosStockTable.empleadoId, empleadosTable.id),
+    )
     .where(and(...filters))
     .orderBy(desc(movimientosStockTable.fecha))
     .limit(opts?.limit ?? 200);
@@ -309,5 +489,6 @@ export async function listMovimientos(opts?: {
     insumo_nombre: row.insumoNombre,
     sucursal_nombre: row.sucursalNombre,
     usuario_nombre: row.usuarioNombre ?? "Sistema",
+    empleado_nombre: row.empleadoNombre ?? undefined,
   }));
 }

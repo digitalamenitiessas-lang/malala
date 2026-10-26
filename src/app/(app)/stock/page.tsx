@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { History, SlidersHorizontal } from "lucide-react";
+import { History, PackageMinus, SlidersHorizontal } from "lucide-react";
 import { listStockBySucursal } from "@/lib/data/stock";
 import { getAccessScopeForUser } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
@@ -62,6 +62,15 @@ export default async function StockPage({
             <History className="h-4 w-4 stroke-[1.5]" />
             Movimientos
           </Link>
+          {scope.puedeGestionarStock && (
+            <Link
+              href="/stock/retiro"
+              className="border border-border px-3 py-2 rounded-md text-sm font-medium hover:bg-cream transition-colors flex items-center gap-2"
+            >
+              <PackageMinus className="h-4 w-4 stroke-[1.5]" />
+              Uso interno
+            </Link>
+          )}
           {scope.rol === "admin" && (
             <Link
               href="/stock/ajuste"

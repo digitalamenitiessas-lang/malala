@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { PackageMinus } from "lucide-react";
 import { InsumoForm } from "@/components/forms/insumo-form";
 import { InsumoServiciosCard } from "@/components/forms/insumo-servicios-card";
 import {
@@ -9,7 +11,7 @@ import {
 import { listProveedores } from "@/lib/data/proveedores";
 import { listServiciosByInsumo } from "@/lib/data/recetas";
 import { listServicios } from "@/lib/data/servicios";
-import { requireUser } from "@/lib/auth/session";
+import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { esAdmin } from "@/lib/auth/access";
 
 export default async function EditarInsumoPage({
@@ -20,12 +22,13 @@ export default async function EditarInsumoPage({
   const user = await requireUser();
   if (!esAdmin(user.rol)) redirect("/catalogos/insumos");
   const { id } = await params;
-  const [insumo, proveedores, serviciosUsando, todosServicios] =
+  const [insumo, proveedores, serviciosUsando, todosServicios, sucursalActiva] =
     await Promise.all([
       getInsumo(id),
       listProveedores(),
       listServiciosByInsumo(id),
       listServicios(),
+      getActiveSucursal(),
     ]);
   if (!insumo) notFound();
 
@@ -45,11 +48,25 @@ export default async function EditarInsumoPage({
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <header className="space-y-1">
-        <h1 className="font-display text-3xl tracking-[0.2em] uppercase">
-          Editar insumo
-        </h1>
-        <p className="text-sm text-muted-foreground">{insumo.nombre}</p>
+      <header className="flex items-end justify-between flex-wrap gap-4">
+        <div className="space-y-1">
+          <h1 className="font-display text-3xl tracking-[0.2em] uppercase">
+            Editar insumo
+          </h1>
+          <p className="text-sm text-muted-foreground">{insumo.nombre}</p>
+        </div>
+        {/* El retiro se hace sobre la sucursal activa, que es la del insumo. */}
+        {insumo.tipo === "venta" &&
+          insumo.activo &&
+          sucursalActiva?.id === insumo.sucursal_id && (
+            <Link
+              href={`/stock/retiro?insumo=${insumo.id}`}
+              className="border border-border px-3 py-2 rounded-md text-sm font-medium hover:bg-cream transition-colors flex items-center gap-2"
+            >
+              <PackageMinus className="h-4 w-4 stroke-[1.5]" />
+              Retirar para uso interno
+            </Link>
+          )}
       </header>
       <InsumoForm
         insumo={insumo}

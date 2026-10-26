@@ -61,6 +61,8 @@ export const tipoMovimientoStockEnum = pgEnum("tipo_movimiento_stock", [
   "ajuste_manual",
   "transferencia_entrada",
   "transferencia_salida",
+  // Producto de venta retirado para usar en el salón. Ver drizzle/0070.
+  "uso_interno",
 ]);
 export const origenTurnoEnum = pgEnum("origen_turno", ["publico", "interno"]);
 export const liquidacionEstadoEnum = pgEnum("liquidacion_estado", [
@@ -686,9 +688,16 @@ export const movimientosStock = pgTable("movimientos_stock", {
     .notNull()
     .references(() => profiles.userId),
   fecha: timestamp("fecha", { withTimezone: true }).notNull(),
+  // Costo por unidad base congelado al momento del movimiento. Hoy sólo lo
+  // llena el retiro para uso interno: el consumo de un mes no tiene que
+  // moverse si después cambia el precio de compra.
+  costoUnitario: doublePrecision("costo_unitario"),
+  // Quién retiró el producto (uso interno). No es usuarioId, que es quién lo
+  // cargó en el sistema.
+  empleadoId: text("empleado_id").references(() => empleados.id),
 });
 
-export const ingresos = pgTable("ingresos", {
+export const ingresos =pgTable("ingresos", {
   id: text("id").primaryKey(),
   fecha: timestamp("fecha", { withTimezone: true }).notNull(),
   sucursalId: text("sucursal_id")
