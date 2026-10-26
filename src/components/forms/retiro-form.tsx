@@ -5,6 +5,7 @@ import { CrudForm } from "./crud-form";
 import { Field, SelectField } from "./field";
 import { formatARS } from "@/lib/utils";
 import { costoRetiroUsoInterno } from "@/lib/stock-uso-interno";
+import { UBICACION_LABEL, type UbicacionStock } from "@/lib/stock-ubicacion";
 import type { Empleado, Insumo, Sucursal } from "@/lib/types";
 import type { ActionResult } from "@/lib/data/_helpers";
 
@@ -20,8 +21,10 @@ interface Props {
   insumos: Insumo[];
   empleados: Empleado[];
   sucursal: Sucursal;
-  /** insumoId -> cantidad actual en stock (unidad base) */
+  /** insumoId -> cantidad actual en stock (unidad base, total) */
   stockMap: Record<string, number>;
+  /** insumoId -> parte en depósito (unidad base) */
+  depositoMap: Record<string, number>;
   defaultInsumoId?: string;
   action: (
     state: ActionResult | null,
@@ -38,17 +41,25 @@ export function RetiroForm({
   empleados,
   sucursal,
   stockMap,
+  depositoMap,
   defaultInsumoId,
   action,
 }: Props) {
   const [insumoId, setInsumoId] = useState(defaultInsumoId ?? "");
   const [valor, setValor] = useState("");
+  // Lo normal es sacarlo de la góndola: "los productos que estaban en
+  // exhibición y se destinaron a bacha".
+  const [ubicacion, setUbicacion] = useState<UbicacionStock>("exhibicion");
 
   const insumo = useMemo(
     () => insumos.find((i) => i.id === insumoId) ?? null,
     [insumos, insumoId],
   );
-  const stockActual = stockMap[insumoId] ?? 0;
+  const enDeposito = depositoMap[insumoId] ?? 0;
+  const stockActual =
+    ubicacion === "deposito"
+      ? enDeposito
+      : (stockMap[insumoId] ?? 0) - enDeposito;
   const unidad = insumo
     ? UNIDAD_LABEL[insumo.unidad_medida] ?? insumo.unidad_medida
     : "";
@@ -88,10 +99,33 @@ export function RetiroForm({
             required
           />
 
+          <input type="hidden" name="ubicacion" value={ubicacion} />
+          <div className="space-y-1.5">
+            <p className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              De dónde sale
+            </p>
+            <div className="flex gap-2">
+              {(["exhibicion", "deposito"] as const).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setUbicacion(u)}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
+                    ubicacion === u
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border hover:bg-cream"
+                  }`}
+                >
+                  {UBICACION_LABEL[u]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {insumo && (
             <div className="bg-cream/40 border border-border rounded-md p-4 space-y-1.5">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                Stock actual en {sucursal.nombre}
+                En {UBICACION_LABEL[ubicacion].toLowerCase()} · {sucursal.nombre}
               </p>
               <p className="text-2xl font-display tabular-nums">
                 {insumo.tamano_envase !== 1
@@ -148,11 +182,20 @@ export function RetiroForm({
                   {formatARS(-calculo.delta * calculo.costoUnitario)}
                 </span>
               </div>
-              {resultado != null && resultado < 0 && (
-                <p className="text-xs text-destructive pt-1">
-                  Atención: el stock quedaría negativo.
-                </p>
-              )}
+              {resultado != null &&
+                resultado < 0 &&
+                (ubicacion === "exhibicion" && enDeposito >= -resultado ? (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    No alcanza lo exhibido: se repone solo {fmt(-resultado)}{" "}
+                    {unidad} desde el depósito.
+                  </p>
+                ) : (
+                  <p className="text-xs text-destructive pt-1">
+                    {ubicacion === "deposito"
+                      ? "No hay tanto en depósito."
+                      : "Atención: el stock quedaría negativo."}
+                  </p>
+                ))}
             </div>
           )}
 

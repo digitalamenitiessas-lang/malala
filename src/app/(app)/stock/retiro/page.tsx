@@ -31,6 +31,9 @@ export default async function RetiroPage({
   const stockMap = Object.fromEntries(
     stockActual.map((row) => [row.insumo.id, row.cantidad]),
   );
+  const depositoMap = Object.fromEntries(
+    stockActual.map((row) => [row.insumo.id, row.cantidad_deposito]),
+  );
   const defaultInsumoId = insumos.some((i) => i.id === sp.insumo)
     ? sp.insumo
     : undefined;
@@ -62,6 +65,7 @@ export default async function RetiroPage({
           empleados={empleados}
           sucursal={sucursal}
           stockMap={stockMap}
+          depositoMap={depositoMap}
           defaultInsumoId={defaultInsumoId}
           action={action}
         />

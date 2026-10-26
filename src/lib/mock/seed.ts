@@ -548,6 +548,7 @@ export function seed(): Store {
     insumo_id: i.id,
     sucursal_id: i.sucursal_id,
     cantidad: i.umbral_stock_bajo * 3,
+    cantidad_deposito: 0,
   }));
 
   // Ventas / ingresos de muestra

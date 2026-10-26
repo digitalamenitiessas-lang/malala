@@ -22,6 +22,11 @@ export default async function AjustePage() {
       stockActual.map((row) => [row.insumo.id, row.cantidad]),
     ),
   };
+  const depositoMap: Record<string, Record<string, number>> = {
+    [sucursal.id]: Object.fromEntries(
+      stockActual.map((row) => [row.insumo.id, row.cantidad_deposito]),
+    ),
+  };
 
   async function action(_prev: unknown, formData: FormData) {
     "use server";
@@ -43,6 +48,7 @@ export default async function AjustePage() {
         insumos={insumos}
         sucursales={[sucursal]}
         stockMap={stockMap}
+        depositoMap={depositoMap}
         defaultSucursalId={sucursal.id}
         action={action}
       />

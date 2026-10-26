@@ -439,6 +439,10 @@ export async function anularIngreso(
         .from(movimientosStockTable)
         .where(eq(movimientosStockTable.refId, ingresoId));
       for (const consumo of consumos) {
+        // La reposición automática que haya disparado la venta no se devuelve:
+        // no fue stock que salió, sólo pasó del depósito a la góndola, y lo
+        // devuelto vuelve a la góndola.
+        if (consumo.tipo === "reposicion") continue;
         await applyMovementTx(tx, {
           insumo_id: consumo.insumoId,
           sucursal_id: consumo.sucursalId,

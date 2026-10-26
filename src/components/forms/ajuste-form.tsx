@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CrudForm } from "./crud-form";
 import { Field, SelectField } from "./field";
 import type { Insumo, Sucursal } from "@/lib/types";
+import { UBICACION_LABEL, type UbicacionStock } from "@/lib/stock-ubicacion";
 import type { ActionResult } from "@/lib/data/_helpers";
 
 const UNIDAD_LABEL: Record<string, string> = {
@@ -16,8 +17,10 @@ const UNIDAD_LABEL: Record<string, string> = {
 interface Props {
   insumos: Insumo[];
   sucursales: Sucursal[];
-  /** sucursalId -> insumoId -> cantidad actual en stock */
+  /** sucursalId -> insumoId -> cantidad actual en stock (total) */
   stockMap: Record<string, Record<string, number>>;
+  /** sucursalId -> insumoId -> parte en depósito (sólo reventa) */
+  depositoMap: Record<string, Record<string, number>>;
   defaultSucursalId: string;
   action: (
     state: ActionResult | null,
@@ -33,6 +36,7 @@ export function AjusteForm({
   insumos,
   sucursales,
   stockMap,
+  depositoMap,
   defaultSucursalId,
   action,
 }: Props) {
@@ -42,13 +46,23 @@ export function AjusteForm({
   // Lo que escribe el usuario: en modo delta es +/- a aplicar; en modo set es
   // el stock real contado.
   const [valor, setValor] = useState<string>("");
+  const [ubicacion, setUbicacion] = useState<UbicacionStock>("exhibicion");
 
   const insumo = useMemo(
     () => insumos.find((i) => i.id === insumoId) ?? null,
     [insumos, insumoId],
   );
 
-  const stockActual = stockMap[sucursalId]?.[insumoId] ?? 0;
+  // En reventa se ajusta un lugar: el recuento se hace por góndola y por
+  // depósito, y "fijar en" tiene que comparar contra lo de ese lugar.
+  const esReventa = insumo?.tipo === "venta";
+  const total = stockMap[sucursalId]?.[insumoId] ?? 0;
+  const enDeposito = depositoMap[sucursalId]?.[insumoId] ?? 0;
+  const stockActual = !esReventa
+    ? total
+    : ubicacion === "deposito"
+      ? enDeposito
+      : total - enDeposito;
   const unidad = insumo
     ? UNIDAD_LABEL[insumo.unidad_medida] ?? insumo.unidad_medida
     : "";
@@ -113,10 +127,37 @@ export function AjusteForm({
             </div>
           )}
 
+          {esReventa && (
+            <div className="space-y-1.5">
+              <input type="hidden" name="ubicacion" value={ubicacion} />
+              <p className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Dónde
+              </p>
+              <div className="flex gap-2">
+                {(["exhibicion", "deposito"] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => setUbicacion(u)}
+                    className={`flex-1 px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
+                      ubicacion === u
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border hover:bg-cream"
+                    }`}
+                  >
+                    {UBICACION_LABEL[u]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {insumo && (
             <div className="bg-cream/40 border border-border rounded-md p-4 space-y-1.5">
               <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                Stock actual
+                {esReventa
+                  ? `Stock actual en ${UBICACION_LABEL[ubicacion].toLowerCase()}`
+                  : "Stock actual"}
               </p>
               <p className="text-2xl font-display tabular-nums">
                 {fmt(stockActual)} {unidad}

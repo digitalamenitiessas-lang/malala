@@ -3,6 +3,8 @@
  * Cuando migremos a Drizzle, estos tipos se reemplazan por InferSelectModel sin cambiar la forma.
  */
 
+import type { UbicacionStock } from "./stock-ubicacion";
+
 export type ID = string;
 
 export type Rol = "superadmin" | "admin" | "encargada" | "empleado";
@@ -27,7 +29,8 @@ export type TipoMovimientoStock =
   | "ajuste_manual"
   | "transferencia_entrada"
   | "transferencia_salida"
-  | "uso_interno";
+  | "uso_interno"
+  | "reposicion";
 
 export interface Sucursal {
   id: ID;
@@ -446,7 +449,10 @@ export interface StockSucursal {
   id: ID;
   insumo_id: ID;
   sucursal_id: ID;
+  /** Total: depósito + exhibición. */
   cantidad: number;
+  /** Parte en depósito (reventa); exhibido = cantidad - cantidad_deposito. */
+  cantidad_deposito: number;
 }
 
 export interface MovimientoStock {
@@ -464,6 +470,8 @@ export interface MovimientoStock {
   costo_unitario?: number;
   /** Empleada que retiró el producto (sólo uso_interno). */
   empleado_id?: ID;
+  /** De qué lugar entró o salió (reventa). Ausente en los anteriores a 0071. */
+  ubicacion?: UbicacionStock;
 }
 
 export interface Ingreso {

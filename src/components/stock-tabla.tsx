@@ -21,7 +21,9 @@ export interface StockFila {
     precio_unitario?: number | null;
     tipo: "bacha" | "venta";
   };
+  /** Total: depósito + exhibición. */
   cantidad: number;
+  cantidad_deposito: number;
   estado: "ok" | "bajo" | "negativo";
 }
 
@@ -164,7 +166,7 @@ export function StockTabla({ filas }: { filas: StockFila[] }) {
                 </td>
               </tr>
             )}
-            {visibles.map(({ insumo, cantidad, estado: est }) => {
+            {visibles.map(({ insumo, cantidad, cantidad_deposito, estado: est }) => {
               const valor =
                 insumo.precio_unitario != null
                   ? cantidad * insumo.precio_unitario
@@ -177,6 +179,19 @@ export function StockTabla({ filas }: { filas: StockFila[] }) {
                       {cantidad.toLocaleString("es-AR")}{" "}
                       {UNIDAD_LABEL[insumo.unidad_medida]}
                     </div>
+                    {insumo.tipo === "venta" && (
+                      <div
+                        className={`text-[11px] ${
+                          cantidad - cantidad_deposito < 0
+                            ? "text-destructive"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        exhib.{" "}
+                        {(cantidad - cantidad_deposito).toLocaleString("es-AR")}{" "}
+                        · dep. {cantidad_deposito.toLocaleString("es-AR")}
+                      </div>
+                    )}
                     {insumo.tamano_envase !== 1 && (
                       <div className="text-[11px] text-muted-foreground">
                         ≈{" "}

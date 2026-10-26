@@ -4,6 +4,7 @@ import { formatARS, formatDateTime } from "@/lib/utils";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { finDeDiaArISO, inicioDeDiaArISO } from "@/lib/fecha-ar";
 import type { TipoMovimientoStock } from "@/lib/types";
+import { UBICACION_LABEL } from "@/lib/stock-ubicacion";
 
 const TIPO_LABEL: Record<string, string> = {
   compra: "Compra",
@@ -12,6 +13,7 @@ const TIPO_LABEL: Record<string, string> = {
   transferencia_entrada: "Transferencia ↘",
   transferencia_salida: "Transferencia ↗",
   uso_interno: "Uso interno",
+  reposicion: "Reposición",
 };
 
 const TIPO_COLOR: Record<string, string> = {
@@ -22,6 +24,7 @@ const TIPO_COLOR: Record<string, string> = {
   transferencia_salida: "bg-cream text-stone-700",
   // Distinto del ajuste a propósito: un retiro para el salón no es un faltante.
   uso_interno: "bg-warning/15 text-brown-700",
+  reposicion: "bg-sage-50 text-sage-900",
 };
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
@@ -181,16 +184,31 @@ export default async function MovimientosPage({
                     </span>
                   </td>
                   <td className="px-4 py-3 font-medium">{m.insumo_nombre}</td>
-                  <td
-                    className="px-4 py-3 text-right tabular-nums font-medium"
-                    style={{
-                      color:
-                        m.cantidad < 0 ? "var(--danger)" : "var(--sage-700)",
-                    }}
-                  >
-                    {m.cantidad > 0 ? "+" : ""}
-                    {m.cantidad.toLocaleString("es-AR")}
-                  </td>
+                  {m.tipo === "reposicion" ? (
+                    // No entra ni sale: pasa del depósito a la góndola.
+                    <td className="px-4 py-3 text-right tabular-nums font-medium text-muted-foreground">
+                      {m.cantidad.toLocaleString("es-AR")}
+                      <span className="block text-[11px] font-normal">
+                        depósito → exhibición
+                      </span>
+                    </td>
+                  ) : (
+                    <td
+                      className="px-4 py-3 text-right tabular-nums font-medium"
+                      style={{
+                        color:
+                          m.cantidad < 0 ? "var(--danger)" : "var(--sage-700)",
+                      }}
+                    >
+                      {m.cantidad > 0 ? "+" : ""}
+                      {m.cantidad.toLocaleString("es-AR")}
+                      {m.ubicacion && (
+                        <span className="block text-[11px] font-normal text-muted-foreground">
+                          {UBICACION_LABEL[m.ubicacion].toLowerCase()}
+                        </span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-muted-foreground">
                     {m.motivo ?? "—"}
                     {m.tipo === "uso_interno" && (

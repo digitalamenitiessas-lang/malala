@@ -15,9 +15,15 @@ import {
 } from "@/lib/db/schema";
 import {
   ajusteManualSchema,
+  reposicionSchema,
   retiroUsoInternoSchema,
 } from "@/lib/validations/stock";
 import { costoRetiroUsoInterno } from "@/lib/stock-uso-interno";
+import {
+  aplicarEnUbicacion,
+  reponerExhibicion,
+  type UbicacionStock,
+} from "@/lib/stock-ubicacion";
 import { failure, fieldErrors, requireRole, type ActionResult } from "./_helpers";
 import type {
   Insumo,
@@ -56,6 +62,7 @@ function mapStock(row: typeof stockSucursalTable.$inferSelect): StockSucursal {
     insumo_id: row.insumoId,
     sucursal_id: row.sucursalId,
     cantidad: row.cantidad,
+    cantidad_deposito: row.cantidadDeposito,
   };
 }
 
@@ -75,6 +82,7 @@ function mapMovimiento(
     fecha: row.fecha.toISOString(),
     costo_unitario: row.costoUnitario ?? undefined,
     empleado_id: row.empleadoId ?? undefined,
+    ubicacion: row.ubicacion ?? undefined,
   };
 }
 
@@ -82,7 +90,10 @@ type DbTx = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0
 
 export type StockRow = {
   insumo: Insumo;
+  /** Total: depósito + exhibición. */
   cantidad: number;
+  /** Parte en depósito; lo exhibido es cantidad - cantidad_deposito. */
+  cantidad_deposito: number;
   estado: "ok" | "bajo" | "negativo";
 };
 
@@ -119,10 +130,11 @@ export async function listStockBySucursal(
       const insumo = mapInsumo(row);
       const stock = stockByInsumo.get(insumo.id);
       const cantidad = stock?.cantidad ?? 0;
+      const cantidad_deposito = stock?.cantidadDeposito ?? 0;
       let estado: StockRow["estado"] = "ok";
       if (cantidad < 0) estado = "negativo";
       else if (cantidad < insumo.umbral_stock_bajo) estado = "bajo";
-      return { insumo, cantidad, estado };
+      return { insumo, cantidad, cantidad_deposito, estado };
     })
     .sort((a, b) => {
       const order = { negativo: 0, bajo: 1, ok: 2 };
@@ -131,9 +143,30 @@ export async function listStockBySucursal(
     });
 }
 
+async function leerStockTx(tx: DbTx, insumoId: string, sucursalId: string) {
+  const [row] = await tx
+    .select()
+    .from(stockSucursalTable)
+    .where(
+      and(
+        eq(stockSucursalTable.insumoId, insumoId),
+        eq(stockSucursalTable.sucursalId, sucursalId),
+      ),
+    )
+    .limit(1);
+  return row;
+}
+
 /**
  * Aplica un delta al stock de un insumo en una sucursal y registra el movimiento.
  * Debe ejecutarse dentro de una transacción cuando forma parte de un flujo mayor.
+ *
+ * `ubicacion` sólo importa en reventa: "deposito" mueve también la parte
+ * guardada; sin ubicación (o "exhibicion") se toca la góndola, y si una salida
+ * la deja en negativo con mercadería en depósito, se repone sola y queda un
+ * movimiento de reposición propio (ver aplicarEnUbicacion). Los anuladores que
+ * recorren movimientos por ref_id tienen que saltear esas reposiciones: no son
+ * stock que entró o salió.
  */
 export async function applyMovementTx(
   tx: DbTx,
@@ -149,26 +182,25 @@ export async function applyMovementTx(
     /** Costo por unidad base a congelar en el movimiento (uso interno). */
     costo_unitario?: number;
     empleado_id?: string;
+    ubicacion?: UbicacionStock;
   },
 ): Promise<{ stock: StockSucursal; movimiento: MovimientoStock }> {
-  const [existing] = await tx
-    .select()
-    .from(stockSucursalTable)
-    .where(
-      and(
-        eq(stockSucursalTable.insumoId, args.insumo_id),
-        eq(stockSucursalTable.sucursalId, args.sucursal_id),
-      ),
-    )
-    .limit(1);
+  const existing = await leerStockTx(tx, args.insumo_id, args.sucursal_id);
 
-  const nextCantidad = (existing?.cantidad ?? 0) + args.delta;
+  const next = aplicarEnUbicacion(
+    {
+      cantidad: existing?.cantidad ?? 0,
+      deposito: existing?.cantidadDeposito ?? 0,
+    },
+    args.delta,
+    args.ubicacion,
+  );
   let stockRow: typeof stockSucursalTable.$inferSelect;
 
   if (existing) {
     const [updated] = await tx
       .update(stockSucursalTable)
-      .set({ cantidad: nextCantidad })
+      .set({ cantidad: next.cantidad, cantidadDeposito: next.deposito })
       .where(eq(stockSucursalTable.id, existing.id))
       .returning();
     stockRow = updated;
@@ -179,10 +211,29 @@ export async function applyMovementTx(
         id: createId(),
         insumoId: args.insumo_id,
         sucursalId: args.sucursal_id,
-        cantidad: nextCantidad,
+        cantidad: next.cantidad,
+        cantidadDeposito: next.deposito,
       })
       .returning();
     stockRow = inserted;
+  }
+
+  const fecha = new Date();
+  if (next.repuesto > 0) {
+    // Antes que la salida, para que en la bitácora se lea en orden: primero se
+    // pasó a la góndola, después salió.
+    await tx.insert(movimientosStockTable).values({
+      id: createId(),
+      insumoId: args.insumo_id,
+      sucursalId: args.sucursal_id,
+      tipo: "reposicion",
+      cantidad: next.repuesto,
+      motivo: "Automática: no quedaba en exhibición",
+      refTipo: args.ref_tipo ?? null,
+      refId: args.ref_id ?? null,
+      usuarioId: args.usuario_id,
+      fecha: new Date(fecha.getTime() - 1),
+    });
   }
 
   const [movimientoRow] = await tx
@@ -197,9 +248,10 @@ export async function applyMovementTx(
       refTipo: args.ref_tipo ?? null,
       refId: args.ref_id ?? null,
       usuarioId: args.usuario_id,
-      fecha: new Date(),
+      fecha,
       costoUnitario: args.costo_unitario ?? null,
       empleadoId: args.empleado_id ?? null,
+      ubicacion: args.ubicacion ?? null,
     })
     .returning();
 
@@ -230,9 +282,21 @@ async function applyMovement(args: {
   usuario_id: string;
   costo_unitario?: number;
   empleado_id?: string;
+  ubicacion?: UbicacionStock;
 }): Promise<{ stock: StockSucursal; movimiento: MovimientoStock }> {
   const db = getDb();
   return db.transaction((tx) => applyMovementTx(tx, args));
+}
+
+/**
+ * El depósito sólo existe para reventa: en un insumo de bacha la ubicación se
+ * ignora, si no quedaría "guardado" algo que las recetas consumen de la bacha.
+ */
+function ubicacionPara(
+  tipoInsumo: string,
+  ubicacion: UbicacionStock | undefined,
+): UbicacionStock | undefined {
+  return tipoInsumo === "venta" ? ubicacion : undefined;
 }
 
 export async function createAjusteManual(
@@ -244,6 +308,7 @@ export async function createAjusteManual(
     sucursal_id: formData.get("sucursal_id"),
     cantidad: formData.get("cantidad"),
     motivo: formData.get("motivo"),
+    ubicacion: formData.get("ubicacion") || undefined,
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
 
@@ -253,6 +318,31 @@ export async function createAjusteManual(
     return failure("Solo podés ajustar el stock de tu sucursal activa.");
   }
 
+  const db = getDb();
+  const [insumo] = await db
+    .select({ tipo: insumosTable.tipo })
+    .from(insumosTable)
+    .where(eq(insumosTable.id, parsed.data.insumo_id))
+    .limit(1);
+  const ubicacion = ubicacionPara(insumo?.tipo ?? "", parsed.data.ubicacion);
+
+  if (ubicacion === "deposito" && parsed.data.cantidad < 0) {
+    const stock = await db.transaction((tx) =>
+      leerStockTx(tx, parsed.data.insumo_id, parsed.data.sucursal_id),
+    );
+    const enDeposito = stock?.cantidadDeposito ?? 0;
+    if (enDeposito + parsed.data.cantidad < 0) {
+      return {
+        ok: false,
+        errors: {
+          cantidad: [
+            `En depósito hay ${enDeposito.toLocaleString("es-AR")}: no se puede restar más que eso`,
+          ],
+        },
+      };
+    }
+  }
+
   await applyMovement({
     insumo_id: parsed.data.insumo_id,
     sucursal_id: parsed.data.sucursal_id,
@@ -260,6 +350,7 @@ export async function createAjusteManual(
     tipo: "ajuste_manual",
     motivo: parsed.data.motivo,
     usuario_id: user.id,
+    ubicacion,
   });
 
   revalidatePath("/stock");
@@ -286,6 +377,7 @@ export async function createRetiroUsoInterno(
     empleado_id: formData.get("empleado_id"),
     cantidad: formData.get("cantidad"),
     motivo: formData.get("motivo"),
+    ubicacion: formData.get("ubicacion") || undefined,
   });
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   const data = parsed.data;
@@ -330,6 +422,24 @@ export async function createRetiroUsoInterno(
     data.cantidad,
   );
 
+  // Del depósito no se repone solo: si se eligió depósito, tiene que alcanzar.
+  if (data.ubicacion === "deposito") {
+    const stock = await db.transaction((tx) =>
+      leerStockTx(tx, insumo.id, data.sucursal_id),
+    );
+    const enDeposito = stock?.cantidadDeposito ?? 0;
+    if (enDeposito + delta < 0) {
+      return {
+        ok: false,
+        errors: {
+          cantidad: [
+            `En depósito hay ${enDeposito.toLocaleString("es-AR")}: no se puede retirar más que eso`,
+          ],
+        },
+      };
+    }
+  }
+
   await applyMovement({
     insumo_id: insumo.id,
     sucursal_id: data.sucursal_id,
@@ -339,12 +449,85 @@ export async function createRetiroUsoInterno(
     usuario_id: user.id,
     costo_unitario: costoUnitario,
     empleado_id: empleado.id,
+    ubicacion: data.ubicacion ?? "exhibicion",
   });
 
   revalidatePath("/stock");
   revalidatePath("/stock/movimientos");
   revalidatePath("/reportes/resultados");
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Pasar mercadería del depósito a la góndola. Hoy se hace todos los días y no
+ * queda en ningún lado; sin registrarla, contar la góndola contra el sistema no
+ * cierra. No cambia el total, sólo dónde está.
+ */
+export async function createReposicion(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const parsed = reposicionSchema.safeParse({
+    insumo_id: formData.get("insumo_id"),
+    sucursal_id: formData.get("sucursal_id"),
+    cantidad: formData.get("cantidad"),
+    motivo: formData.get("motivo") || undefined,
+  });
+  if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
+  const data = parsed.data;
+
+  const sucursalActiva = await getActiveSucursal();
+  if (!sucursalActiva || data.sucursal_id !== sucursalActiva.id) {
+    return failure("Solo podés reponer stock de tu sucursal activa.");
+  }
+
+  const db = getDb();
+  const [insumo] = await db
+    .select()
+    .from(insumosTable)
+    .where(eq(insumosTable.id, data.insumo_id))
+    .limit(1);
+  if (!insumo || insumo.sucursalId !== data.sucursal_id) {
+    return failure("El producto no es de esta sucursal.");
+  }
+  if (insumo.tipo !== "venta") {
+    return failure("Sólo los productos de venta tienen depósito y exhibición.");
+  }
+
+  // En envases, como el resto de las pantallas de stock.
+  const unidades = data.cantidad * (insumo.tamanoEnvase > 0 ? insumo.tamanoEnvase : 1);
+
+  const resultado = await db.transaction(async (tx) => {
+    const stock = await leerStockTx(tx, insumo.id, data.sucursal_id);
+    // Sin fila de stock el depósito es 0 y reponerExhibicion ya lo rechaza.
+    const r = reponerExhibicion(
+      { cantidad: stock?.cantidad ?? 0, deposito: stock?.cantidadDeposito ?? 0 },
+      unidades,
+    );
+    if (!r.ok || !stock) return r;
+    await tx
+      .update(stockSucursalTable)
+      .set({ cantidadDeposito: r.saldo.deposito })
+      .where(eq(stockSucursalTable.id, stock.id));
+    await tx.insert(movimientosStockTable).values({
+      id: createId(),
+      insumoId: insumo.id,
+      sucursalId: data.sucursal_id,
+      tipo: "reposicion",
+      cantidad: unidades,
+      motivo: data.motivo ?? null,
+      usuarioId: user.id,
+      fecha: new Date(),
+    });
+    return r;
+  });
+  if (!resultado.ok) {
+    return { ok: false, errors: { cantidad: [resultado.error] } };
+  }
+
+  revalidatePath("/stock");
+  revalidatePath("/stock/movimientos");
   return { ok: true };
 }
 

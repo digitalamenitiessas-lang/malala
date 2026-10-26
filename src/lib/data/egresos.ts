@@ -440,7 +440,10 @@ export async function createEgreso(
         // insumo (ml/g/ud), igual que el consumo por receta y la valuación, así
         // que convertimos a unidad base con el tamaño del envase.
         const [insumoRow] = await tx
-          .select({ tamanoEnvase: insumosTable.tamanoEnvase })
+          .select({
+            tamanoEnvase: insumosTable.tamanoEnvase,
+            tipo: insumosTable.tipo,
+          })
           .from(insumosTable)
           .where(eq(insumosTable.id, data.insumo_id))
           .limit(1);
@@ -454,6 +457,9 @@ export async function createEgreso(
           ref_tipo: "egreso",
           ref_id: egresoId,
           usuario_id: user.id,
+          // La mercadería de reventa que llega va al depósito; a la góndola
+          // pasa con una reposición.
+          ubicacion: insumoRow?.tipo === "venta" ? "deposito" : undefined,
         });
       }
 
@@ -780,6 +786,8 @@ export async function anularEgreso(
         .from(movimientosStockTable)
         .where(eq(movimientosStockTable.refId, egresoId));
       for (const compra of compras) {
+        // Una reposición no es stock que entró: sólo cambió de lugar.
+        if (compra.tipo === "reposicion") continue;
         await applyMovementTx(tx, {
           insumo_id: compra.insumoId,
           sucursal_id: compra.sucursalId,
@@ -789,6 +797,8 @@ export async function anularEgreso(
           ref_tipo: "egreso_anulado",
           ref_id: egresoId,
           usuario_id: user.id,
+          // Sale de donde había entrado (el depósito, si era reventa).
+          ubicacion: compra.ubicacion ?? undefined,
         });
       }
 

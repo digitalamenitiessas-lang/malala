@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { UbicacionStock } from "../stock-ubicacion";
 import { sql } from "drizzle-orm";
 
 const auth = pgSchema("auth");
@@ -63,6 +64,8 @@ export const tipoMovimientoStockEnum = pgEnum("tipo_movimiento_stock", [
   "transferencia_salida",
   // Producto de venta retirado para usar en el salón. Ver drizzle/0070.
   "uso_interno",
+  // Del depósito a la góndola: no cambia el total. Ver drizzle/0071.
+  "reposicion",
 ]);
 export const origenTurnoEnum = pgEnum("origen_turno", ["publico", "interno"]);
 export const liquidacionEstadoEnum = pgEnum("liquidacion_estado", [
@@ -664,7 +667,10 @@ export const stockSucursal = pgTable(
     sucursalId: text("sucursal_id")
       .notNull()
       .references(() => sucursales.id, { onDelete: "cascade" }),
+    // Total: depósito + exhibición. Lo exhibido es la diferencia.
     cantidad: doublePrecision("cantidad").notNull(),
+    // Parte guardada en depósito (reventa). Los de bacha la dejan en 0.
+    cantidadDeposito: doublePrecision("cantidad_deposito").notNull().default(0),
   },
   (table) => ({
     uniqueStock: index("stock_sucursal_unique_idx").on(table.insumoId, table.sucursalId),
@@ -695,6 +701,9 @@ export const movimientosStock = pgTable("movimientos_stock", {
   // Quién retiró el producto (uso interno). No es usuarioId, que es quién lo
   // cargó en el sistema.
   empleadoId: text("empleado_id").references(() => empleados.id),
+  // De qué lugar entró o salió: 'deposito' | 'exhibicion' (ver
+  // src/lib/stock-ubicacion.ts). Null en los movimientos de antes de 0071.
+  ubicacion: text("ubicacion").$type<UbicacionStock>(),
 });
 
 export const ingresos =pgTable("ingresos", {
