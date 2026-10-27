@@ -30,8 +30,9 @@
  * producto, así que se multiplican por el tamaño del envase.
  *
  * Corre contra la base que diga el entorno: en la VPS (NODE_ENV=production) es
- * la de producción. Dry-run salvo --commit.
- * Uso: NODE_ENV=production npx tsx scripts/import-stock-reventa-yb.ts [--commit]
+ * la de producción. Dry-run salvo --commit. Va por lotes (ver LOTES): el
+ * "26oct" es la planilla; el "27oct", lo que Elu contó después.
+ * Uso: NODE_ENV=production npx tsx scripts/import-stock-reventa-yb.ts --lote <lote> [--commit]
  */
 import "../envConfig";
 import { and, eq } from "drizzle-orm";
@@ -124,6 +125,36 @@ const SIN_STOCK = [
   // "Serum Vitamina Spectrum" NO: puede ser el serum vitamino color pendiente.
 ];
 
+/**
+ * Segundo lote (27/10/2026): lo que Elu contó después por WhatsApp. Sin
+ * renombrar. Elu no dijo dónde están el serum, el cepillo y la vincha: van a
+ * salón (exhibición), que es donde se venden.
+ *
+ * "Serum vitamino color: no tenemos stock. Solo en existencia 1 serum de
+ * vitamino color spectrum" — el de la planilla no existe; el Spectrum sí.
+ */
+const CARGA_27OCT: Array<{ id: string; deposito: number; salon: number }> = [
+  { id: "yb-VPC135", deposito: 0, salon: 1 }, // Serum Vitamina Spectrum
+  { id: "ebac043c-205c-40b8-bbf7-c68a1b4cbfcb", deposito: 0, salon: 1 }, // Cepillo Antifriz
+  { id: "1e2bd824-aaff-4f45-942d-d7b3fa5a82be", deposito: 4, salon: 5 }, // PROLASH EASY GEL MELANIA
+  { id: "yb-VPC125", deposito: 0, salon: 0 }, // Aceite de cuticulas: sin stock
+  { id: "26ddab8a-0bbb-4209-ac05-fc5a3aa9de33", deposito: 0, salon: 2 }, // vincha + colero + traba
+];
+
+/**
+ * Cada lote se aplica una sola vez: fija cantidades absolutas, así que volver a
+ * correr uno viejo pisaría las ventas que hubo desde entonces.
+ */
+const LOTES = {
+  "26oct": { motivo: MOTIVO, carga: CARGA, bajas: BAJAS, sinStock: SIN_STOCK },
+  "27oct": {
+    motivo: "Recuento reventa 27/10/2026 (WhatsApp de Elu)",
+    carga: CARGA_27OCT,
+    bajas: [] as typeof BAJAS,
+    sinStock: [] as string[],
+  },
+};
+
 class DryRun extends Error {}
 
 function fmt(n: number): string {
@@ -132,6 +163,13 @@ function fmt(n: number): string {
 
 async function main() {
   const commit = process.argv.includes("--commit");
+  const i = process.argv.indexOf("--lote");
+  const nombreLote = i >= 0 ? process.argv[i + 1] : "";
+  if (!(nombreLote in LOTES)) {
+    throw new Error(`Indicá el lote: --lote ${Object.keys(LOTES).join(" | ")}`);
+  }
+  const lote = LOTES[nombreLote as keyof typeof LOTES];
+  const { carga: CARGA_L, bajas: BAJAS_L, sinStock: SIN_STOCK_L, motivo: MOTIVO_L } = lote;
   const db = getDb();
 
   const [usuario] = await db
@@ -141,7 +179,7 @@ async function main() {
     .limit(1);
   if (!usuario) throw new Error(`No existe el perfil ${USUARIO_EMAIL}`);
 
-  const ids = [...CARGA.map((c) => c.id), ...BAJAS.map((b) => b.id), ...SIN_STOCK];
+  const ids = [...CARGA_L.map((c) => c.id), ...BAJAS_L.map((b) => b.id), ...SIN_STOCK_L];
   if (new Set(ids).size !== ids.length) throw new Error("Hay un producto repetido en el mapeo");
 
   const lineas: string[] = [];
@@ -183,34 +221,36 @@ async function main() {
         return row;
       }
 
-      lineas.push("=== CARGA (nombre de la planilla + depósito/salón) ===");
-      for (const c of CARGA) {
+      lineas.push(`=== CARGA · lote ${nombreLote} (nombre + depósito/salón) ===`);
+      for (const c of CARGA_L) {
         const row = await leerInsumo(c.id);
         const tam = row.tamanoEnvase > 0 ? row.tamanoEnvase : 1;
-        const { antes } = await fijar(c.id, { deposito: c.deposito * tam, exhibido: c.salon * tam }, MOTIVO);
-        if (row.nombre !== c.nombre) {
-          await tx.update(insumosTable).set({ nombre: c.nombre }).where(eq(insumosTable.id, c.id));
+        const { antes } = await fijar(c.id, { deposito: c.deposito * tam, exhibido: c.salon * tam }, MOTIVO_L);
+        // Sin nombre en el lote, queda el que tiene.
+        const nombre = "nombre" in c ? c.nombre : row.nombre;
+        if (row.nombre !== nombre) {
+          await tx.update(insumosTable).set({ nombre }).where(eq(insumosTable.id, c.id));
         }
         lineas.push(
-          `  ${row.nombre === c.nombre ? c.nombre : `${row.nombre}  →  ${c.nombre}`}\n` +
+          `  ${row.nombre === nombre ? nombre : `${row.nombre}  →  ${nombre}`}\n` +
             `      exhib. ${fmt(antes.exhibido / tam)} → ${c.salon} · dep. ${fmt(antes.deposito / tam)} → ${c.deposito}`,
         );
       }
 
-      lineas.push("\n=== BAJAS (duplicados) ===");
-      for (const b of BAJAS) {
+      lineas.push("\n=== BAJAS_L (duplicados) ===");
+      for (const b of BAJAS_L) {
         const row = await leerInsumo(b.id);
         const tam = row.tamanoEnvase > 0 ? row.tamanoEnvase : 1;
-        const { antes } = await fijar(b.id, { deposito: 0, exhibido: 0 }, `${MOTIVO}: ${b.motivo}`);
+        const { antes } = await fijar(b.id, { deposito: 0, exhibido: 0 }, `${MOTIVO_L}: ${b.motivo}`);
         await tx.update(insumosTable).set({ activo: false }).where(eq(insumosTable.id, b.id));
         lineas.push(`  ${row.nombre}: stock ${fmt((antes.exhibido + antes.deposito) / tam)} → 0 y baja (${b.motivo})`);
       }
 
       lineas.push("\n=== SIN STOCK (quedan en 0) ===");
-      for (const id of SIN_STOCK) {
+      for (const id of SIN_STOCK_L) {
         const row = await leerInsumo(id);
         const tam = row.tamanoEnvase > 0 ? row.tamanoEnvase : 1;
-        const { antes } = await fijar(id, { deposito: 0, exhibido: 0 }, `${MOTIVO}: no hay stock`);
+        const { antes } = await fijar(id, { deposito: 0, exhibido: 0 }, `${MOTIVO_L}: no hay stock`);
         lineas.push(`  ${row.nombre}: ${fmt((antes.exhibido + antes.deposito) / tam)} → 0`);
       }
 
