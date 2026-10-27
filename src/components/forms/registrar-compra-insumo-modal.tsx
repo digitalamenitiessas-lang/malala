@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { X } from "lucide-react";
 import { useActionStateFeedback } from "@/components/feedback/action-feedback";
 import { LoadingButton } from "./field";
@@ -10,22 +17,54 @@ import { registrarCompraInsumo } from "@/lib/data/insumos";
 import type { CreateEgresoResult } from "@/lib/data/egresos";
 import { formatARS } from "@/lib/utils";
 
-interface Props {
-  insumo: Insumo;
-  /** Los que ya están asociados a este insumo. Puede venir vacío. */
-  proveedores: Proveedor[];
+interface DatosCompra {
   /**
-   * Todos los de la casa, para cuando el insumo no tiene ninguno asociado.
+   * Todos los de la casa: los asociados al insumo salen de acá por
+   * proveedor_ids, y la lista entera se ofrece cuando no tiene ninguno.
    *
    * Sin esto el modal no dibujaba ningún campo de proveedor y la compra se
    * rechazaba igual, con un cartel que decía "elegí el proveedor" al lado de
    * un formulario donde no había dónde elegirlo. Elu: "me pide proveedor
    * obviamente pero no tengo el campo para ponerlo".
    */
-  proveedoresTodos?: Proveedor[];
+  proveedores: Proveedor[];
   sucursales: Sucursal[];
   mediosPago: MedioPago[];
   defaultSucursalId: string;
+}
+
+const DatosCompraContext = createContext<DatosCompra | null>(null);
+
+/**
+ * Las listas que comparten todos los modales de la tabla, una sola vez.
+ *
+ * Antes cada una de las ~340 filas recibía proveedores, sucursales y medios de
+ * pago como props. React no repite un objeto que ya mandó: lo referencia por
+ * su camino dentro de la fila anterior ("$6:props:children:…:proveedoresTodos"),
+ * y con cientos de filas encadenadas así el navegador se quedaba esperando una
+ * referencia que nunca se resolvía. Sin error y sin consumir CPU: entrar a
+ * Insumos desde Catálogo no hacía nada, y guardar un insumo dejaba el botón en
+ * "Guardando..." para siempre (vuelve a esta lista). Recargando andaba porque la
+ * página entera se arma en el servidor.
+ */
+export function DatosCompraProvider({
+  children,
+  ...datos
+}: DatosCompra & { children: ReactNode }) {
+  return (
+    <DatosCompraContext.Provider value={datos}>{children}</DatosCompraContext.Provider>
+  );
+}
+
+function useDatosCompra(): DatosCompra {
+  const datos = useContext(DatosCompraContext);
+  if (!datos) throw new Error("RegistrarCompraInsumoModal va dentro de DatosCompraProvider");
+  return datos;
+}
+
+interface Props {
+  /** Va sola por fila: el resto sale de DatosCompraProvider. */
+  insumo: Insumo;
   triggerLabel?: string;
 }
 
@@ -43,17 +82,18 @@ function todayYMD(): string {
 
 export function RegistrarCompraInsumoModal({
   insumo,
-  proveedores,
-  proveedoresTodos,
-  sucursales,
-  mediosPago,
-  defaultSucursalId,
   triggerLabel = "Registrar compra",
 }: Props) {
+  const { proveedores: proveedoresTodos, sucursales, mediosPago, defaultSucursalId } =
+    useDatosCompra();
+  const proveedores = useMemo(
+    () => proveedoresTodos.filter((p) => insumo.proveedor_ids?.includes(p.id)),
+    [proveedoresTodos, insumo.proveedor_ids],
+  );
   // Si el insumo no tiene proveedores propios, se eligen de la lista completa
   // y ese queda asociado para la próxima compra.
   const sinAsociar = proveedores.length === 0;
-  const opciones = sinAsociar ? (proveedoresTodos ?? []) : proveedores;
+  const opciones = sinAsociar ? proveedoresTodos : proveedores;
   const [open, setOpen] = useState(false);
   const [sucursalId, setSucursalId] = useState(defaultSucursalId);
   const [cantidad, setCantidad] = useState<number>(1);

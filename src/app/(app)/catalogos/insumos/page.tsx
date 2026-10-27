@@ -8,7 +8,10 @@ import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { redirect } from "next/navigation";
 import { formatARS } from "@/lib/utils";
-import { RegistrarCompraInsumoModal } from "@/components/forms/registrar-compra-insumo-modal";
+import {
+  DatosCompraProvider,
+  RegistrarCompraInsumoModal,
+} from "@/components/forms/registrar-compra-insumo-modal";
 import { InsumosSearch } from "./insumos-search";
 
 const UNIDAD_LABEL: Record<string, string> = {
@@ -84,6 +87,15 @@ export default async function InsumosPage({
 
       <InsumosSearch />
 
+      {/* Las listas del modal de compra van una sola vez acá y no en cada fila:
+          repetidas en ~340 filas, la navegación a esta página se colgaba (ver
+          DatosCompraProvider). */}
+      <DatosCompraProvider
+        proveedores={proveedores}
+        sucursales={sucursalesParaCompra}
+        mediosPago={mediosPago}
+        defaultSucursalId={sucursalActiva?.id ?? ""}
+      >
       {/* La tabla ya venía justa de ancho; con la columna de código scrollea en
           pantallas chicas en vez de apretar las celdas. */}
       <div className="bg-card border border-border rounded-md overflow-x-auto">
@@ -183,14 +195,7 @@ export default async function InsumosPage({
                         i.activo &&
                         sucursalActiva &&
                         sucursales.length > 0 && (
-                          <RegistrarCompraInsumoModal
-                            insumo={i}
-                            proveedores={proveedoresDelInsumo}
-                            proveedoresTodos={proveedores}
-                            sucursales={sucursalesParaCompra}
-                            mediosPago={mediosPago}
-                            defaultSucursalId={sucursalActiva.id}
-                          />
+                          <RegistrarCompraInsumoModal insumo={i} />
                         )}
                       {esAdmin(user.rol) && (
                         // Sin prefetch: es el botón de cada una de las 343
@@ -211,6 +216,7 @@ export default async function InsumosPage({
           </tbody>
         </table>
       </div>
+      </DatosCompraProvider>
     </div>
   );
 }
