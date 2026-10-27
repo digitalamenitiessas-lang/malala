@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { notFound, redirect } from "next/navigation";
 import { AgregarInsumoReceta } from "@/components/forms/agregar-insumo-receta";
@@ -153,9 +152,11 @@ export default async function EditarRecetaPage({
           <p className="text-xs">
             Esas líneas suman $ 0 al costo, así que el costo real de esta receta
             es mayor y el margen menor que el que ves acá. Cargá el precio en{" "}
-            <Link href="/catalogos/insumos" className="underline">
+            {/* <a> y no Link: Insumos se abre recargando (ver catalogos/page). */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/catalogos/insumos" className="underline">
               Catálogos → Insumos
-            </Link>
+            </a>
             .
           </p>
         </div>

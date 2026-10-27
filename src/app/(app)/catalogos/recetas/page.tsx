@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { TableActionLink } from "@/components/table-action-link";
 import { listRecetasResumen } from "@/lib/data/recetas";
 import { redirect } from "next/navigation";
@@ -70,9 +69,11 @@ export default async function RecetasPage() {
             Esos insumos no suman al costo: en esas recetas el costo real es
             mayor y el margen menor que el que muestra esta tabla. Cargá el
             precio en{" "}
-            <Link href="/catalogos/insumos" className="underline">
+            {/* <a> y no Link: Insumos se abre recargando (ver catalogos/page). */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/catalogos/insumos" className="underline">
               Catálogos → Insumos
-            </Link>
+            </a>
             .
           </p>
         </div>

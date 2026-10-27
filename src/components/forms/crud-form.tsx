@@ -12,6 +12,8 @@ interface Props {
   redirectTo: string;
   submitLabel: string;
   cancelHref?: string;
+  /** Volver a redirectTo recargando la página. Ver `recargar` en action-feedback. */
+  recargar?: boolean;
   children: (errors: Record<string, string[]>) => React.ReactNode;
 }
 
@@ -20,10 +22,12 @@ export function CrudForm({
   redirectTo,
   submitLabel,
   cancelHref,
+  recargar,
   children,
 }: Props) {
   const [state, formAction, pending] = useActionStateFeedback(action, {
     redirectTo,
+    recargar,
   });
 
   const errors = state && !state.ok ? state.errors : {};

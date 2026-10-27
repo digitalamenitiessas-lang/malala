@@ -18,6 +18,13 @@ interface FeedbackOptions<T extends FeedbackResultLike> {
   successMessage?: string;
   errorMessage?: string;
   refreshOnSuccess?: boolean;
+  /**
+   * Ir a redirectTo recargando la página entera en vez de navegar con el
+   * router. Para destinos cuya navegación del lado del cliente se cuelga (la
+   * lista de insumos): el botón quedaba en "Guardando..." aunque ya se había
+   * guardado.
+   */
+  recargar?: boolean;
   onSuccess?: (result: T) => void;
   onError?: (result: T) => void;
 }
@@ -57,6 +64,10 @@ function useFeedbackDispatcher() {
             : options.redirectTo;
         if (redirectTo) {
           persistFlashToast({ type: "success", message });
+          if (options.recargar) {
+            window.location.assign(redirectTo);
+            return result;
+          }
           router.push(redirectTo);
           if (options.refreshOnSuccess !== false) {
             router.refresh();

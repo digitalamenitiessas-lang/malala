@@ -82,6 +82,9 @@ export function InsumoForm({
     <CrudForm
       action={action}
       redirectTo="/catalogos/insumos"
+      // La lista de insumos no se termina de mostrar navegando sin recargar:
+      // el botón quedaba en "Guardando..." con el insumo ya guardado.
+      recargar
       submitLabel={submitLabel}
     >
       {(errors) => (

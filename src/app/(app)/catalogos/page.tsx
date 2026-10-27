@@ -194,8 +194,12 @@ export default async function CatalogosPage() {
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map(({ href, label, Icon, desc }) => (
-          <Link
+        {items.map(({ href, label, Icon, desc }) => {
+          // Insumos se abre recargando: navegando sin recargar, la lista no se
+          // terminaba de mostrar y la tarjeta parecía no hacer nada.
+          const Enlace = href === "/catalogos/insumos" ? "a" : Link;
+          return (
+          <Enlace
             key={href}
             href={href}
             className="bg-card border border-border rounded-md p-5 hover:bg-cream/40 transition-colors group"
@@ -214,8 +218,9 @@ export default async function CatalogosPage() {
                 )}
               </div>
             </div>
-          </Link>
-        ))}
+          </Enlace>
+          );
+        })}
       </div>
     </div>
   );
