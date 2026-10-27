@@ -38,6 +38,7 @@ import "../envConfig";
 import { and, eq } from "drizzle-orm";
 import { getDb, getSqlClient } from "../src/lib/db/client/postgres";
 import {
+  insumoProveedores as insumoProveedoresTable,
   insumos as insumosTable,
   profiles as profilesTable,
   stockSucursal as stockSucursalTable,
@@ -142,16 +143,61 @@ const CARGA_27OCT: Array<{ id: string; deposito: number; salon: number }> = [
 ];
 
 /**
+ * Los dos de la planilla que no existían en el sistema. Elu pasó costo y precio
+ * de venta (lista y efectivo, 20% menos). Cantidades de la planilla.
+ */
+type Alta = {
+  codigo: string;
+  nombre: string;
+  costo: number;
+  precioVenta: number;
+  precioVentaEfectivo: number;
+  proveedorId: string;
+  deposito: number;
+  salon: number;
+};
+const ALTAS_27OCT: Alta[] = [
+  {
+    codigo: "VPC155",
+    nombre: "Oil Absolut Repair 90ml",
+    costo: 51555,
+    precioVenta: 140000,
+    precioVentaEfectivo: 112000,
+    proveedorId: "prov-loreal",
+    deposito: 2,
+    salon: 1,
+  },
+  {
+    codigo: "VPC156",
+    nombre: "Fixer paste_pasta modeladora_style question",
+    costo: 13231,
+    precioVenta: 36000,
+    precioVentaEfectivo: 28800,
+    proveedorId: "prov-question-professional",
+    deposito: 0,
+    salon: 2,
+  },
+];
+
+/**
  * Cada lote se aplica una sola vez: fija cantidades absolutas, así que volver a
  * correr uno viejo pisaría las ventas que hubo desde entonces.
  */
 const LOTES = {
-  "26oct": { motivo: MOTIVO, carga: CARGA, bajas: BAJAS, sinStock: SIN_STOCK },
+  "26oct": { motivo: MOTIVO, carga: CARGA, bajas: BAJAS, sinStock: SIN_STOCK, altas: [] as Alta[] },
   "27oct": {
     motivo: "Recuento reventa 27/10/2026 (WhatsApp de Elu)",
     carga: CARGA_27OCT,
     bajas: [] as typeof BAJAS,
     sinStock: [] as string[],
+    altas: [] as Alta[],
+  },
+  "27oct-altas": {
+    motivo: "Alta con stock de la planilla de reventa (27/10/2026)",
+    carga: [] as typeof CARGA_27OCT,
+    bajas: [] as typeof BAJAS,
+    sinStock: [] as string[],
+    altas: ALTAS_27OCT,
   },
 };
 
@@ -169,7 +215,13 @@ async function main() {
     throw new Error(`Indicá el lote: --lote ${Object.keys(LOTES).join(" | ")}`);
   }
   const lote = LOTES[nombreLote as keyof typeof LOTES];
-  const { carga: CARGA_L, bajas: BAJAS_L, sinStock: SIN_STOCK_L, motivo: MOTIVO_L } = lote;
+  const {
+    carga: CARGA_L,
+    bajas: BAJAS_L,
+    sinStock: SIN_STOCK_L,
+    motivo: MOTIVO_L,
+    altas: ALTAS_L,
+  } = lote;
   const db = getDb();
 
   const [usuario] = await db
@@ -219,6 +271,45 @@ async function main() {
         if (row.tipo !== "venta") throw new Error(`${row.nombre} no es de reventa`);
         if (!row.activo) throw new Error(`${row.nombre} está dado de baja`);
         return row;
+      }
+
+      if (ALTAS_L.length) lineas.push(`=== ALTAS · lote ${nombreLote} ===`);
+      for (const a of ALTAS_L) {
+        const [existe] = await tx
+          .select({ id: insumosTable.id, nombre: insumosTable.nombre })
+          .from(insumosTable)
+          .where(and(eq(insumosTable.sucursalId, YB_ID), eq(insumosTable.codigo, a.codigo)))
+          .limit(1);
+        if (existe) throw new Error(`El código ${a.codigo} ya es de "${existe.nombre}"`);
+        const id = crypto.randomUUID();
+        // Como el resto de la reventa: se vende por unidad, así que el envase es
+        // 1 y su precio es el costo.
+        await tx.insert(insumosTable).values({
+          id,
+          sucursalId: YB_ID,
+          nombre: a.nombre,
+          codigo: a.codigo,
+          unidadMedida: "ud",
+          tamanoEnvase: 1,
+          precioEnvase: a.costo,
+          precioUnitario: a.costo,
+          umbralStockBajo: 0,
+          activo: true,
+          tipo: "venta",
+          vendible: true,
+          precioVenta: a.precioVenta,
+          precioVentaEfectivo: a.precioVentaEfectivo,
+        });
+        await tx.insert(insumoProveedoresTable).values({
+          id: crypto.randomUUID(),
+          insumoId: id,
+          proveedorId: a.proveedorId,
+        });
+        await fijar(id, { deposito: a.deposito, exhibido: a.salon }, MOTIVO_L);
+        lineas.push(
+          `  + ${a.codigo} ${a.nombre}\n` +
+            `      costo ${fmt(a.costo)} · venta ${fmt(a.precioVenta)} / ${fmt(a.precioVentaEfectivo)} ef. · exhib. ${a.salon} · dep. ${a.deposito}`,
+        );
       }
 
       lineas.push(`=== CARGA · lote ${nombreLote} (nombre + depósito/salón) ===`);
