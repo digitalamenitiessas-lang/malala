@@ -4,21 +4,32 @@ import { useState } from "react";
 import { Ban } from "lucide-react";
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { LoadingButton } from "./field";
-import { anularIngresoManual } from "@/lib/data/cuentas-bancarias";
+import {
+  anularIngresoManual,
+  anularTransferencia,
+} from "@/lib/data/cuentas-bancarias";
 import { formatARS } from "@/lib/utils";
 
 interface Props {
   movimientoId: string;
   monto: number;
   concepto?: string;
+  /** Una transferencia se anula con sus dos patas (ver anularTransferencia). */
+  tipo?: "ingreso" | "transferencia";
 }
 
 /**
- * Anular un ingreso manual desde la lista de movimientos. No se borra: queda
- * un ajuste en negativo que lo cancela, con el motivo, y el saldo vuelve a lo
- * que era.
+ * Anular un ingreso manual o una transferencia desde la lista de movimientos.
+ * No se borra: queda un ajuste que lo cancela, con el motivo, y el saldo
+ * vuelve a lo que era.
  */
-export function AnularIngresoManual({ movimientoId, monto, concepto }: Props) {
+export function AnularIngresoManual({
+  movimientoId,
+  monto,
+  concepto,
+  tipo = "ingreso",
+}: Props) {
+  const esTransferencia = tipo === "transferencia";
   const { pending, run } = useTransitionFeedback();
   const [abierto, setAbierto] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -32,11 +43,16 @@ export function AnularIngresoManual({ movimientoId, monto, concepto }: Props) {
     }
     run(
       async () => {
-        const res = await anularIngresoManual(movimientoId, motivo);
+        const res = esTransferencia
+          ? await anularTransferencia(movimientoId, motivo)
+          : await anularIngresoManual(movimientoId, motivo);
         if (!res.ok) setError(Object.values(res.errors).flat().join(" "));
         return res;
       },
-      { refreshOnSuccess: true, successMessage: "Ingreso anulado" },
+      {
+        refreshOnSuccess: true,
+        successMessage: esTransferencia ? "Transferencia anulada" : "Ingreso anulado",
+      },
     );
   }
 
@@ -56,9 +72,19 @@ export function AnularIngresoManual({ movimientoId, monto, concepto }: Props) {
   return (
     <div className="mt-2 space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-left">
       <p className="text-xs text-foreground">
-        Anular el ingreso de {formatARS(monto)}
-        {concepto ? ` (${concepto})` : ""}. Se descuenta de la cuenta y queda
-        registrado como anulado.
+        {esTransferencia ? (
+          <>
+            Anular la transferencia de {formatARS(Math.abs(monto))}
+            {concepto ? ` (${concepto})` : ""}. Las dos cuentas vuelven a como
+            estaban y queda registrada como anulada.
+          </>
+        ) : (
+          <>
+            Anular el ingreso de {formatARS(monto)}
+            {concepto ? ` (${concepto})` : ""}. Se descuenta de la cuenta y queda
+            registrado como anulado.
+          </>
+        )}
       </p>
       <label
         htmlFor={`motivo-${movimientoId}`}

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { fechaArDeISO, finDeDiaArISO, formatYmdAr, hoyAr } from "@/lib/fecha-ar";
 import { getDb } from "@/lib/db/client/postgres";
@@ -253,7 +253,9 @@ export async function listMovimientos(
   ) as string[];
   // El contra-asiento puede quedar fuera de la página (otro filtro, el
   // límite), así que se busca aparte para poder marcar el original.
-  const manualIds = movs.filter((m) => m.ref_tipo === "manual").map((m) => m.id);
+  const manualIds = movs
+    .filter((m) => m.ref_tipo === "manual" || m.ref_tipo === "transferencia")
+    .map((m) => m.id);
   const anulacionRows =
     manualIds.length > 0
       ? await db
@@ -412,6 +414,8 @@ export async function createTransferencia(
 
       const fecha = new Date();
       const descripcion = data.descripcion ?? `Transferencia entre cuentas`;
+      // Las dos patas comparten ref_id: así se encuentran para anularlas juntas.
+      const transferenciaId = createId();
 
       await tx.insert(movimientosBancariosTable).values([
         {
@@ -422,7 +426,7 @@ export async function createTransferencia(
           monto: -Math.abs(data.monto),
           sucursalId: sucursalOrigen,
           refTipo: "transferencia",
-          refId: null,
+          refId: transferenciaId,
           descripcion,
           usuarioId: user.id,
         },
@@ -434,7 +438,7 @@ export async function createTransferencia(
           monto: Math.abs(data.monto),
           sucursalId: sucursalDestino,
           refTipo: "transferencia",
-          refId: null,
+          refId: transferenciaId,
           descripcion,
           usuarioId: user.id,
         },
@@ -628,6 +632,120 @@ export async function anularIngresoManual(
     return failure(
       error instanceof Error ? error.message : "No se pudo anular",
     );
+  }
+
+  revalidatePath("/bancos");
+  revalidatePath("/caja");
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Deshace una transferencia entre cuentas cargada por error.
+ *
+ * Pedido por Malala Centro: cargaron dos veces la misma transferencia, y al
+ * revés de lo que querían, y no había cómo sacarla. Igual que el ingreso
+ * manual, no se borra: cada pata recibe su contra-asiento (ref_tipo
+ * "anulacion_manual", ref_id = esa pata), así el arqueo del día y los totales
+ * de la pantalla descartan los pares sin cambiar nada más.
+ *
+ * Se anulan las dos patas juntas, se toque la que se toque. Las transferencias
+ * nuevas comparten ref_id; las de antes no tenían, y su par se reconoce por la
+ * misma fecha exacta, el mismo usuario y el monto opuesto.
+ */
+export async function anularTransferencia(
+  movimientoId: string,
+  motivo: string,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+  const nota = motivo?.trim();
+  if (!nota) {
+    return { ok: false, errors: { motivo: ["Contá por qué se anula"] } };
+  }
+
+  const db = getDb();
+  const [mov] = await db
+    .select()
+    .from(movimientosBancariosTable)
+    .where(eq(movimientosBancariosTable.id, movimientoId))
+    .limit(1);
+  if (!mov) return failure("Movimiento no encontrado");
+  if (mov.refTipo !== "transferencia") {
+    return failure("Este movimiento no es una transferencia entre cuentas.");
+  }
+
+  const [par] = await db
+    .select()
+    .from(movimientosBancariosTable)
+    .where(
+      and(
+        eq(movimientosBancariosTable.refTipo, "transferencia"),
+        ne(movimientosBancariosTable.id, mov.id),
+        mov.refId
+          ? eq(movimientosBancariosTable.refId, mov.refId)
+          : and(
+              isNull(movimientosBancariosTable.refId),
+              eq(movimientosBancariosTable.fecha, mov.fecha),
+              eq(movimientosBancariosTable.usuarioId, mov.usuarioId),
+              eq(movimientosBancariosTable.monto, -mov.monto),
+            ),
+      ),
+    )
+    .limit(1);
+  if (!par) {
+    return failure(
+      "No se encontró la otra cuenta de esta transferencia. Avisanos y la corregimos.",
+    );
+  }
+
+  for (const m of [mov, par]) {
+    if (!m.sucursalId || !isSucursalAllowed(scope, m.sucursalId)) {
+      return failure("No tenés acceso a esa transferencia");
+    }
+  }
+
+  const ymd = fechaArDeISO(mov.fecha.toISOString());
+  const cierre = await getCierreQueBloqueaFecha(mov.sucursalId!, ymd);
+  if (cierre) {
+    return failure(
+      `La caja del ${formatYmdAr(cierre.fecha)} ya está cerrada y esta transferencia entró en ese arqueo. Reabrí ese cierre desde Caja y volvé a intentarlo.`,
+    );
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      // Pegado al insert: un doble clic no tiene que dejar dos anulaciones.
+      const [yaAnulado] = await tx
+        .select({ id: movimientosBancariosTable.id })
+        .from(movimientosBancariosTable)
+        .where(
+          and(
+            eq(movimientosBancariosTable.refTipo, "anulacion_manual"),
+            inArray(movimientosBancariosTable.refId, [mov.id, par.id]),
+          ),
+        )
+        .limit(1);
+      if (yaAnulado) throw new Error("Esta transferencia ya estaba anulada");
+
+      await tx.insert(movimientosBancariosTable).values(
+        [mov, par].map((m) => ({
+          id: createId(),
+          cuentaId: m.cuentaId,
+          // Misma fecha que la pata original: el par cae en el mismo día.
+          fecha: m.fecha,
+          tipo: "ajuste" as const,
+          monto: -m.monto,
+          sucursalId: m.sucursalId,
+          refTipo: "anulacion_manual",
+          refId: m.id,
+          descripcion: `Anulación de transferencia "${m.descripcion ?? "entre cuentas"}": ${nota}`,
+          usuarioId: user.id,
+        })),
+      );
+    });
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : "No se pudo anular");
   }
 
   revalidatePath("/bancos");

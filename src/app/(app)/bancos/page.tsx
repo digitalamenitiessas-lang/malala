@@ -405,8 +405,9 @@ export default async function BancosPage({ searchParams }: PageProps) {
               ) : (
                 movimientos.map((m) => {
                   const esManual = m.movimiento.ref_tipo === "manual";
+                  const esTransferencia = m.movimiento.ref_tipo === "transferencia";
                   const esAnulacion = m.movimiento.ref_tipo === "anulacion_manual";
-                  const anulado = esManual && Boolean(m.anulacion);
+                  const anulado = (esManual || esTransferencia) && Boolean(m.anulacion);
                   return (
                     <tr
                       key={m.movimiento.id}
@@ -461,6 +462,16 @@ export default async function BancosPage({ searchParams }: PageProps) {
                               />
                             </div>
                           )}
+                        {esTransferencia && !anulado && puedeAnular && (
+                          <div className="mt-1">
+                            <AnularIngresoManual
+                              tipo="transferencia"
+                              movimientoId={m.movimiento.id}
+                              monto={m.movimiento.monto}
+                              concepto={m.movimiento.descripcion}
+                            />
+                          </div>
+                        )}
                       </td>
                       <td
                         className={
