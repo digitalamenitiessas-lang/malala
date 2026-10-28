@@ -51,11 +51,16 @@ export default async function CierreDetallePage({
         </div>
       </header>
 
-      {/* Conciliación del cierre: efectivo esperado (suma el saldo inicial). El
-          resto del desglose por medio va en <DesgloseCaja />. */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <SummaryBox label="Efectivo esperado" value={formatARS(efectivoEsperado)} />
-      </section>
+      {/* Efectivo esperado del snapshot viejo (inicial + ventas EF − egresos
+          EF). Sólo para cierres sin arqueo por cuenta: no ve los movimientos
+          manuales de cuenta, y al lado de la tabla mostraba otra cifra. Centro
+          cerró el 28/10 con 731.400 contados y cuadrando, y este recuadro decía
+          481.400 porque le faltaba un ingreso manual de 250.000. */}
+      {arqueo.length === 0 && (
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <SummaryBox label="Efectivo esperado" value={formatARS(efectivoEsperado)} />
+        </section>
+      )}
 
       {/* Arqueo por cuenta: esperado vs contado al cerrar (fase 2). */}
       {arqueo.length > 0 && (
