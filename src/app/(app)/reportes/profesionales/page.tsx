@@ -62,12 +62,16 @@ export default async function ReportesProfesionalesPage({
   const promoComponentesById = new Map(
     promociones.map((promo) => [promo.id, promo.componentes.length]),
   );
+  const promoListaById = new Map(
+    promociones.map((promo) => [promo.id, promo.precio_lista]),
+  );
 
   const weeklyGroups = resumenSemanalPorProfesional(ingresos, {
     desde: filtros.desde,
     hasta: filtros.hasta,
     promoPriceById,
     promoComponentesById,
+    promoListaById,
   });
   const totalFacturado = weeklyGroups.reduce(
     (sum, group) => sum + group.totals.facturado,

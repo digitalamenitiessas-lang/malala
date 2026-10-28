@@ -125,6 +125,12 @@ export function comisionMontoServicio(args: {
   precioEfectivoServicio?: number;
   /** Las líneas que vienen de una promo comisionan sobre lo cobrado. */
   esDePromo: boolean;
+  /**
+   * Promo cobrada a precio de lista (con tarjeta): precio en efectivo de la
+   * promo sobre su precio de lista. Lo cobrado de más es el recargo, y la
+   * comisión sigue siendo sobre efectivo, igual que en un servicio suelto.
+   */
+  factorPromoLista?: number;
   comisionPct: number;
   soportaDescuento: boolean;
   subtotal: number;
@@ -134,13 +140,15 @@ export function comisionMontoServicio(args: {
     precioCobrado,
     precioEfectivoServicio,
     esDePromo,
+    factorPromoLista,
     comisionPct,
     soportaDescuento,
     subtotal,
     descuentoMonto,
   } = args;
-  const baseCatalogo =
-    esDePromo || precioEfectivoServicio == null
+  const baseCatalogo = esDePromo
+    ? precioCobrado * (factorPromoLista ?? 1)
+    : precioEfectivoServicio == null
       ? precioCobrado
       : precioEfectivoServicio;
   // El descuento se aplica como TASA sobre la base, no como monto absoluto.
@@ -160,6 +168,14 @@ export function comisionMontoServicio(args: {
   // Un descuento grande sobre un ticket de varias líneas puede dejar la base en
   // negativo; la comisión es cero, no una deuda de la empleada.
   return Math.max(0, base) * (comisionPct / 100);
+}
+
+/** Precio en efectivo sobre precio de lista de una promo (1 si no hay lista). */
+export function factorEfectivoSobreLista(
+  precioEfectivo: number,
+  precioLista: number,
+): number {
+  return precioLista > 0 ? Math.min(1, precioEfectivo / precioLista) : 1;
 }
 
 export interface IngresoLineaConDetalle extends IngresoLinea {
@@ -455,6 +471,12 @@ export function buildFacturadoPorLineaMap(
    * combo de $50.000 usado en dos días figuraba como $100.000 facturados.
    */
   promoComponentesById?: Map<string, number>,
+  /**
+   * Precio de lista de cada promo. Un combo cobrado con tarjeta va a precio de
+   * lista y sus líneas ya suman eso: repartirle el precio en efectivo lo
+   * mostraría facturando de menos.
+   */
+  promoListaById?: Map<string, number>,
 ): Map<string, number> {
   const amounts = new Map<string, number>();
 
@@ -493,6 +515,10 @@ export function buildFacturadoPorLineaMap(
     const componentes = promoComponentesById?.get(promoId);
     if (componentes != null && promoLineas.length < componentes) continue;
 
+    const lista = promoListaById?.get(promoId);
+    const sumaLineas = promoLineas.reduce((s, l) => s + l.subtotal, 0);
+    if (lista != null && lista > 0 && Math.abs(sumaLineas - lista) < 1) continue;
+
     const totalWeight = promoLineas.reduce(
       (sum, linea) => sum + (linea.servicio?.precio_lista ?? linea.subtotal),
       0,
@@ -521,6 +547,8 @@ export function rendimientoPorEmpleado(
     promoPriceById?: Map<string, number>;
     /** Cuántos servicios incluye cada promo. Ver buildFacturadoPorLineaMap. */
     promoComponentesById?: Map<string, number>;
+    /** Precio de lista de cada promo. Ver buildFacturadoPorLineaMap. */
+    promoListaById?: Map<string, number>;
   },
 ): RendimientoEmpleadoRow[] {
   const allowedIds = opts?.empleadoIds ? new Set(opts.empleadoIds) : null;
@@ -531,6 +559,7 @@ export function rendimientoPorEmpleado(
       row,
       opts?.promoPriceById,
       opts?.promoComponentesById,
+      opts?.promoListaById,
     );
     for (const linea of row.lineas) {
       if (!linea.empleado) continue;
@@ -592,6 +621,8 @@ export function resumenSemanalPorProfesional(
     promoPriceById?: Map<string, number>;
     /** Cuántos servicios incluye cada promo. Ver buildFacturadoPorLineaMap. */
     promoComponentesById?: Map<string, number>;
+    /** Precio de lista de cada promo. Ver buildFacturadoPorLineaMap. */
+    promoListaById?: Map<string, number>;
   },
 ): SemanaProfesionalGroup[] {
   const allowedIds = opts?.empleadoIds ? new Set(opts.empleadoIds) : null;
@@ -624,6 +655,7 @@ export function resumenSemanalPorProfesional(
       row,
       opts?.promoPriceById,
       opts?.promoComponentesById,
+      opts?.promoListaById,
     );
 
     for (const linea of row.lineas) {

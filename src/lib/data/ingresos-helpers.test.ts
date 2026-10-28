@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   comisionMontoServicio,
+  factorEfectivoSobreLista,
   computeDescuento,
   computeRecargos,
   buildFacturadoPorLineaMap,
@@ -312,5 +313,44 @@ describe("buildFacturadoPorLineaMap: combos canjeados por partes", () => {
       precios,
     );
     expect(map.get("b")).toBe(50000);
+  });
+});
+
+/**
+ * Una promo cobrada con tarjeta va a precio de lista: "Semi manos + pies"
+ * $40.000 en efectivo, $50.000 con crédito. La comisión sigue siendo sobre
+ * efectivo, como en un servicio suelto, y el reporte la muestra a $50.000.
+ */
+describe("promo cobrada a precio de lista", () => {
+  it("comisiona sobre la parte en efectivo, no sobre el recargo", () => {
+    const c = comisionMontoServicio({
+      precioCobrado: 23809.52,
+      esDePromo: true,
+      factorPromoLista: factorEfectivoSobreLista(40000, 50000),
+      comisionPct: 30,
+      soportaDescuento: true,
+      subtotal: 50000,
+      descuentoMonto: 0,
+    });
+    // 30% de su parte en efectivo (19.047,62), igual que si pagaba en efectivo.
+    expect(c).toBeCloseTo(5714.29, 1);
+  });
+
+  it("el reporte no le reparte el precio en efectivo a un combo cobrado a lista", () => {
+    const linea = (id: string, subtotal: number, precioLista: number) =>
+      ({
+        id,
+        subtotal,
+        cantidad: 1,
+        promo_servicio_id: "semi-mp",
+        servicio: { precio_lista: precioLista },
+      }) as never;
+    const map = buildFacturadoPorLineaMap(
+      { ingreso: {}, cliente: null, mp1: null, mp2: null, lineas: [linea("a", 23809.52, 25000), linea("b", 26190.48, 27500)] } as never,
+      new Map([["semi-mp", 40000]]),
+      new Map([["semi-mp", 2]]),
+      new Map([["semi-mp", 50000]]),
+    );
+    expect(map.get("a")! + map.get("b")!).toBeCloseTo(50000, 2);
   });
 });

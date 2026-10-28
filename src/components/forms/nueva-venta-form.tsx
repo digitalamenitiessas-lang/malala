@@ -21,7 +21,10 @@ import type {
   Servicio,
   ServicioHorario,
 } from "@/lib/types";
-import { comisionMontoServicio } from "@/lib/data/ingresos-helpers";
+import {
+  comisionMontoServicio,
+  factorEfectivoSobreLista,
+} from "@/lib/data/ingresos-helpers";
 import { estaVigente } from "@/lib/promo-vigencia";
 import { esCanjeable, estadoGiftCard, hoyAr } from "@/lib/gift-card-estado";
 import { formatARS } from "@/lib/utils";
@@ -53,6 +56,12 @@ type LineaServicioForm = {
   // Si la línea proviene de una promo: id del servicio-promo y su nombre (display).
   promo_servicio_id?: string;
   promo_nombre?: string;
+  /**
+   * Qué líneas son la MISMA promo agregada: cambiar de efectivo a lista
+   * re-prorratea el combo entre todas ellas. No alcanza con el id de la promo,
+   * porque el mismo combo puede estar dos veces en el ticket (madre e hija).
+   */
+  promo_grupo?: string;
   /**
    * Un servicio que hicieron dos personas y se reparte la comisión.
    *
@@ -99,6 +108,29 @@ interface Props {
   promoHorariosById: Record<string, ServicioHorario[]>;
   /** Tarjetas canjeables. Incluye las vencidas: se avisa, no se bloquea. */
   giftCards: GiftCard[];
+}
+
+/**
+ * El precio del combo repartido entre sus servicios, según el peso del precio
+ * de lista de cada uno. El ajuste de redondeo va en el último, para que la
+ * suma dé justo el precio del combo.
+ */
+function preciosPromo(
+  promo: Promocion,
+  tipo: "lista" | "efectivo",
+): { servicio_id: string; precio: number }[] {
+  const total = tipo === "efectivo" ? promo.precio_efectivo : promo.precio_lista;
+  const sumaLista = promo.componentes.reduce((acc, c) => acc + c.precio_lista, 0);
+  let acumulado = 0;
+  return promo.componentes.map((c, i) => {
+    const esUltima = i === promo.componentes.length - 1;
+    const proporcion = sumaLista > 0 ? c.precio_lista / sumaLista : 1 / promo.componentes.length;
+    const precio = esUltima
+      ? Math.round((total - acumulado) * 100) / 100
+      : Math.round(total * proporcion * 100) / 100;
+    acumulado += precio;
+    return { servicio_id: c.servicio_id, precio };
+  });
 }
 
 const newLineaServicio = (): LineaServicioForm => ({
@@ -351,12 +383,19 @@ export function NuevaVentaForm({
     }
     const s = servicios.find((x) => x.id === l.servicio_id);
     const cant = Number(l.cantidad) || 0;
+    const promo =
+      l.promo_servicio_id && l.precio_tipo === "lista"
+        ? promociones.find((p) => p.id === l.promo_servicio_id)
+        : undefined;
     return comisionMontoServicio({
       ...comun,
       precioCobrado: (Number(l.precio) || 0) * cant,
       precioEfectivoServicio:
         s?.precio_efectivo != null ? s.precio_efectivo * cant : undefined,
       esDePromo: !!l.promo_servicio_id,
+      factorPromoLista: promo
+        ? factorEfectivoSobreLista(promo.precio_efectivo, promo.precio_lista)
+        : undefined,
       soportaDescuento: l.soporta_descuento,
     });
   };
@@ -523,6 +562,10 @@ export function NuevaVentaForm({
   function handlePrecioTipoChange(idx: number, tipo: "lista" | "efectivo") {
     const l = lineas[idx];
     if (l.tipo !== "servicio") return;
+    if (l.promo_servicio_id) {
+      handlePrecioTipoPromo(l, tipo);
+      return;
+    }
     const s = servicios.find((x) => x.id === l.servicio_id);
     updateLinea(idx, {
       precio_tipo: tipo,
@@ -579,28 +622,48 @@ export function NuevaVentaForm({
     setLineas((prev) => [...prev, newLineaProducto()]);
   }
 
+  /**
+   * Una promo con tarjeta de crédito se cobra a precio de lista.
+   *
+   * Las líneas de promo tenían el precio de efectivo clavado y no había forma
+   * de cambiarlo: "Cliente se hizo manos y pies semi > puse agregar promoción.
+   * Quiere pagar con crédito. Precio es $50.000", y el ticket daba $40.000.
+   * Se cambia el combo entero, no una línea: si no, la mitad quedaría a un
+   * precio y la mitad al otro.
+   */
+  function handlePrecioTipoPromo(l: LineaServicioForm, tipo: "lista" | "efectivo") {
+    const promo = promociones.find((p) => p.id === l.promo_servicio_id);
+    if (!promo) return;
+    const mismoCombo = (x: LineaForm): x is LineaServicioForm =>
+      x.tipo === "servicio" &&
+      x.promo_servicio_id === l.promo_servicio_id &&
+      x.promo_grupo === l.promo_grupo;
+    const precios = preciosPromo(promo, tipo);
+    setLineas((prev) => {
+      // Cada línea toma el precio de su componente; sin repetir, por si el
+      // combo trae dos veces el mismo servicio.
+      const pendientes = [...precios];
+      return prev.map((x) => {
+        if (!mismoCombo(x)) return x;
+        const i = pendientes.findIndex((p) => p.servicio_id === x.servicio_id);
+        if (i < 0) return { ...x, precio_tipo: tipo };
+        const [p] = pendientes.splice(i, 1);
+        return { ...x, precio_tipo: tipo, precio: p.precio };
+      });
+    });
+  }
+
   // Agrega una promo: la explota en una línea de servicio por componente, con el
-  // precio combo prorrateado según el peso del precio de lista de cada uno (el
-  // ajuste de redondeo va en la última línea para que la suma == precio combo).
+  // precio combo prorrateado (ver preciosPromo).
   function addPromo(promoId: string) {
     const promo = promociones.find((p) => p.id === promoId);
     if (!promo || promo.componentes.length === 0) return;
-    const sumaLista = promo.componentes.reduce(
-      (acc, c) => acc + c.precio_lista,
-      0,
-    );
-    let acumulado = 0;
-    const nuevas: LineaServicioForm[] = promo.componentes.map((c, i) => {
-      const esUltima = i === promo.componentes.length - 1;
-      const proporcion = sumaLista > 0 ? c.precio_lista / sumaLista : 1 / promo.componentes.length;
-      const precio = esUltima
-        ? Math.round((promo.precio_efectivo - acumulado) * 100) / 100
-        : Math.round(promo.precio_efectivo * proporcion * 100) / 100;
-      acumulado += precio;
-      return {
+    const grupo = crypto.randomUUID();
+    const nuevas: LineaServicioForm[] = preciosPromo(promo, "efectivo").map(
+      ({ servicio_id, precio }) => ({
         tempId: crypto.randomUUID(),
         tipo: "servicio",
-        servicio_id: c.servicio_id,
+        servicio_id,
         empleado_id: "",
         precio,
         precio_tipo: "efectivo",
@@ -609,8 +672,9 @@ export function NuevaVentaForm({
         soporta_descuento: true,
         promo_servicio_id: promo.id,
         promo_nombre: promo.nombre,
-      };
-    });
+        promo_grupo: grupo,
+      }),
+    );
     setLineas((prev) => {
       // Si la única línea es una de servicio vacía inicial, la reemplazamos.
       const base =
@@ -783,6 +847,7 @@ export function NuevaVentaForm({
             comision_pct: Number(l.comision_pct) || 0,
             soporta_descuento: l.soporta_descuento,
             promo_servicio_id: l.promo_servicio_id,
+            precio_tipo: l.precio_tipo,
           };
         }),
       ),
@@ -1045,6 +1110,7 @@ export function NuevaVentaForm({
                   empleados={empleadosActivos}
                   comision={comisionDe(l)}
                   promoNombre={l.promo_nombre}
+                  promo={promociones.find((p) => p.id === l.promo_servicio_id)}
                   locked={!!l.promo_servicio_id}
                   onServicio={(id) => handleServicioChange(idx, id)}
                   onEmpleado={(id) => handleEmpleadoChange(idx, id)}
@@ -1887,6 +1953,7 @@ function LineaServicioRow({
   empleados,
   comision,
   promoNombre,
+  promo,
   locked,
   onServicio,
   onEmpleado,
@@ -1904,6 +1971,8 @@ function LineaServicioRow({
   empleados: Empleado[];
   comision: number;
   promoNombre?: string;
+  /** La promo de la línea, para ofrecer su precio de lista y de efectivo. */
+  promo?: Promocion;
   locked: boolean;
   onServicio: (id: string) => void;
   onEmpleado: (id: string) => void;
@@ -2062,6 +2131,42 @@ function LineaServicioRow({
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground sm:pl-[16.67%]">
           Precio fijo por promo · prorrateado del precio combo
         </p>
+      )}
+
+      {/* En una promo, lista o efectivo cambia el combo entero: los precios
+          que se muestran son los del combo, no los de esta línea. */}
+      {locked && promo && (
+        <div className="grid grid-cols-12 gap-2">
+          <div className="col-span-12 sm:col-start-3 sm:col-span-6 flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+              Precio combo
+            </span>
+            <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+              <button
+                type="button"
+                onClick={() => onPrecioTipo("lista")}
+                className={`px-2.5 py-1 transition-colors ${
+                  linea.precio_tipo === "lista"
+                    ? "bg-ink text-white"
+                    : "bg-card hover:bg-cream"
+                }`}
+              >
+                Lista · {formatARS(promo.precio_lista)}
+              </button>
+              <button
+                type="button"
+                onClick={() => onPrecioTipo("efectivo")}
+                className={`px-2.5 py-1 border-l border-border transition-colors ${
+                  linea.precio_tipo === "efectivo"
+                    ? "bg-ink text-white"
+                    : "bg-card hover:bg-cream"
+                }`}
+              >
+                Efectivo · {formatARS(promo.precio_efectivo)}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Controles de precio y comisión por descuento */}

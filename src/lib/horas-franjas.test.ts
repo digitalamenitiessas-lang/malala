@@ -87,6 +87,19 @@ describe("horasDeFranjasEnRango", () => {
     expect(real).toBe(11 * 8 + 2 * 4);
   });
 
+  it("con corte, el último día cuenta sólo lo que ya pasó de su franja", () => {
+    // Miércoles 2026-10-28, franja de 15 a 21 (el caso de Fatyma).
+    const tarde: Franja[] = [{ diaSemana: 3, apertura: "15:00", cierre: "21:00" }];
+    expect(horasDeFranjasEnRango("2026-10-28", "2026-10-28", tarde, 13 * 60)).toBe(0);
+    expect(horasDeFranjasEnRango("2026-10-28", "2026-10-28", tarde, 17 * 60 + 30)).toBe(2.5);
+    expect(horasDeFranjasEnRango("2026-10-28", "2026-10-28", tarde, 23 * 60)).toBe(6);
+  });
+
+  it("el corte sólo toca el último día", () => {
+    // Lunes 7 a miércoles 9 a las 10: 8 + 8 + 1.
+    expect(horasDeFranjasEnRango("2026-09-07", "2026-09-09", SEMANA, 10 * 60)).toBe(17);
+  });
+
   it("rango invertido da cero", () => {
     expect(horasDeFranjasEnRango("2026-09-15", "2026-09-01", SEMANA)).toBe(0);
   });

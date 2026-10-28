@@ -22,6 +22,7 @@ import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import {
   buildCostoInsumosByServicio,
   comisionMontoServicio,
+  factorEfectivoSobreLista,
   computeBreakdown,
   computeDescuento,
   computeRecargos,
@@ -674,6 +675,32 @@ export async function createIngreso(
     ).map((s) => [s.id, s.precioEfectivo]),
   );
 
+  // Una promo cobrada a precio de lista comisiona sobre su precio en efectivo,
+  // igual que un servicio suelto. Los precios se leen acá, no del formulario.
+  const promoIdsLista = Array.from(
+    new Set(
+      data.lineas
+        .filter(
+          (l): l is Extract<typeof l, { tipo: "servicio" }> =>
+            l.tipo === "servicio" && !!l.promo_servicio_id && l.precio_tipo === "lista",
+        )
+        .map((l) => l.promo_servicio_id as string),
+    ),
+  );
+  const factorPromoListaById = new Map(
+    (promoIdsLista.length > 0
+      ? await db
+          .select({
+            id: serviciosTable.id,
+            precioEfectivo: serviciosTable.precioEfectivo,
+            precioLista: serviciosTable.precioLista,
+          })
+          .from(serviciosTable)
+          .where(inArray(serviciosTable.id, promoIdsLista))
+      : []
+    ).map((s) => [s.id, factorEfectivoSobreLista(s.precioEfectivo, s.precioLista)]),
+  );
+
   const comisionMontoDeLinea = (
     linea: Extract<(typeof data.lineas)[number], { tipo: "servicio" }>,
   ): number =>
@@ -687,6 +714,10 @@ export async function createIngreso(
         return unitario != null ? unitario * linea.cantidad : undefined;
       })(),
       esDePromo: !!linea.promo_servicio_id,
+      factorPromoLista:
+        linea.promo_servicio_id && linea.precio_tipo === "lista"
+          ? factorPromoListaById.get(linea.promo_servicio_id)
+          : undefined,
       comisionPct: linea.comision_pct,
       soportaDescuento: linea.soporta_descuento && !motivoIgnoraDescuento,
       subtotal,

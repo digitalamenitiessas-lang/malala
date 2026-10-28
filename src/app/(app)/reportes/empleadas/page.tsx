@@ -58,16 +58,25 @@ export default async function ReportesEmpleadasPage({
   const promoComponentesById = new Map(
     promociones.map((promo) => [promo.id, promo.componentes.length]),
   );
+  const promoListaById = new Map(
+    promociones.map((promo) => [promo.id, promo.precio_lista]),
+  );
   const filas = rendimientoPorEmpleado(ingresos, {
     promoPriceById,
     promoComponentesById,
+    promoListaById,
   });
   const totales = totalesRendimientoPorEmpleado(filas);
 
   // Detalle de servicios por empleada (para desplegar al tocar cada fila).
   const detalle: Record<string, DetalleLinea[]> = {};
   for (const row of ingresos) {
-    const facturadoPorLinea = buildFacturadoPorLineaMap(row, promoPriceById, promoComponentesById);
+    const facturadoPorLinea = buildFacturadoPorLineaMap(
+      row,
+      promoPriceById,
+      promoComponentesById,
+      promoListaById,
+    );
     for (const linea of row.lineas) {
       if (!linea.empleado || !linea.servicio) continue;
       (detalle[linea.empleado.id] ??= []).push({

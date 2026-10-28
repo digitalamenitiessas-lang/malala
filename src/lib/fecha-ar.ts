@@ -25,6 +25,16 @@ export function hoyAr(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: TZ });
 }
 
+/** Minutos transcurridos del día en Argentina (13:20 → 800). */
+export function minutoDelDiaAr(ahora: Date = new Date()): number {
+  const [h, m] = ahora
+    .toLocaleTimeString("en-GB", { timeZone: TZ, hour12: false, hour: "2-digit", minute: "2-digit" })
+    .split(":")
+    .map(Number);
+  // en-GB puede dar "24:00" a medianoche en algunos runtimes.
+  return ((h % 24) * 60 + m) || 0;
+}
+
 /** Instante (ISO UTC) del inicio del día de Argentina para una fecha YMD. */
 export function inicioDeDiaArISO(ymd: string = hoyAr()): string {
   return new Date(`${ymd}T00:00:00.000${AR_OFFSET}`).toISOString();

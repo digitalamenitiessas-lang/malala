@@ -61,6 +61,7 @@ import {
   finDeDiaArISO,
   hoyAr,
   inicioDeDiaArISO,
+  minutoDelDiaAr,
   sumarDiasYmd,
 } from "@/lib/fecha-ar";
 // Mismo cálculo que muestra la ficha de la empleada: el total que la encargada
@@ -357,6 +358,11 @@ async function fetchValorHoraYAnticipos(args: {
   /** Desde donde se buscan anticipos y descuentos sin liquidar. */
   piso: string;
   hasta: string;
+  /**
+   * Si `hasta` es hoy, contar de hoy sólo las horas que ya pasaron. Es para la
+   * proyección, que muestra lo acumulado; la liquidación paga el día entero.
+   */
+  hastaAhora?: boolean;
 }): Promise<{
   valorHora: number;
   tipoComision: TipoComision;
@@ -492,7 +498,12 @@ async function fetchValorHoraYAnticipos(args: {
   const horasSugeridas = esMixto
     ? horasDeFicha
     : franjas.length > 0
-      ? horasDeFranjasEnRango(args.desde, args.hasta, franjas)
+      ? horasDeFranjasEnRango(
+          args.desde,
+          args.hasta,
+          franjas,
+          args.hastaAhora && args.hasta === hoyAr() ? minutoDelDiaAr() : undefined,
+        )
       : horasDeFicha;
 
   // El basico es semanal y el periodo se cuenta en SEMANAS, no en dias.
@@ -1855,6 +1866,7 @@ export async function getProyeccionSemanal(args: {
         desde,
         piso,
         hasta: args.hasta,
+        hastaAhora: true,
       }),
       fetchViaticosPendientes({
         empleadoId: emp.id,

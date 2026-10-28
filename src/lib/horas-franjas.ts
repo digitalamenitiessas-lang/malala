@@ -59,6 +59,15 @@ export function horasDeFranjasEnRango(
   desde: string,
   hasta: string,
   franjas: Franja[],
+  /**
+   * Minuto del día (0-1440) en que se corta el último día del rango. Sin él,
+   * el último día cuenta entero.
+   *
+   * Para lo acumulado "hasta ahora": a las 13 h la proyección le sumaba a
+   * Fatyma las 6 h de un miércoles que ella arranca a las 15. "Ya está sumando
+   * horas para asegurado y ella ingresa recién a las 15hs."
+   */
+  corteUltimoDia?: number,
 ): number {
   const porDia = minutosPorDia(franjas);
   let minutos = 0;
@@ -66,7 +75,16 @@ export function horasDeFranjasEnRango(
   const cur = new Date(`${desde}T12:00:00`);
   const fin = new Date(`${hasta}T12:00:00`);
   while (cur <= fin) {
-    minutos += porDia.get(cur.getDay()) ?? 0;
+    const esUltimo = cur.getTime() === fin.getTime();
+    if (esUltimo && corteUltimoDia != null) {
+      for (const f of franjas) {
+        if (f.diaSemana !== cur.getDay()) continue;
+        const hastaMin = Math.min(aMinutos(f.cierre), corteUltimoDia);
+        minutos += Math.max(0, hastaMin - aMinutos(f.apertura));
+      }
+    } else {
+      minutos += porDia.get(cur.getDay()) ?? 0;
+    }
     cur.setDate(cur.getDate() + 1);
   }
   return redondear2(minutos / 60);

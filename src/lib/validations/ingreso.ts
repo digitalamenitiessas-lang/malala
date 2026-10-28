@@ -27,6 +27,9 @@ export const lineaServicioSchema = z.object({
     .string()
     .nullish()
     .transform((s) => (s ? s : undefined)),
+  // Sólo importa en una promo: si se cobró a precio de lista (tarjeta), la
+  // comisión igual sale del precio en efectivo. Ver comisionMontoServicio.
+  precio_tipo: z.enum(["lista", "efectivo"]).optional(),
 });
 
 export const lineaProductoSchema = z.object({
