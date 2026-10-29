@@ -65,8 +65,19 @@ export function ViaticosPanel({
    * habia que corregir el sabado a mano, uno por uno.
    */
   const [montoSabado, setMontoSabado] = useState(viaticoSabado);
-  const [pagado, setPagado] = useState(true);
-  const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
+  // Arranca sin tildar y, si se tilda, con Efectivo. Antes venía tildado con el
+  // primer medio de la lista, que en Centro es "autoconsumo": un medio sin
+  // cuenta, que no saca plata de ningún lado. Así se cargaron ocho viáticos de
+  // Jessica como "ya entregados" sin habérselos dado, y la liquidación no se
+  // los pagaba. Por eso tampoco se ofrecen medios sin cuenta.
+  const mediosEntrega = useMemo(
+    () => mediosPago.filter((m) => m.cuenta_id),
+    [mediosPago],
+  );
+  const mpDefault =
+    (mediosEntrega.find((m) => m.codigo === "EF") ?? mediosEntrega[0])?.id ?? "";
+  const [pagado, setPagado] = useState(false);
+  const [mpId, setMpId] = useState(mpDefault);
   const [observacion, setObservacion] = useState("");
   /** Días del rango que la encargada sacó a mano. */
   const [excluidas, setExcluidas] = useState<string[]>([]);
@@ -105,7 +116,8 @@ export function ViaticosPanel({
     // cero obliga a reescribirlo cada vez.
     setMonto(viaticoPorDia);
     setMontoSabado(viaticoSabado);
-    setPagado(true);
+    setPagado(false);
+    setMpId(mpDefault);
     setObservacion("");
     setError(null);
   }
@@ -394,7 +406,7 @@ export function ViaticosPanel({
               >
                 Con qué
               </label>
-              {mediosPago.length === 0 ? (
+              {mediosEntrega.length === 0 ? (
                 <p className="text-xs text-destructive">
                   Esta sucursal no tiene medios de pago cargados.
                 </p>
@@ -405,7 +417,7 @@ export function ViaticosPanel({
                   onChange={(e) => setMpId(e.target.value)}
                   className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  {mediosPago.map((m) => (
+                  {mediosEntrega.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nombre}
                     </option>

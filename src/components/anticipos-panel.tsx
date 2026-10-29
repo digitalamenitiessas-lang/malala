@@ -46,7 +46,11 @@ export function AnticiposPanel({
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [monto, setMonto] = useState(0);
-  const [mpId, setMpId] = useState(mediosPago[0]?.id ?? "");
+  // Efectivo por defecto, no el primero de la lista: en Centro el primero es
+  // "autoconsumo", que no tiene cuenta y no saca plata de ningún lado.
+  const [mpId, setMpId] = useState(
+    (mediosPago.find((m) => m.codigo === "EF") ?? mediosPago[0])?.id ?? "",
+  );
   // Cuenta elegida. Vacio = la del medio por defecto.
   const [mpCuentaId, setMpCuentaId] = useState("");
   const [observacion, setObservacion] = useState("");
