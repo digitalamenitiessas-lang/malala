@@ -1,7 +1,7 @@
 "use server";
 
 import { and, desc, eq } from "drizzle-orm";
-import { hoyAr } from "@/lib/fecha-ar";
+import { hoyAr, sumarDiasYmd } from "@/lib/fecha-ar";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
@@ -107,6 +107,17 @@ export async function getSugerenciasApertura(
    * emite queda mal.
    */
   fecha?: string,
+  /**
+   * Para abrir: el saldo con el que ARRANCÓ el día, sin lo que ya se movió en él.
+   *
+   * La caja muestra saldo inicial (lo declarado) + movimientos del día. Si el
+   * esperado de la apertura ya traía movimientos de ese día, se contaban dos
+   * veces. Centro abrió el 31/10 a las 17:33, después de vender tres gift cards
+   * en efectivo, y arrancó con $476.020 cuando había cerrado el 30 con
+   * $332.020: los $144.000 de las tarjetas estaban en el inicial y en los
+   * ingresos. El cierre sigue pidiendo el saldo al final del día.
+   */
+  alAbrir = false,
 ): Promise<AperturaCuentaSugerida[]> {
   const user = await requireUser();
   const scope = buildAccessScope(user);
@@ -115,7 +126,11 @@ export async function getSugerenciasApertura(
   const esPasada = !!fecha && fecha < hoyAr();
   const saldos = await listSaldos({
     sucursalId,
-    hasta: esPasada ? fecha : undefined,
+    hasta: alAbrir
+      ? sumarDiasYmd(fecha ?? hoyAr(), -1)
+      : esPasada
+        ? fecha
+        : undefined,
   });
 
   // Lo contado en el último cierre: es con lo que arranca el día de verdad,
@@ -253,7 +268,11 @@ export async function crearApertura(
   const db = getDb();
 
   // Con la fecha: el ajuste se calcula contra el saldo de ESE dia, no el de hoy.
-  const sugerencias = await getSugerenciasApertura(data.sucursal_id, data.fecha);
+  const sugerencias = await getSugerenciasApertura(
+    data.sucursal_id,
+    data.fecha,
+    true,
+  );
   if (sugerencias.length === 0) {
     return {
       ok: false,
