@@ -1613,8 +1613,11 @@ export function NuevaVentaForm({
               className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm"
             >
               <option value="">— Ninguno —</option>
+              {/* El mismo medio dos veces no tiene sentido, salvo gift card:
+                  son dos tarjetas distintas, cada una con su saldo. YB tenía
+                  una clienta pagando con dos y no podía cargar la venta. */}
               {mediosNormales
-                .filter((m) => m.id !== mp1Id)
+                .filter((m) => m.id !== mp1Id || (mp1EsGift && m.codigo === "GIFT"))
                 .map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.codigo} — {m.nombre}
