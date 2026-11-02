@@ -180,17 +180,41 @@ const ALTAS_27OCT: Alta[] = [
 ];
 
 /**
+ * Tercer lote (02/11/2026): las joyas, que Elu pasó por WhatsApp con sus
+ * códigos (CO01, AN01…). Todo a exhibición: es donde se venden. Los negativos
+ * de hoy son ventas anteriores al recuento; quedan en lo contado.
+ *
+ * Donde hay dos productos con el mismo código, va al activo (los VDJ105-107
+ * quedaron de baja). HAR01 sólo existe dado de baja: se reactiva.
+ *
+ * PENDIENTES: "PUL02" no existe (falta nombre y precio) y "Collar CO004" no
+ * está en la lista de Elu. Se le preguntó.
+ */
+const CARGA_02NOV: Array<{ id: string; deposito: number; salon: number }> = [
+  { id: "yb-VDJ100", deposito: 0, salon: 8 }, // CO01 · Collar CO001
+  { id: "yb-VDJ101", deposito: 0, salon: 4 }, // CO02 · Collar CO002
+  { id: "yb-VDJ102", deposito: 0, salon: 2 }, // CO03 · Collar CO003
+  { id: "a378ed97-7d0e-4265-88d1-b2feae941cd0", deposito: 0, salon: 2 }, // AN01 · ANILLO AN001
+  { id: "yb-VDJ108", deposito: 0, salon: 6 }, // HAR01 · Hair HA001
+  { id: "3f88a8ef-7b09-4876-a14b-d5d1caf9789c", deposito: 0, salon: 4 }, // CUF01 · Cuff CU001
+  { id: "42d1da53-0de9-4564-bf4c-103794f0570d", deposito: 0, salon: 4 }, // PUL01 · Pulsera PU001
+  { id: "yb-VDJ103", deposito: 0, salon: 2 }, // AR01 · Aros AR001
+  { id: "yb-VDJ104", deposito: 0, salon: 3 }, // AR02 · Aros AR002
+];
+
+/**
  * Cada lote se aplica una sola vez: fija cantidades absolutas, así que volver a
  * correr uno viejo pisaría las ventas que hubo desde entonces.
  */
 const LOTES = {
-  "26oct": { motivo: MOTIVO, carga: CARGA, bajas: BAJAS, sinStock: SIN_STOCK, altas: [] as Alta[] },
+  "26oct": { motivo: MOTIVO, carga: CARGA, bajas: BAJAS, sinStock: SIN_STOCK, altas: [] as Alta[], reactivar: [] as string[] },
   "27oct": {
     motivo: "Recuento reventa 27/10/2026 (WhatsApp de Elu)",
     carga: CARGA_27OCT,
     bajas: [] as typeof BAJAS,
     sinStock: [] as string[],
     altas: [] as Alta[],
+    reactivar: [] as string[],
   },
   "27oct-altas": {
     motivo: "Alta con stock de la planilla de reventa (27/10/2026)",
@@ -198,6 +222,15 @@ const LOTES = {
     bajas: [] as typeof BAJAS,
     sinStock: [] as string[],
     altas: ALTAS_27OCT,
+    reactivar: [] as string[],
+  },
+  "02nov-joyas": {
+    motivo: "Recuento joyas 02/11/2026 (WhatsApp de Elu)",
+    carga: CARGA_02NOV,
+    bajas: [] as typeof BAJAS,
+    sinStock: [] as string[],
+    altas: [] as Alta[],
+    reactivar: ["yb-VDJ108"],
   },
 };
 
@@ -221,6 +254,7 @@ async function main() {
     sinStock: SIN_STOCK_L,
     motivo: MOTIVO_L,
     altas: ALTAS_L,
+    reactivar: REACTIVAR_L,
   } = lote;
   const db = getDb();
 
@@ -271,6 +305,14 @@ async function main() {
         if (row.tipo !== "venta") throw new Error(`${row.nombre} no es de reventa`);
         if (!row.activo) throw new Error(`${row.nombre} está dado de baja`);
         return row;
+      }
+
+      for (const id of REACTIVAR_L) {
+        const [row] = await tx.select().from(insumosTable).where(eq(insumosTable.id, id)).limit(1);
+        if (!row) throw new Error(`No existe el producto ${id}`);
+        if (row.sucursalId !== YB_ID) throw new Error(`${row.nombre} no es de Yerba Buena`);
+        await tx.update(insumosTable).set({ activo: true }).where(eq(insumosTable.id, id));
+        lineas.push(`  ↺ ${row.nombre}: ${row.activo ? "ya estaba activo" : "reactivado"}`);
       }
 
       if (ALTAS_L.length) lineas.push(`=== ALTAS · lote ${nombreLote} ===`);
