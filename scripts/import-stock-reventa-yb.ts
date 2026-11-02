@@ -152,7 +152,8 @@ type Alta = {
   costo: number;
   precioVenta: number;
   precioVentaEfectivo: number;
-  proveedorId: string;
+  /** Las joyas no tienen proveedor cargado. */
+  proveedorId?: string;
   deposito: number;
   salon: number;
 };
@@ -203,6 +204,26 @@ const CARGA_02NOV: Array<{ id: string; deposito: number; salon: number }> = [
 ];
 
 /**
+ * Lo que quedó pendiente de las joyas, con la respuesta de Elu: "PUL02
+ * $32.000 / $40.000 /// CO04 stock cero". El nombre sigue la serie de los
+ * demás. Costo 1, como el resto de las joyas: no hay costo cargado.
+ */
+const CARGA_02NOV_2: Array<{ id: string; deposito: number; salon: number }> = [
+  { id: "e61679ad-2a94-4b3a-bc7e-63d612b806be", deposito: 0, salon: 0 }, // CO04 · Collar CO004
+];
+const ALTAS_02NOV: Alta[] = [
+  {
+    codigo: "VDJ113",
+    nombre: "Pulsera PU002",
+    costo: 1,
+    precioVenta: 40000,
+    precioVentaEfectivo: 32000,
+    deposito: 0,
+    salon: 2,
+  },
+];
+
+/**
  * Cada lote se aplica una sola vez: fija cantidades absolutas, así que volver a
  * correr uno viejo pisaría las ventas que hubo desde entonces.
  */
@@ -231,6 +252,14 @@ const LOTES = {
     sinStock: [] as string[],
     altas: [] as Alta[],
     reactivar: ["yb-VDJ108"],
+  },
+  "02nov-joyas-2": {
+    motivo: "Recuento joyas 02/11/2026 (WhatsApp de Elu)",
+    carga: CARGA_02NOV_2,
+    bajas: [] as typeof BAJAS,
+    sinStock: [] as string[],
+    altas: ALTAS_02NOV,
+    reactivar: [] as string[],
   },
 };
 
@@ -342,11 +371,13 @@ async function main() {
           precioVenta: a.precioVenta,
           precioVentaEfectivo: a.precioVentaEfectivo,
         });
-        await tx.insert(insumoProveedoresTable).values({
-          id: crypto.randomUUID(),
-          insumoId: id,
-          proveedorId: a.proveedorId,
-        });
+        if (a.proveedorId) {
+          await tx.insert(insumoProveedoresTable).values({
+            id: crypto.randomUUID(),
+            insumoId: id,
+            proveedorId: a.proveedorId,
+          });
+        }
         await fijar(id, { deposito: a.deposito, exhibido: a.salon }, MOTIVO_L);
         lineas.push(
           `  + ${a.codigo} ${a.nombre}\n` +
