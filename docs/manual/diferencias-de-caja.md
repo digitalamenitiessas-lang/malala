@@ -1,5 +1,5 @@
 # No me cierra la caja
-palabras: no cierra la caja, diferencia, faltante, sobrante, falta plata, sobra plata, descuadre, arqueo, esperado, efectivo, buscar el error
+palabras: no cierra la caja, no coincide, diferencia, otro importe, otro número, dice otra cosa, faltante, sobrante, falta plata, sobra plata, descuadre, arqueo, esperado, saldo, efectivo, buscar el error
 quién: dueño/admin, encargada
 
 Para encontrar por qué el cajón no coincide con el sistema.

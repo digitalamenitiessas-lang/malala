@@ -55,6 +55,9 @@ describe("el manual del repo responde lo que preguntan los salones", () => {
   // Preguntas tal como llegaron por WhatsApp a Luciano.
   const casos: [string, string][] = [
     ["tengo el efectivo bien pero arriba dice otro importe, no me cierra la caja", "diferencias-de-caja"],
+    // Tal cual lo escribió Lucía, sin "no me cierra".
+    ["tengo el efectivo bien, porque arriba dice otro importe", "diferencias-de-caja"],
+    ["el saldo final de ayer no coincide con el saldo inicial de hoy", "diferencias-de-caja"],
     ["cargué mal los viáticos, me aparecen ya entregado y no pagué todavía", "viaticos"],
     ["cómo doy de alta una cuenta de mercado pago", "cuentas-y-medios-de-pago"],
     ["podemos exportar informes filtrados en pdf o excel", "reportes-y-pdf"],
