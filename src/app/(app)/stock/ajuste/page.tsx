@@ -11,9 +11,11 @@ export default async function AjustePage() {
   const sucursal = await getActiveSucursal();
   if (!sucursal) redirect("/stock");
 
-  // El ajuste manual se limita a la sucursal activa de la sesión.
+  // El ajuste manual se limita a la sucursal activa de la sesión, también en
+  // la lista de productos: sin el filtro salían los de las dos sucursales y
+  // Yerba Buena eligió "karsell mascara", que es de Centro, y lo veía en cero.
   const [insumos, stockActual] = await Promise.all([
-    listInsumos(),
+    listInsumos({ sucursalId: sucursal.id }),
     listStockBySucursal(sucursal.id),
   ]);
 
