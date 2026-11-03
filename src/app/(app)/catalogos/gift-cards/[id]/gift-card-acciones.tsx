@@ -87,7 +87,12 @@ export function CorregirCodigo({
   );
 }
 
-/** Anular: deja la tarjeta sin valor. Solo admin. No devuelve la plata. */
+/**
+ * Anular: deja la tarjeta sin valor. Solo admin. Su cobro sale de la caja del
+ * día en que se vendió (anularGiftCard borra el movimiento de la venta), así
+ * que NO hay que cargar además un gasto: el texto viejo decía eso y la plata
+ * se descontaba dos veces.
+ */
 export function AnularGiftCard({
   giftCardId,
   action,
@@ -119,8 +124,9 @@ export function AnularGiftCard({
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="gift_card_id" value={giftCardId} />
       <p className="text-sm text-muted-foreground">
-        La tarjeta queda sin saldo y no se va a poder canjear. Esto no devuelve
-        la plata: si hay que reintegrarla, cargala como gasto.
+        La tarjeta queda sin saldo y no se va a poder canjear. Su cobro sale de
+        la caja del día en que se vendió, como si no se hubiera vendido: no
+        cargues además un gasto.
       </p>
       <Field
         label="Motivo"

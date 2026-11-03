@@ -41,7 +41,10 @@ export default async function NuevoCierrePage({
   if (!apertura) redirect("/caja/apertura");
 
   const resumen = await getResumenDelDia(sucursal.id, fecha);
-  const cuentas = await getSugerenciasApertura(sucursal.id);
+  // Con la fecha: al cerrar un día pasado el esperado es el saldo al final de
+  // ESE día. Sin ella salía el saldo de ahora, con todo lo movido después, y
+  // cerrar sin tocar "Contado" dejaba una diferencia que no existía.
+  const cuentas = await getSugerenciasApertura(sucursal.id, fecha);
 
   return (
     <div className="space-y-8 max-w-3xl">
