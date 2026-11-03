@@ -2,7 +2,7 @@ import type OpenAI from "openai";
 import { eq } from "drizzle-orm";
 import type { Rol } from "@/lib/types";
 import { getDb } from "@/lib/db/client/postgres";
-import { hoyAr } from "@/lib/fecha-ar";
+import { finDeDiaArISO, hoyAr, inicioDeDiaArISO } from "@/lib/fecha-ar";
 import { turnos as turnosTable } from "@/lib/db/schema";
 import { listTurnos } from "@/lib/data/turnos";
 import { listIngresos } from "@/lib/data/ingresos";
@@ -60,6 +60,23 @@ export function roleAllowed(entryRoles: Rol[], rol: Rol): boolean {
   if (entryRoles.includes(rol)) return true;
   if (rol === "superadmin" && entryRoles.includes("admin")) return true;
   return false;
+}
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Rango de fechas que manda el modelo, en hora de Argentina. El modelo pide
+ * "2026-11-02" y listIngresos/listEgresos lo leían como medianoche UTC (las 21 h
+ * del día anterior acá): "ventas del 02/11" daba vacío con la caja en $911.425.
+ * Un día suelto va de su primer a su último instante; un ISO completo se respeta.
+ */
+export function rangoAr(a: Args): { desde?: string; hasta?: string } {
+  const desde = str(a.desde);
+  const hasta = str(a.hasta);
+  return {
+    desde: desde && YMD.test(desde) ? inicioDeDiaArISO(desde) : desde,
+    hasta: hasta && YMD.test(hasta) ? finDeDiaArISO(hasta) : hasta,
+  };
 }
 
 function str(v: unknown): string | undefined {
@@ -229,8 +246,7 @@ const REGISTRY: Record<string, ToolEntry> = {
           sucursalId: ctx.sucursalId,
           empleadoId: a.empleadoId as string | undefined,
           clienteId: a.clienteId as string | undefined,
-          desde: a.desde as string | undefined,
-          hasta: a.hasta as string | undefined,
+          ...rangoAr(a),
           incluirAnulados: a.incluirAnulados as boolean | undefined,
         })
       ).slice(0, 200),
@@ -239,14 +255,14 @@ const REGISTRY: Record<string, ToolEntry> = {
       function: {
         name: "list_ingresos",
         description:
-          "Lista ingresos/ventas de tu sucursal activa. Filtros por empleado, cliente y rango de fechas (ISO).",
+          "Lista ingresos/ventas de tu sucursal activa. Filtros por empleado, cliente y rango de fechas.",
         parameters: {
           type: "object",
           properties: {
             empleadoId: { type: "string" },
             clienteId: { type: "string" },
-            desde: { type: "string", description: "ISO date" },
-            hasta: { type: "string", description: "ISO date" },
+            desde: { type: "string", description: "YYYY-MM-DD (incluido)" },
+            hasta: { type: "string", description: "YYYY-MM-DD (incluido)" },
             incluirAnulados: { type: "boolean" },
           },
         },
@@ -262,8 +278,7 @@ const REGISTRY: Record<string, ToolEntry> = {
           sucursalId: ctx.sucursalId,
           rubroId: a.rubroId as string | undefined,
           proveedorId: a.proveedorId as string | undefined,
-          desde: a.desde as string | undefined,
-          hasta: a.hasta as string | undefined,
+          ...rangoAr(a),
           soloPendientes: a.soloPendientes as boolean | undefined,
         })
       ).slice(0, 200),
@@ -278,8 +293,8 @@ const REGISTRY: Record<string, ToolEntry> = {
           properties: {
             rubroId: { type: "string" },
             proveedorId: { type: "string" },
-            desde: { type: "string" },
-            hasta: { type: "string" },
+            desde: { type: "string", description: "YYYY-MM-DD (incluido)" },
+            hasta: { type: "string", description: "YYYY-MM-DD (incluido)" },
             soloPendientes: { type: "boolean" },
           },
         },

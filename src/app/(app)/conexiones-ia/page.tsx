@@ -71,7 +71,7 @@ export default async function ConexionesIaPage() {
           <p className="font-medium">Para probar, preguntale por ejemplo:</p>
           <ul className="list-disc pl-5 space-y-0.5 text-brown-700">
             <li>¿Cuánto vendimos esta semana y con qué medios de pago?</li>
-            <li>¿Qué turnos hay mañana y con quién?</li>
+            <li>¿Quién vendió más este mes y en qué servicios?</li>
             <li>¿Qué gastos quedan pendientes de pago?</li>
             <li>¿Qué productos están por quedarse sin stock?</li>
           </ul>

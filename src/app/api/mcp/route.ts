@@ -40,6 +40,9 @@ function instrucciones(sesion: SesionMcp): string {
     "Todo es de solo lectura. Los montos están en pesos argentinos y las fechas van como YYYY-MM-DD, en hora de Argentina.",
     `Al conectarse, hoy era ${hoyAr()}.`,
     "Las herramientas filtran por ID: para buscar a una profesional usá list_empleados, para una clienta list_clientes, y después pasá el ID.",
+    // Al 03/11/2026 la agenda tenía un turno desde octubre: lo que pasó en el
+    // salón está en las ventas, no en los turnos.
+    "Los salones casi no usan la agenda de turnos: para saber qué se hizo, quién atendió o cuánto se vendió, mirá las ventas (list_ingresos, get_resumen_caja), no list_turnos.",
   ].join(" ");
 }
 
