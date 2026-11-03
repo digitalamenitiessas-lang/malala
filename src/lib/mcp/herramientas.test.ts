@@ -30,9 +30,16 @@ describe("herramientasPara", () => {
     expect(nombres).not.toContain("cambiar_estado_turno");
   });
 
-  it("todas van marcadas como de solo lectura", () => {
-    for (const h of herramientasPara(encargada).values()) {
-      expect(h.def.annotations.readOnlyHint).toBe(true);
+  it("todas son de solo lectura menos reportar_problema", () => {
+    for (const [nombre, h] of herramientasPara(encargada)) {
+      expect(h.def.annotations.readOnlyHint).toBe(nombre !== "reportar_problema");
+    }
+  });
+
+  it("incluye las de detalle de caja", () => {
+    const nombres = [...herramientasPara(encargada).keys()];
+    for (const n of ["get_apertura_caja", "get_cierre_caja", "get_estado_caja_dia", "list_movimientos_cuenta", "list_viaticos", "list_gift_cards", "list_proveedores"]) {
+      expect(nombres).toContain(n);
     }
   });
 

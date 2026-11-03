@@ -1,13 +1,16 @@
 import { toolsForRole, type ToolEntry } from "@/lib/admin-chat/registry";
 import { listSucursales } from "@/lib/data/sucursales";
 import { listMovimientosCc } from "@/lib/data/cuenta-corriente";
+import { crearReporteProblema } from "@/lib/data/reportes-problema";
+import { notificarReporteProblemaPush } from "@/lib/integraciones/push";
 import type { Usuario } from "@/lib/types";
 
 /**
  * Las herramientas que ve la IA conectada por MCP. Son las mismas del chat del
- * panel (src/lib/admin-chat/registry.ts), con tres diferencias:
+ * panel (src/lib/admin-chat/registry.ts), con estas diferencias:
  *
  * - Solo las de lectura. Las que cargan o cambian turnos no salen por acá.
+ *   La única que escribe es reportar_problema, que no toca datos del salón.
  * - La sucursal: el chat del panel trabaja sobre la sucursal del selector; acá
  *   no hay selector, así que quien tiene más de una (los dueños) puede pasar
  *   sucursal_id en cada consulta. Sin eso, usa su sucursal principal.
@@ -19,7 +22,7 @@ export interface HerramientaMcp {
   title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
-  annotations: { readOnlyHint: true; openWorldHint: false };
+  annotations: { readOnlyHint: boolean; destructiveHint?: boolean; openWorldHint: false };
 }
 
 export interface HerramientaEjecutable {
@@ -54,6 +57,57 @@ function reemplazos(usuario: Usuario): Record<string, Partial<ToolEntry>> {
     // que en la ficha de la clienta.
     get_cuenta_corriente_cliente: {
       execute: (a, ctx) => listMovimientosCc(String(a.clienteId ?? ""), ctx.sucursalId),
+    },
+  };
+}
+
+/**
+ * Cuando la IA no puede resolver algo, deja el problema armado para soporte en
+ * vez de que la persona tenga que mandar un audio. Ver drizzle/0073.
+ */
+function reportarProblema(variasSucursales: boolean): HerramientaEjecutable {
+  const properties: Record<string, unknown> = {
+    resumen: { type: "string", description: "Una línea: qué pasa (máx. 200 caracteres)" },
+    detalle: {
+      type: "string",
+      description: "Qué pidió o vio la persona, con montos, fechas, cuentas y nombres concretos",
+    },
+    revisado: {
+      type: "string",
+      description: "Qué consultaste y qué encontraste, para que soporte no empiece de cero",
+    },
+    fecha_problema: { type: "string", description: "YYYY-MM-DD del día del problema, si aplica" },
+  };
+  if (variasSucursales) {
+    properties[PARAM_SUCURSAL] = {
+      type: "string",
+      description: "ID de la sucursal del problema. Si no se indica, la principal.",
+    };
+  }
+  return {
+    def: {
+      name: "reportar_problema",
+      description:
+        "Deja un problema reportado a soporte (le llega una notificación). Usala solo cuando no lo pudiste resolver con las consultas y el manual, o cuando hace falta corregir datos o el sistema anda mal. Antes, contale a la persona qué vas a reportar.",
+      inputSchema: { type: "object", properties, required: ["resumen", "detalle"] },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    execute: async (a, ctx) => {
+      const res = await crearReporteProblema({
+        sucursalId: ctx.sucursalId,
+        resumen: String(a.resumen ?? ""),
+        detalle: String(a.detalle ?? ""),
+        revisado: typeof a.revisado === "string" ? a.revisado : undefined,
+        fechaProblema: typeof a.fecha_problema === "string" ? a.fecha_problema : undefined,
+      });
+      if (!res.ok) return { reportado: false, motivo: res.error };
+      await notificarReporteProblemaPush({ reporteId: res.id }).catch((e) =>
+        console.error("[mcp] no se pudo avisar el reporte", e),
+      );
+      return {
+        reportado: true,
+        mensaje: "Listo, quedó reportado a soporte. Se ve en Conectar con IA del sistema.",
+      };
     },
   };
 }
@@ -100,6 +154,7 @@ export function herramientasPara(usuario: Usuario): Map<string, HerramientaEjecu
       execute: cambios[name]?.execute ?? entry.execute,
     });
   }
+  out.set("reportar_problema", reportarProblema(variasSucursales));
   return out;
 }
 

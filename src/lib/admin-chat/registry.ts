@@ -20,6 +20,8 @@ import { listMovimientosCc } from "@/lib/data/cuenta-corriente";
 import { listServicios } from "@/lib/data/servicios";
 import { listPromociones } from "@/lib/data/promociones";
 import { listAnticipos } from "@/lib/data/anticipos";
+import { HERRAMIENTAS_CAJA } from "./herramientas-caja";
+import { cargarManual, consultarManual } from "@/lib/mcp/manual";
 import {
   createAdminTurnoAction,
   reprogramTurnoAction,
@@ -608,6 +610,32 @@ const REGISTRY: Record<string, ToolEntry> = {
             "cliente_nombre",
             "cliente_telefono",
           ],
+        },
+      },
+    },
+  },
+
+  // ───────────────────────── Lectura: detalle de caja ─────────────────────────
+  ...HERRAMIENTAS_CAJA,
+
+  // ───────────────────────── Manual de uso ─────────────────────────
+  ayuda: {
+    roles: TODOS,
+    mode: "read",
+    execute: async (a) =>
+      consultarManual(cargarManual(), { tema: str(a.tema), buscar: str(a.buscar) }),
+    def: {
+      type: "function",
+      function: {
+        name: "ayuda",
+        description:
+          "Manual de uso del sistema: cómo se hace cada cosa (abrir y cerrar caja, ventas, gift cards, gastos, viáticos, liquidaciones, stock, reportes...). Usala SIEMPRE que pregunten cómo hacer algo en el sistema, antes de contestar. Sin argumentos lista los temas; con buscar trae los más parecidos; con tema trae uno entero.",
+        parameters: {
+          type: "object",
+          properties: {
+            buscar: { type: "string", description: "La pregunta en palabras de la persona" },
+            tema: { type: "string", description: "ID de un tema de la lista" },
+          },
         },
       },
     },

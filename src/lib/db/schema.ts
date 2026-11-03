@@ -1553,3 +1553,29 @@ export const mcpRegistro = pgTable(
     ),
   }),
 );
+
+/** Problema que dejó armado la IA cuando no lo pudo resolver. Ver drizzle/0073. */
+export const reportesProblema = pgTable(
+  "reportes_problema",
+  {
+    id: text("id").primaryKey(),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => profiles.userId, { onDelete: "cascade" }),
+    sucursalId: text("sucursal_id")
+      .notNull()
+      .references(() => sucursales.id),
+    fechaProblema: date("fecha_problema"),
+    resumen: text("resumen").notNull(),
+    detalle: text("detalle").notNull(),
+    /** Lo que la IA ya consultó y encontró, para no empezar de cero. */
+    revisado: text("revisado"),
+    estado: text("estado").$type<"abierto" | "resuelto">().notNull().default("abierto"),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+    resueltoEn: timestamp("resuelto_en", { withTimezone: true }),
+    resueltoPor: uuid("resuelto_por").references(() => profiles.userId),
+  },
+  (table) => ({
+    estadoFechaIdx: index("reportes_problema_estado_fecha_idx").on(table.estado, table.creadoEn),
+  }),
+);

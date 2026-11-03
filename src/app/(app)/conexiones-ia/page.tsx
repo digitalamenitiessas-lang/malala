@@ -4,8 +4,10 @@ import { requireUser } from "@/lib/auth/session";
 import { esAdmin } from "@/lib/auth/access";
 import { listarConexiones, listarUsosRecientes } from "@/lib/mcp/oauth";
 import { rolPuedeUsarMcp, urlMcp, urlPublica } from "@/lib/mcp/oauth-util";
+import { listReportesProblema } from "@/lib/data/reportes-problema";
+import { formatYmdAr } from "@/lib/fecha-ar";
 import { formatDateTime } from "@/lib/utils";
-import { cortarConexion } from "./actions";
+import { cortarConexion, resolverReporte } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +22,10 @@ export default async function ConexionesIaPage() {
   if (!rolPuedeUsarMcp(user.rol)) redirect("/dashboard");
   const admin = esAdmin(user.rol);
 
-  const [conexiones, usos] = await Promise.all([
+  const [conexiones, usos, reportes] = await Promise.all([
     listarConexiones(admin ? undefined : user.id),
     listarUsosRecientes(admin ? undefined : user.id, 20),
+    listReportesProblema(30),
   ]);
   const direccion = urlMcp(urlPublica(await headers()));
 
@@ -130,6 +133,59 @@ export default async function ConexionesIaPage() {
           </div>
         )}
       </section>
+
+      {reportes.length > 0 && (
+        <section className="space-y-3" id="reportes">
+          <h2 className="text-xs uppercase tracking-wider text-muted-foreground">
+            Problemas reportados por la IA
+          </h2>
+          <ul className="space-y-3">
+            {reportes.map((r) => (
+              <li
+                key={r.id}
+                id={`reporte-${r.id}`}
+                className={`rounded-md border bg-card p-4 text-sm space-y-2 ${
+                  r.estado === "abierto" ? "border-warning/60" : "border-border opacity-70"
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{r.resumen}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.usuarioNombre} · {r.sucursalNombre} · {formatDateTime(r.creadoEn)}
+                      {r.fechaProblema && <> · del {formatYmdAr(r.fechaProblema)}</>}
+                    </p>
+                  </div>
+                  {r.estado === "abierto" ? (
+                    admin && (
+                      <form action={resolverReporte}>
+                        <input type="hidden" name="reporte_id" value={r.id} />
+                        <button
+                          type="submit"
+                          className="rounded-md border border-border px-3 py-1.5 text-xs uppercase tracking-wider hover:bg-cream"
+                        >
+                          Resuelto
+                        </button>
+                      </form>
+                    )
+                  ) : (
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Resuelto
+                    </span>
+                  )}
+                </div>
+                <p className="whitespace-pre-wrap text-brown-700">{r.detalle}</p>
+                {r.revisado && (
+                  <details className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer">Lo que ya revisó la IA</summary>
+                    <p className="mt-1 whitespace-pre-wrap">{r.revisado}</p>
+                  </details>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {usos.length > 0 && (
         <section className="space-y-3">

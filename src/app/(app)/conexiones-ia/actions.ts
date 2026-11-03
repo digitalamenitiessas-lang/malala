@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { esAdmin } from "@/lib/auth/access";
 import { getConexion, revocarConexion } from "@/lib/mcp/oauth";
+import { marcarReporteResuelto } from "@/lib/data/reportes-problema";
 
 /** Corta una conexión. Cada uno las suyas; los admin, cualquiera. */
 export async function cortarConexion(formData: FormData) {
@@ -13,5 +14,10 @@ export async function cortarConexion(formData: FormData) {
   if (!conexion) return;
   if (conexion.usuarioId !== user.id && !esAdmin(user.rol)) return;
   await revocarConexion(id);
+  revalidatePath("/conexiones-ia");
+}
+
+export async function resolverReporte(formData: FormData) {
+  await marcarReporteResuelto(String(formData.get("reporte_id") ?? ""));
   revalidatePath("/conexiones-ia");
 }

@@ -1,11 +1,13 @@
 "use server";
 
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { createPrivateKey, sign } from "node:crypto";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   empleados as empleadosTable,
   liquidaciones as liquidacionesTable,
+  profiles as profilesTable,
+  reportesProblema as reportesProblemaTable,
   pushNotificationQueue as pushNotificationQueueTable,
   pushSubscriptions as pushSubscriptionsTable,
   servicios as serviciosTable,
@@ -191,6 +193,91 @@ async function queueEmployeeNotification(
 
   await Promise.allSettled(
     subscriptions.map((subscription) => sendPushPing(subscription.endpoint)),
+  );
+}
+
+/** Igual que queueEmployeeNotification, pero a usuarios del sistema (dueño, soporte). */
+async function queueUserNotification(userIds: string[], payload: QueuePayload) {
+  if (!isWebPushConfigured() || userIds.length === 0) return;
+
+  const db = getDb();
+  const subscriptions = await db
+    .select()
+    .from(pushSubscriptionsTable)
+    .where(
+      and(
+        inArray(pushSubscriptionsTable.userId, userIds),
+        eq(pushSubscriptionsTable.activo, true),
+      ),
+    );
+
+  if (subscriptions.length === 0) return;
+
+  const now = new Date();
+  await db.insert(pushNotificationQueueTable).values(
+    subscriptions.map((subscription) => ({
+      id: createId(),
+      subscriptionId: subscription.id,
+      titulo: payload.titulo,
+      cuerpo: payload.cuerpo,
+      url: payload.url,
+      tipo: payload.tipo,
+      createdAt: now,
+    })),
+  );
+
+  await Promise.allSettled(
+    subscriptions.map((subscription) => sendPushPing(subscription.endpoint)),
+  );
+}
+
+/**
+ * Aviso de un problema que reportó la IA. Va a los usuarios cuyos mails están
+ * en MALALA_REPORTES_EMAILS (separados por coma): Luciano pidió que le llegue
+ * a él por push. Sin la variable, el reporte igual queda en "Conectar con IA".
+ *
+ * Recibe solo el id y lee el texto de la base: este archivo es "use server" y
+ * lo exportado se puede invocar desde el navegador, así que no puede aceptar
+ * un texto armado afuera.
+ */
+export async function notificarReporteProblemaPush(args: { reporteId: string }) {
+  const emails = (process.env.MALALA_REPORTES_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (emails.length === 0 || !isWebPushConfigured()) return;
+
+  const db = getDb();
+  const [reporte] = await db
+    .select({
+      resumen: reportesProblemaTable.resumen,
+      estado: reportesProblemaTable.estado,
+      creadoEn: reportesProblemaTable.creadoEn,
+      usuarioNombre: profilesTable.nombre,
+      sucursalNombre: sucursalesTable.nombre,
+    })
+    .from(reportesProblemaTable)
+    .innerJoin(profilesTable, eq(profilesTable.userId, reportesProblemaTable.usuarioId))
+    .innerJoin(sucursalesTable, eq(sucursalesTable.id, reportesProblemaTable.sucursalId))
+    .where(eq(reportesProblemaTable.id, args.reporteId))
+    .limit(1);
+  // Solo recién creados: llamarla de nuevo con un id viejo no vuelve a avisar.
+  if (!reporte || reporte.estado !== "abierto") return;
+  if (Date.now() - reporte.creadoEn.getTime() > 60_000) return;
+
+  const destinatarios = await db
+    .select({ userId: profilesTable.userId })
+    .from(profilesTable)
+    .where(and(inArray(sql`lower(${profilesTable.email})`, emails), eq(profilesTable.activo, true)));
+
+  await queueUserNotification(
+    destinatarios.map((d) => d.userId),
+    {
+      titulo: `Problema reportado · ${reporte.sucursalNombre}`,
+      cuerpo: `${reporte.usuarioNombre}: ${reporte.resumen}`.slice(0, 180),
+      url: `/conexiones-ia#reporte-${args.reporteId}`,
+      tipo: "reporte:problema",
+    },
   );
 }
 
