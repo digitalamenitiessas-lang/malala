@@ -34,7 +34,7 @@ import type {
   MedioPago,
 } from "@/lib/types";
 import { listEgresos } from "./egresos";
-import { computeBreakdown } from "./ingresos-helpers";
+import { computeBreakdown, tramosDePago } from "./ingresos-helpers";
 import { listIngresos } from "./ingresos";
 import { listMediosPago } from "./medios-pago";
 import { getAperturaDeFecha, getSugerenciasApertura } from "./apertura-caja";
@@ -362,21 +362,11 @@ export async function getResumenDelDia(
   >();
 
   for (const row of ingresosDelDia) {
-    const mp1 = acc.get(row.ingreso.mp1_id);
-    if (mp1) mp1.ingresos += row.ingreso.valor1;
-    if (row.ingreso.mp2_id && row.ingreso.valor2 != null) {
-      const mp2 = acc.get(row.ingreso.mp2_id);
-      if (mp2) mp2.ingresos += row.ingreso.valor2;
-    }
-
     let fiadoRow = 0;
-    if (ccMpIds.has(row.ingreso.mp1_id)) fiadoRow += row.ingreso.valor1;
-    if (
-      row.ingreso.mp2_id &&
-      row.ingreso.valor2 != null &&
-      ccMpIds.has(row.ingreso.mp2_id)
-    ) {
-      fiadoRow += row.ingreso.valor2;
+    for (const tramo of tramosDePago(row.ingreso)) {
+      const mp = acc.get(tramo.mpId);
+      if (mp) mp.ingresos += tramo.valor;
+      if (ccMpIds.has(tramo.mpId)) fiadoRow += tramo.valor;
     }
     if (fiadoRow > 0) {
       fiadoTotal += fiadoRow;

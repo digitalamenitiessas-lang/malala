@@ -147,3 +147,83 @@ describe("ingresoDesdeFormData", () => {
     if (r.success) expect(r.data.gift_card_1_id).toBe("gc-1");
   });
 });
+
+/**
+ * Tercer medio de pago. El caso que lo trajo, Yerba Buena 03/11/2026: una
+ * clienta pagó con dos gift cards (GC-0191 y GC-0192) y el resto por
+ * transferencia, y con dos medios la venta no se podía cargar entera.
+ */
+describe("ingresoSchema · tercer medio de pago", () => {
+  const dosGiftYTransferencia = (extra: Record<string, unknown> = {}) => ({
+    ...venta([lineaServicio(50000, 1)], 20000),
+    mp1_id: "mp-gift",
+    gift_card_1_id: "gc-0191",
+    mp2_id: "mp-gift",
+    valor2: 15000,
+    gift_card_2_id: "gc-0192",
+    mp3_id: "mp-transf",
+    valor3: 15000,
+    ...extra,
+  });
+
+  it("dos gift cards y una transferencia cierran el total", () => {
+    const r = ingresoSchema.safeParse(dosGiftYTransferencia());
+    expect(r.success).toBe(true);
+  });
+
+  it("el tercer importe cuenta para la diferencia", () => {
+    const r = ingresoSchema.safeParse(dosGiftYTransferencia({ valor3: 10000 }));
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues.some((i) => /no coincide con el total/.test(i.message))).toBe(
+        true,
+      );
+    }
+  });
+
+  it("no acepta un tercer medio sin segundo", () => {
+    const r = ingresoSchema.safeParse({
+      ...venta([lineaServicio(30000, 1)], 15000),
+      mp3_id: "mp-transf",
+      valor3: 15000,
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues.map((i) => i.path[0])).toContain("mp3_id");
+  });
+
+  it.each([
+    ["el primero", { gift_card_3_id: "gc-0191" }, "primer"],
+    ["el segundo", { gift_card_3_id: "gc-0192" }, "segundo"],
+  ])("rechaza la misma gift card en el tercero que en %s", (_, extra, ordinal) => {
+    const r = ingresoSchema.safeParse(
+      dosGiftYTransferencia({ mp3_id: "mp-gift", ...extra }),
+    );
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const issue = r.error.issues.find((i) => i.path[0] === "gift_card_3_id");
+      expect(issue?.message).toContain(`el ${ordinal} medio`);
+    }
+  });
+
+  it("tres gift cards distintas pasan", () => {
+    const r = ingresoSchema.safeParse(
+      dosGiftYTransferencia({ mp3_id: "mp-gift", gift_card_3_id: "gc-0193" }),
+    );
+    expect(r.success).toBe(true);
+  });
+
+  it("el FormData trae los campos del tercer medio", () => {
+    const fd = new FormData();
+    fd.set("mp3_id", "mp-transf");
+    fd.set("valor3", "15000");
+    fd.set("mp3_cuenta_id", "cta-1");
+    fd.set("gift_card_3_id", "gc-3");
+    const obj = ingresoDesdeFormData(fd, []);
+    expect(obj).toMatchObject({
+      mp3_id: "mp-transf",
+      valor3: "15000",
+      mp3_cuenta_id: "cta-1",
+      gift_card_3_id: "gc-3",
+    });
+  });
+});

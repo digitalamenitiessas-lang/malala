@@ -11,6 +11,7 @@ import {
   aggregate,
   comisionesPorEmpleado,
   descuentosPorMotivo,
+  tramosDePago,
 } from "@/lib/data/ingresos-helpers";
 import { BarChart } from "@/components/charts/bar-chart";
 import { PrintButton } from "@/components/print-button";
@@ -82,10 +83,7 @@ export default async function ReporteExportarPage({ searchParams }: PageProps) {
       cur.monto += monto;
       ingresosPorMp.set(mp.id, cur);
     };
-    add(row.ingreso.mp1_id, row.ingreso.valor1);
-    if (row.ingreso.mp2_id && row.ingreso.valor2) {
-      add(row.ingreso.mp2_id, row.ingreso.valor2);
-    }
+    for (const tramo of tramosDePago(row.ingreso)) add(tramo.mpId, tramo.valor);
   }
   const ingresosMpFilas = Array.from(ingresosPorMp.values()).sort(
     (a, b) => b.monto - a.monto,

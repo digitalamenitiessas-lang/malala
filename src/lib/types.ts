@@ -493,6 +493,9 @@ export interface Ingreso {
   mp2_id?: ID;
   valor2?: number;
   mp2_cuenta_id?: ID;
+  mp3_id?: ID;
+  valor3?: number;
+  mp3_cuenta_id?: ID;
   observacion?: string;
   usuario_id: ID;
   anulado: boolean;

@@ -67,8 +67,10 @@ export function computeDescuento(args: {
 export interface RecargoCalc {
   recargo1: number;
   recargo2: number;
+  recargo3: number;
   valor1Cobrado: number;
   valor2Cobrado: number | null;
+  valor3Cobrado: number | null;
   total: number;
 }
 
@@ -82,21 +84,70 @@ export function computeRecargos(args: {
   valor1: number;
   mp2Id?: string;
   valor2?: number | null;
+  mp3Id?: string;
+  valor3?: number | null;
   recargoPctById: Map<string, number>;
 }): RecargoCalc {
-  const { totalNeto, mp1Id, valor1, mp2Id, valor2, recargoPctById } = args;
+  const { totalNeto, mp1Id, valor1, mp2Id, valor2, mp3Id, valor3, recargoPctById } =
+    args;
   const recargo1 = valor1 * ((recargoPctById.get(mp1Id) ?? 0) / 100);
   const recargo2 =
     mp2Id && valor2 != null
       ? valor2 * ((recargoPctById.get(mp2Id) ?? 0) / 100)
       : 0;
+  const recargo3 =
+    mp3Id && valor3 != null
+      ? valor3 * ((recargoPctById.get(mp3Id) ?? 0) / 100)
+      : 0;
   return {
     recargo1,
     recargo2,
+    recargo3,
     valor1Cobrado: valor1 + recargo1,
     valor2Cobrado: valor2 != null ? valor2 + recargo2 : null,
-    total: totalNeto + recargo1 + recargo2,
+    valor3Cobrado: mp3Id && valor3 != null ? valor3 + recargo3 : null,
+    total: totalNeto + recargo1 + recargo2 + recargo3,
   };
+}
+
+export interface TramoPago {
+  mpId: string;
+  valor: number;
+  cuentaId?: string;
+}
+
+/**
+ * Los medios con que se pagó una venta, en orden. El primero va siempre; el
+ * segundo y el tercero sólo si tienen medio e importe distinto de cero.
+ *
+ * Los reportes que suman por medio de pago leen de acá: cuando se agregó el
+ * tercer medio, cada uno repetía el mismo if por tramo y era fácil que uno
+ * quedara contando dos.
+ */
+export function tramosDePago(
+  ingreso: Pick<
+    Ingreso,
+    | "mp1_id"
+    | "valor1"
+    | "mp1_cuenta_id"
+    | "mp2_id"
+    | "valor2"
+    | "mp2_cuenta_id"
+    | "mp3_id"
+    | "valor3"
+    | "mp3_cuenta_id"
+  >,
+): TramoPago[] {
+  const tramos: TramoPago[] = [
+    { mpId: ingreso.mp1_id, valor: ingreso.valor1, cuentaId: ingreso.mp1_cuenta_id },
+  ];
+  if (ingreso.mp2_id && ingreso.valor2) {
+    tramos.push({ mpId: ingreso.mp2_id, valor: ingreso.valor2, cuentaId: ingreso.mp2_cuenta_id });
+  }
+  if (ingreso.mp3_id && ingreso.valor3) {
+    tramos.push({ mpId: ingreso.mp3_id, valor: ingreso.valor3, cuentaId: ingreso.mp3_cuenta_id });
+  }
+  return tramos;
 }
 
 /**
@@ -193,6 +244,7 @@ export interface IngresoConDetalle {
   cliente: Cliente | null;
   mp1: MedioPago | null;
   mp2: MedioPago | null;
+  mp3: MedioPago | null;
   lineas: IngresoLineaConDetalle[];
   breakdown: IngresoBreakdown;
 }

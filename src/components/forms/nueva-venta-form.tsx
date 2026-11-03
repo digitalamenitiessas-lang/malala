@@ -294,7 +294,11 @@ export function NuevaVentaForm({
         if (mp1Id === medioCc.id) {
           setMp1Id(medioPorDefecto(efectivo, mediosNormales));
         }
-        if (mp2Id === medioCc.id) setMp2Id("");
+        if (mp2Id === medioCc.id) {
+          setMp2Id("");
+          quitarMedio3();
+        }
+        if (mp3Id === medioCc.id) quitarMedio3();
       }
       setShowNewCliente(false);
       setNewClienteNombre("");
@@ -332,6 +336,11 @@ export function NuevaVentaForm({
   const [mp2Id, setMp2Id] = useState("");
   const [valor2, setValor2] = useState<number>(0);
   const [mp2CuentaId, setMp2CuentaId] = useState("");
+  // Medio 3: sólo aparece con un Medio 2 elegido y se lleva el resto. Caso
+  // real de YB: dos gift cards y lo que faltaba por transferencia.
+  const [mp3Id, setMp3Id] = useState("");
+  const [valor3, setValor3] = useState<number>(0);
+  const [mp3CuentaId, setMp3CuentaId] = useState("");
 
   // Qué tarjeta se canjea en cada tramo, cuando el medio es GIFT.
   // Cotización del día, la carga quien cobra. El salón la toma del tipo de
@@ -344,6 +353,15 @@ export function NuevaVentaForm({
   const [moneda, setMoneda] = useState(0);
   const [giftCard1Id, setGiftCard1Id] = useState("");
   const [giftCard2Id, setGiftCard2Id] = useState("");
+  const [giftCard3Id, setGiftCard3Id] = useState("");
+
+  /** Sin Medio 2 no hay Medio 3: se va con todo lo suyo. */
+  function quitarMedio3() {
+    setMp3Id("");
+    setValor3(0);
+    setMp3CuentaId("");
+    setGiftCard3Id("");
+  }
 
   // Resultado server
   const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -429,21 +447,27 @@ export function NuevaVentaForm({
       : 0;
   const mp1EsCc = !!medioCc && mp1Id === medioCc.id;
   const mp2EsCc = !!medioCc && mp2Id === medioCc.id;
-  const usaCc = mp1EsCc || mp2EsCc;
+  const mp3EsCc = !!medioCc && mp3Id === medioCc.id;
+  const usaCc = mp1EsCc || mp2EsCc || mp3EsCc;
   const montoFiado =
-    (mp1EsCc ? Number(valor1) || 0 : 0) + (mp2EsCc ? Number(valor2) || 0 : 0);
+    (mp1EsCc ? Number(valor1) || 0 : 0) +
+    (mp2EsCc ? Number(valor2) || 0 : 0) +
+    (mp3EsCc ? Number(valor3) || 0 : 0);
 
   // Gift card: el medio "GIFT" tampoco cobra plata, descuenta el saldo de una
   // tarjeta ya vendida. Hay que decir cuál.
   const medioGift = mediosPago.find((m) => m.codigo === "GIFT");
   const mp1EsGift = !!medioGift && mp1Id === medioGift.id;
   const mp2EsGift = !!medioGift && mp2Id === medioGift.id;
+  const mp3EsGift = !!medioGift && mp3Id === medioGift.id;
   const giftCard1 = giftCards.find((g) => g.id === giftCard1Id);
   const giftCard2 = giftCards.find((g) => g.id === giftCard2Id);
+  const giftCard3 = giftCards.find((g) => g.id === giftCard3Id);
 
   // Recargo automático por medio de pago (ej. tarjeta de crédito).
   const mp1 = mediosPago.find((m) => m.id === mp1Id);
   const mp2 = mp2Id ? mediosPago.find((m) => m.id === mp2Id) : undefined;
+  const mp3 = mp3Id ? mediosPago.find((m) => m.id === mp3Id) : undefined;
   // Cobro en moneda extranjera. Lo que se guarda siempre son PESOS: la caja,
   // las comisiones y los reportes son en pesos y no tiene sentido mezclarlos.
   // Lo que cambia es de dónde sale ese número — acá de dólares por cotización
@@ -455,10 +479,12 @@ export function NuevaVentaForm({
 
   const recargo1 = (Number(valor1) || 0) * ((mp1?.recargo_pct ?? 0) / 100);
   const recargo2 = mp2 ? (Number(valor2) || 0) * ((mp2.recargo_pct ?? 0) / 100) : 0;
-  const recargoTotal = recargo1 + recargo2;
+  const recargo3 = mp3 ? (Number(valor3) || 0) * ((mp3.recargo_pct ?? 0) / 100) : 0;
+  const recargoTotal = recargo1 + recargo2 + recargo3;
   const totalACobrar = total + recargoTotal;
 
-  const pagado = (Number(valor1) || 0) + (Number(valor2) || 0);
+  const pagado =
+    (Number(valor1) || 0) + (Number(valor2) || 0) + (mp3Id ? Number(valor3) || 0 : 0);
   const diff = total - pagado;
   const pagosOk = Math.abs(diff) < 0.01;
 
@@ -469,6 +495,7 @@ export function NuevaVentaForm({
   const sinCuenta = [
     { mp: mp1, esCc: mp1EsCc, esGift: mp1EsGift, override: mp1CuentaId, monto: Number(valor1) || 0 },
     { mp: mp2, esCc: mp2EsCc, esGift: mp2EsGift, override: mp2CuentaId, monto: Number(valor2) || 0 },
+    { mp: mp3, esCc: mp3EsCc, esGift: mp3EsGift, override: mp3CuentaId, monto: Number(valor3) || 0 },
   ]
     .filter((p) => p.mp && !p.esCc && !p.esGift && !p.mp.cuenta_id && !p.override && p.monto > 0)
     .map((p) => p.mp!.nombre);
@@ -476,10 +503,20 @@ export function NuevaVentaForm({
   // Gift card: hay que haber elegido cuál, y no se puede cobrar más de lo que
   // le queda. La base lo frena igual con el UPDATE condicional, pero ahí ya se
   // perdió la carga entera; acá se ve antes de apretar Guardar.
-  const giftFalta = (mp1EsGift && !giftCard1Id) || (mp2EsGift && !giftCard2Id);
-  const giftSinSaldo =
-    (!!giftCard1 && (Number(valor1) || 0) > giftCard1.saldo + 0.005) ||
-    (!!giftCard2 && (Number(valor2) || 0) > giftCard2.saldo + 0.005);
+  const giftFalta =
+    (mp1EsGift && !giftCard1Id) ||
+    (mp2EsGift && !giftCard2Id) ||
+    (mp3EsGift && !giftCard3Id);
+  // Por medio, en orden: el primero que no alcanza es el que se avisa al guardar.
+  const giftCortas = [
+    { g: giftCard1, monto: Number(valor1) || 0, medio: 1 },
+    { g: giftCard2, monto: Number(valor2) || 0, medio: 2 },
+    { g: giftCard3, monto: Number(valor3) || 0, medio: 3 },
+  ].filter(
+    (t): t is { g: GiftCard; monto: number; medio: number } =>
+      !!t.g && t.monto > t.g.saldo + 0.005,
+  );
+  const giftSinSaldo = giftCortas.length > 0;
   const giftOk = !giftFalta && !giftSinSaldo;
 
   // El servidor ya lo exige, pero descubrirlo recién al apretar Guardar obliga
@@ -531,18 +568,32 @@ export function NuevaVentaForm({
     (a, b) => b.total - a.total,
   );
 
-  // Cuando no hay mp2, valor1 = total automáticamente
+  // Cuando no hay mp2, valor1 = total automáticamente; con mp2 y sin mp3, el 2
+  // se lleva el resto.
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       if (!mp2Id) {
         setValor1(total);
         setValor2(0);
-      } else {
+      } else if (!mp3Id) {
         setValor2(Math.max(0, total - (Number(valor1) || 0)));
       }
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [mp2Id, total, valor1]);
+  }, [mp2Id, mp3Id, total, valor1]);
+
+  // Con mp3, el resto se lo lleva el 3. Effect aparte porque es el único que
+  // sigue a valor2: en el de arriba, seguirlo pisaría el importe que propone
+  // la gift card del Medio 2 cuando no cubre todo.
+  useEffect(() => {
+    if (!mp2Id || !mp3Id) return;
+    const timeoutId = window.setTimeout(() => {
+      setValor3(
+        Math.max(0, total - (Number(valor1) || 0) - (Number(valor2) || 0)),
+      );
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [mp2Id, mp3Id, total, valor1, valor2]);
 
   // ----- Helpers de líneas -----
   function updateLinea(idx: number, patch: Partial<LineaForm>) {
@@ -734,7 +785,11 @@ export function NuevaVentaForm({
     if (mp1Id === medioCc.id) {
       setMp1Id(medioPorDefecto(efectivo, mediosNormales));
     }
-    if (mp2Id === medioCc.id) setMp2Id("");
+    if (mp2Id === medioCc.id) {
+      setMp2Id("");
+      quitarMedio3();
+    }
+    if (mp3Id === medioCc.id) quitarMedio3();
   }
 
   function handleClienteChange(nuevoId: string) {
@@ -775,13 +830,15 @@ export function NuevaVentaForm({
       notifyError("Falta elegir la gift card del Medio 2");
       return;
     }
+    if (mp3EsGift && !giftCard3Id) {
+      setErrors({ gift_card_3_id: ["Elegí cuál"] });
+      notifyError("Falta elegir la gift card del Medio 3");
+      return;
+    }
     if (giftSinSaldo) {
       // Con el saldo y lo que se le quiere cobrar: sin los dos números, quien
       // está en el mostrador no sabe cuánto tiene que mover al otro medio.
-      const corta =
-        giftCard1 && (Number(valor1) || 0) > giftCard1.saldo + 0.005
-          ? { g: giftCard1, monto: Number(valor1) || 0, medio: 1 }
-          : { g: giftCard2!, monto: Number(valor2) || 0, medio: 2 };
+      const corta = giftCortas[0];
       notifyError(
         `A la gift card ${corta.g.codigo} le quedan ${formatARS(corta.g.saldo)} y en el Medio ${corta.medio} le estás cobrando ${formatARS(corta.monto)}`,
       );
@@ -882,6 +939,15 @@ export function NuevaVentaForm({
         usaCuentaBanco(mp2) ? mp2CuentaId : "",
       );
       formData.set("gift_card_2_id", mp2EsGift ? giftCard2Id : "");
+      if (mp3Id) {
+        formData.set("mp3_id", mp3Id);
+        formData.set("valor3", String(Number(valor3) || 0));
+        formData.set(
+          "mp3_cuenta_id",
+          usaCuentaBanco(mp3) ? mp3CuentaId : "",
+        );
+        formData.set("gift_card_3_id", mp3EsGift ? giftCard3Id : "");
+      }
     }
     formData.set("fecha", fechaVenta);
     formData.set("cotizacion", usaMonedaExtranjera ? String(cotizacion) : "");
@@ -1491,7 +1557,7 @@ export function NuevaVentaForm({
               min={0}
               onChange={(v) => {
                 setValor1(v);
-                if (mp2Id) setValor2(Math.max(0, total - v));
+                if (mp2Id && !mp3Id) setValor2(Math.max(0, total - v));
               }}
               className="w-full px-3 py-2 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -1539,7 +1605,7 @@ export function NuevaVentaForm({
                     if (cotizacion > 0) {
                       if (mp1Moneda) {
                         setValor1(pesos);
-                        if (mp2Id) setValor2(Math.max(0, total - pesos));
+                        if (mp2Id && !mp3Id) setValor2(Math.max(0, total - pesos));
                       } else setValor2(pesos);
                     }
                   }}
@@ -1562,7 +1628,7 @@ export function NuevaVentaForm({
                     if (moneda > 0) {
                       if (mp1Moneda) {
                         setValor1(pesos);
-                        if (mp2Id) setValor2(Math.max(0, total - pesos));
+                        if (mp2Id && !mp3Id) setValor2(Math.max(0, total - pesos));
                       } else setValor2(pesos);
                     }
                   }}
@@ -1604,7 +1670,7 @@ export function NuevaVentaForm({
               if (g) {
                 const aplica = Math.min(g.saldo, total);
                 setValor1(aplica);
-                if (mp2Id) setValor2(Math.max(0, total - aplica));
+                if (mp2Id && !mp3Id) setValor2(Math.max(0, total - aplica));
               }
             }}
           />
@@ -1624,7 +1690,8 @@ export function NuevaVentaForm({
                 if (!v) {
                   setValor1(total);
                   setValor2(0);
-                } else {
+                  quitarMedio3();
+                } else if (!mp3Id) {
                   setValor2(Math.max(0, total - (Number(valor1) || 0)));
                 }
               }}
@@ -1656,7 +1723,8 @@ export function NuevaVentaForm({
                 min={0}
                 onChange={(v) => {
                   setValor2(v);
-                  setValor1(Math.max(0, total - v));
+                  // Con Medio 3, la diferencia la absorbe el 3 (ver el effect).
+                  if (!mp3Id) setValor1(Math.max(0, total - v));
                 }}
                 className="w-full px-3 py-2 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -1681,7 +1749,7 @@ export function NuevaVentaForm({
         {mp2EsGift && (
           <GiftCardSelector
             label="Gift card (Medio 2)"
-            giftCards={giftCards.filter((g) => g.id !== giftCard1Id)}
+            giftCards={giftCards.filter((g) => g.id !== giftCard1Id && g.id !== giftCard3Id)}
             clienteNombre={clienteSel?.nombre}
             value={giftCard2Id}
             error={errors.gift_card_2_id}
@@ -1694,6 +1762,116 @@ export function NuevaVentaForm({
               }
             }}
           />
+        )}
+
+        {/* Medio 3: sólo con un Medio 2 elegido, y se lleva lo que falte.
+            Lo pidió YB el 03/11/2026: dos gift cards y el resto por
+            transferencia no entraban en dos medios y partían la venta en dos.
+            Moneda extranjera no se ofrece acá: la cotización es una por
+            ticket y la conversión de arriba completa el Medio 1 o el 2. */}
+        {mp2Id && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Medio 3 (opcional)
+                </label>
+                <select
+                  value={mp3Id}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (!v) {
+                      quitarMedio3();
+                      // Sin Medio 3 vuelve a cerrar el 2.
+                      setValor2(Math.max(0, total - (Number(valor1) || 0)));
+                      return;
+                    }
+                    setMp3Id(v);
+                    if (!medioGift || v !== medioGift.id) setGiftCard3Id("");
+                  }}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm"
+                >
+                  <option value="">— Ninguno —</option>
+                  {/* Como en el Medio 2: el mismo medio dos veces no, salvo
+                      gift card, que son tarjetas distintas. */}
+                  {mediosNormales
+                    .filter(
+                      (m) =>
+                        m.moneda === "ARS" &&
+                        (m.codigo === "GIFT" || (m.id !== mp1Id && m.id !== mp2Id)),
+                    )
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.codigo} — {m.nombre}
+                      </option>
+                    ))}
+                  {clienteTieneCc && medioCc && !mp1EsCc && !mp2EsCc && (
+                    <option value={medioCc.id}>CC — Cuenta corriente</option>
+                  )}
+                </select>
+                {errors.mp3_id && (
+                  <p className="text-xs text-destructive">{errors.mp3_id.join(", ")}</p>
+                )}
+              </div>
+              {mp3Id && (
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Valor 3
+                  </label>
+                  <CurrencyInput
+                    value={valor3}
+                    min={0}
+                    onChange={(v) => {
+                      setValor3(v);
+                      setValor2(Math.max(0, total - (Number(valor1) || 0) - v));
+                    }}
+                    className="w-full px-3 py-2 text-right tabular-nums border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  {recargo3 > 0 && (
+                    <p className="text-[10px] text-warning tabular-nums">
+                      + recargo {mp3?.recargo_pct}% = {formatARS(valor3 + recargo3)} a cobrar
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {mp3Id && usaCuentaBanco(mp3) && (
+              <BancoSelector
+                cuentas={cuentasBanco}
+                value={mp3CuentaId}
+                onChange={setMp3CuentaId}
+                label="Cuenta de cobro (Medio 3)"
+              />
+            )}
+
+            {mp3EsGift && (
+              <GiftCardSelector
+                label="Gift card (Medio 3)"
+                giftCards={giftCards.filter(
+                  (g) => g.id !== giftCard1Id && g.id !== giftCard2Id,
+                )}
+                clienteNombre={clienteSel?.nombre}
+                value={giftCard3Id}
+                error={errors.gift_card_3_id}
+                onChange={(id) => {
+                  setGiftCard3Id(id);
+                  const g = giftCards.find((x) => x.id === id);
+                  if (g) {
+                    // Si la tarjeta no cubre el resto, lo que falta vuelve al
+                    // Medio 2, igual que al escribir el Valor 3 a mano.
+                    const resto = Math.max(
+                      0,
+                      total - (Number(valor1) || 0) - (Number(valor2) || 0),
+                    );
+                    const aplica = Math.min(g.saldo, resto);
+                    setValor3(aplica);
+                    setValor2(Math.max(0, total - (Number(valor1) || 0) - aplica));
+                  }
+                }}
+              />
+            )}
+          </>
         )}
 
         <div className="flex items-center justify-between pt-3 border-t border-border text-sm tabular-nums">

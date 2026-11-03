@@ -35,7 +35,13 @@ async function main() {
       db
         .select({ id: ingresos.id })
         .from(ingresos)
-        .where(or(eq(ingresos.mp1Id, cc.id), eq(ingresos.mp2Id, cc.id)))
+        .where(
+          or(
+            eq(ingresos.mp1Id, cc.id),
+            eq(ingresos.mp2Id, cc.id),
+            eq(ingresos.mp3Id, cc.id),
+          ),
+        )
         .then(count),
       db.select({ id: egresos.id }).from(egresos).where(eq(egresos.mpId, cc.id)).then(count),
       db

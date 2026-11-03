@@ -4,6 +4,7 @@ import {
   factorEfectivoSobreLista,
   computeDescuento,
   computeRecargos,
+  tramosDePago,
   buildFacturadoPorLineaMap,
   buildCostoInsumosByServicio,
   buildRecetasByServicio,
@@ -86,6 +87,64 @@ describe("computeRecargos", () => {
     expect(r.valor1Cobrado).toBe(840);
     expect(r.valor2Cobrado).toBeNull();
     expect(r.total).toBe(840);
+  });
+
+  it("recargo del tercer medio sobre su porción", () => {
+    // gift + gift + tarjeta 10% sobre 3.000 → +300
+    const r = computeRecargos({
+      totalNeto: 10000,
+      mp1Id: "gift",
+      valor1: 4000,
+      mp2Id: "gift",
+      valor2: 3000,
+      mp3Id: "tc",
+      valor3: 3000,
+      recargoPctById: new Map([
+        ["gift", 0],
+        ["tc", 10],
+      ]),
+    });
+    expect(r.recargo3).toBe(300);
+    expect(r.valor3Cobrado).toBe(3300);
+    expect(r.total).toBe(10300);
+  });
+
+  it("sin tercer medio, valor3Cobrado es null aunque venga un importe", () => {
+    const r = computeRecargos({
+      totalNeto: 1000,
+      mp1Id: "ef",
+      valor1: 1000,
+      valor3: 0,
+      recargoPctById: new Map(),
+    });
+    expect(r.recargo3).toBe(0);
+    expect(r.valor3Cobrado).toBeNull();
+  });
+});
+
+describe("tramosDePago", () => {
+  it("devuelve los tres medios en orden con su banco", () => {
+    const t = tramosDePago({
+      mp1_id: "gift",
+      valor1: 20000,
+      mp2_id: "gift",
+      valor2: 15000,
+      mp3_id: "transf",
+      valor3: 15000,
+      mp3_cuenta_id: "macro",
+    });
+    expect(t).toEqual([
+      { mpId: "gift", valor: 20000, cuentaId: undefined },
+      { mpId: "gift", valor: 15000, cuentaId: undefined },
+      { mpId: "transf", valor: 15000, cuentaId: "macro" },
+    ]);
+  });
+
+  it("el primero va siempre; el 2 y el 3 sólo con medio e importe", () => {
+    expect(tramosDePago({ mp1_id: "ef", valor1: 0 })).toHaveLength(1);
+    expect(
+      tramosDePago({ mp1_id: "ef", valor1: 100, mp2_id: "tc", valor2: 0, mp3_id: "tr" }),
+    ).toEqual([{ mpId: "ef", valor: 100, cuentaId: undefined }]);
   });
 });
 

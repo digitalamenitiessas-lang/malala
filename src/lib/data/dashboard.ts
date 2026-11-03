@@ -182,23 +182,21 @@ export async function getDashboardData(
 
   const mpAcc = new Map<string, { codigo: string; nombre: string; total: number }>();
   for (const row of ingresosMes) {
-    if (row.mp1) {
-      const current = mpAcc.get(row.mp1.id) ?? {
-        codigo: row.mp1.codigo,
-        nombre: row.mp1.nombre,
+    const tramos = [
+      { mp: row.mp1, valor: row.ingreso.valor1 },
+      { mp: row.mp2, valor: row.ingreso.valor2 },
+      { mp: row.mp3, valor: row.ingreso.valor3 },
+    ];
+    for (const [i, { mp, valor }] of tramos.entries()) {
+      // El primero cuenta siempre; el 2 y el 3, sólo si se cobró algo.
+      if (!mp || (i > 0 && !valor)) continue;
+      const current = mpAcc.get(mp.id) ?? {
+        codigo: mp.codigo,
+        nombre: mp.nombre,
         total: 0,
       };
-      current.total += row.ingreso.valor1;
-      mpAcc.set(row.mp1.id, current);
-    }
-    if (row.mp2 && row.ingreso.valor2) {
-      const current = mpAcc.get(row.mp2.id) ?? {
-        codigo: row.mp2.codigo,
-        nombre: row.mp2.nombre,
-        total: 0,
-      };
-      current.total += row.ingreso.valor2;
-      mpAcc.set(row.mp2.id, current);
+      current.total += valor ?? 0;
+      mpAcc.set(mp.id, current);
     }
   }
   const totalMp = Array.from(mpAcc.values()).reduce((sum, item) => sum + item.total, 0);

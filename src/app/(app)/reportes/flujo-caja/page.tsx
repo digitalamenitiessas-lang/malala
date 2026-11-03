@@ -6,6 +6,7 @@ import { listIngresos } from "@/lib/data/ingresos";
 import { listEgresos } from "@/lib/data/egresos";
 import { listSucursales } from "@/lib/data/sucursales";
 import { listMediosPago } from "@/lib/data/medios-pago";
+import { tramosDePago } from "@/lib/data/ingresos-helpers";
 import { formatARS } from "@/lib/utils";
 import {
   parseReporteFiltros,
@@ -49,33 +50,22 @@ export default async function ReportesFlujoCajaPage({
   );
   const mpById = new Map(mediosPago.map((m) => [m.id, m]));
 
-  // Ingresos por método de pago (suma de valor1/valor2 según mp)
+  // Ingresos por método de pago (suma de cada tramo según su mp)
   const ingresosPorMp = new Map<
     string,
     { codigo: string; nombre: string; monto: number }
   >();
   for (const row of ingresos) {
-    const mp1 = mpById.get(row.ingreso.mp1_id);
-    if (mp1) {
-      const entry = ingresosPorMp.get(mp1.id) ?? {
-        codigo: mp1.codigo,
-        nombre: mp1.nombre,
+    for (const tramo of tramosDePago(row.ingreso)) {
+      const mp = mpById.get(tramo.mpId);
+      if (!mp) continue;
+      const entry = ingresosPorMp.get(mp.id) ?? {
+        codigo: mp.codigo,
+        nombre: mp.nombre,
         monto: 0,
       };
-      entry.monto += row.ingreso.valor1;
-      ingresosPorMp.set(mp1.id, entry);
-    }
-    if (row.ingreso.mp2_id && row.ingreso.valor2) {
-      const mp2 = mpById.get(row.ingreso.mp2_id);
-      if (mp2) {
-        const entry = ingresosPorMp.get(mp2.id) ?? {
-          codigo: mp2.codigo,
-          nombre: mp2.nombre,
-          monto: 0,
-        };
-        entry.monto += row.ingreso.valor2;
-        ingresosPorMp.set(mp2.id, entry);
-      }
+      entry.monto += tramo.valor;
+      ingresosPorMp.set(mp.id, entry);
     }
   }
   const ingresosPorMpFilas = Array.from(ingresosPorMp.values()).sort(

@@ -34,7 +34,7 @@ export default async function VentaDetallePage({
   ]);
   if (!row) notFound();
 
-  const { ingreso, cliente, mp1, mp2, lineas, breakdown } = row;
+  const { ingreso, cliente, mp1, mp2, mp3, lineas, breakdown } = row;
   // Para poder poner la vendedora que faltó. Son las de la sucursal de la
   // venta, no las de la que esté en pantalla.
   const [empleadosSucursal, tinturasPorServicio] = await Promise.all([
@@ -53,8 +53,11 @@ export default async function VentaDetallePage({
   const banco2 = ingreso.mp2_cuenta_id
     ? cuentaById.get(ingreso.mp2_cuenta_id)?.nombre
     : null;
+  const banco3 = ingreso.mp3_cuenta_id
+    ? cuentaById.get(ingreso.mp3_cuenta_id)?.nombre
+    : null;
   const recargoCobrado =
-    (ingreso.valor1 + (ingreso.valor2 ?? 0)) - ingreso.total;
+    (ingreso.valor1 + (ingreso.valor2 ?? 0) + (ingreso.valor3 ?? 0)) - ingreso.total;
 
   // Las dos lecturas posibles de la misma venta, en pesos. Se calculan siempre
   // porque el control sólo tiene sentido mostrando ambos números: "la empleada
@@ -136,6 +139,12 @@ export default async function VentaDetallePage({
             <p className="text-sm mt-0.5 tabular-nums">
               {mp2.nombre}
               {banco2 ? ` · ${banco2}` : ""}: {formatARS(ingreso.valor2)}
+            </p>
+          )}
+          {mp3 && ingreso.valor3 != null && (
+            <p className="text-sm mt-0.5 tabular-nums">
+              {mp3.nombre}
+              {banco3 ? ` · ${banco3}` : ""}: {formatARS(ingreso.valor3)}
             </p>
           )}
           {recargoCobrado > 0.01 && (

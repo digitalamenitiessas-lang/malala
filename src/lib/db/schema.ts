@@ -776,6 +776,10 @@ export const ingresos =pgTable("ingresos", {
   mp2Id: text("mp2_id").references(() => mediosPago.id),
   valor2: doublePrecision("valor2"),
   mp2CuentaId: text("mp2_cuenta_id").references(() => cuentasBancarias.id),
+  // Tercer medio: dos gift cards + transferencia, por ejemplo. Ver drizzle/0075.
+  mp3Id: text("mp3_id").references(() => mediosPago.id),
+  valor3: doublePrecision("valor3"),
+  mp3CuentaId: text("mp3_cuenta_id").references(() => cuentasBancarias.id),
   // Cotización usada si se cobró en otra moneda. Lo guardado en valor1/valor2
   // siempre son PESOS; esto es lo que permite explicar de dónde salieron.
   // Ver drizzle/0055.

@@ -101,6 +101,17 @@ export const ingresoSchema = z
       .string()
       .nullish()
       .transform((s) => (s ? s : undefined)),
+    // Tercer medio: solo si hay segundo. Caso real: dos gift cards y el resto
+    // por transferencia.
+    mp3_id: z
+      .string()
+      .nullish()
+      .transform((s) => (s ? s : undefined)),
+    valor3: z.coerce.number().optional(),
+    mp3_cuenta_id: z
+      .string()
+      .nullish()
+      .transform((s) => (s ? s : undefined)),
     /**
      * Día de la venta, cuando no es hoy.
      *
@@ -134,6 +145,10 @@ export const ingresoSchema = z
       .string()
       .nullish()
       .transform((s) => (s ? s : undefined)),
+    gift_card_3_id: z
+      .string()
+      .nullish()
+      .transform((s) => (s ? s : undefined)),
     observacion: z
       .string()
       .nullish()
@@ -147,7 +162,7 @@ export const ingresoSchema = z
         : data.descuento_valor;
     const total = subtotal - descMonto;
 
-    const pagado = data.valor1 + (data.valor2 ?? 0);
+    const pagado = data.valor1 + (data.valor2 ?? 0) + (data.valor3 ?? 0);
     if (Math.abs(pagado - total) > 0.01) {
       ctx.addIssue({
         code: "custom",
@@ -176,19 +191,29 @@ export const ingresoSchema = z
         message: "Elegí un motivo para el descuento",
       });
     }
-    // La misma tarjeta en los dos tramos gastaría el saldo dos veces sobre una
-    // lectura sola. El UPDATE condicional del canje lo frenaría igual, pero acá
-    // el error se ve en el formulario en vez de reventar la venta entera.
-    if (
-      data.gift_card_1_id &&
-      data.gift_card_2_id &&
-      data.gift_card_1_id === data.gift_card_2_id
-    ) {
+    // El tercer medio va después del segundo: sin esto quedaría un hueco que
+    // los reportes leen como "un solo medio".
+    if (data.mp3_id && !data.mp2_id) {
       ctx.addIssue({
         code: "custom",
-        path: ["gift_card_2_id"],
-        message: "Es la misma gift card que el primer medio de pago",
+        path: ["mp3_id"],
+        message: "Completá el segundo medio de pago antes del tercero",
       });
+    }
+    // La misma tarjeta en dos tramos gastaría el saldo dos veces sobre una
+    // lectura sola. El UPDATE condicional del canje lo frenaría igual, pero acá
+    // el error se ve en el formulario en vez de reventar la venta entera.
+    const tarjetas = [data.gift_card_1_id, data.gift_card_2_id, data.gift_card_3_id];
+    const ordinal = ["primer", "segundo"];
+    for (let i = 1; i < tarjetas.length; i++) {
+      const repetida = tarjetas.slice(0, i).indexOf(tarjetas[i]);
+      if (tarjetas[i] && repetida >= 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: [`gift_card_${i + 1}_id`],
+          message: `Es la misma gift card que el ${ordinal[repetida]} medio de pago`,
+        });
+      }
     }
   });
 
@@ -225,10 +250,14 @@ export function ingresoDesdeFormData(
     mp2_id: formData.get("mp2_id"),
     valor2: formData.get("valor2"),
     mp2_cuenta_id: formData.get("mp2_cuenta_id"),
+    mp3_id: formData.get("mp3_id"),
+    valor3: formData.get("valor3"),
+    mp3_cuenta_id: formData.get("mp3_cuenta_id"),
     fecha: formData.get("fecha"),
     cotizacion: formData.get("cotizacion"),
     gift_card_1_id: formData.get("gift_card_1_id"),
     gift_card_2_id: formData.get("gift_card_2_id"),
+    gift_card_3_id: formData.get("gift_card_3_id"),
     observacion: formData.get("observacion"),
   };
 }

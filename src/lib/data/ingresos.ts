@@ -89,6 +89,9 @@ function mapIngreso(row: typeof ingresosTable.$inferSelect): Ingreso {
     mp2_id: row.mp2Id ?? undefined,
     valor2: row.valor2 ?? undefined,
     mp2_cuenta_id: row.mp2CuentaId ?? undefined,
+    mp3_id: row.mp3Id ?? undefined,
+    valor3: row.valor3 ?? undefined,
+    mp3_cuenta_id: row.mp3CuentaId ?? undefined,
     observacion: row.observacion ?? undefined,
     usuario_id: row.usuarioId,
     anulado: row.anulado,
@@ -221,7 +224,7 @@ async function loadIngresoCatalogs(args: {
   const medioPagoIds = Array.from(
     new Set(
       args.ingresos.flatMap((item) =>
-        [item.mp1_id, item.mp2_id].filter(Boolean),
+        [item.mp1_id, item.mp2_id, item.mp3_id].filter(Boolean),
       ),
     ),
   ) as string[];
@@ -354,6 +357,9 @@ function buildIngresosConDetalle(args: {
       mp1: args.mediosPagoById.get(ingreso.mp1_id) ?? null,
       mp2: ingreso.mp2_id
         ? (args.mediosPagoById.get(ingreso.mp2_id) ?? null)
+        : null,
+      mp3: ingreso.mp3_id
+        ? (args.mediosPagoById.get(ingreso.mp3_id) ?? null)
         : null,
       lineas,
       breakdown: computeBreakdown(ingreso, lineas),
@@ -574,7 +580,7 @@ export async function createIngreso(
 
   // Recargo automático según el medio de pago (ej. tarjeta de crédito).
   // El recargo se calcula sobre la porción base cobrada con cada medio.
-  const mpIds = [data.mp1_id, data.mp2_id].filter(Boolean) as string[];
+  const mpIds = [data.mp1_id, data.mp2_id, data.mp3_id].filter(Boolean) as string[];
   const mediosRows =
     mpIds.length > 0
       ? await db
@@ -589,7 +595,8 @@ export async function createIngreso(
   const codigoById = new Map(mediosRows.map((m) => [m.id, m.codigo]));
   const mp1EsCc = codigoById.get(data.mp1_id) === "CC";
   const mp2EsCc = data.mp2_id ? codigoById.get(data.mp2_id) === "CC" : false;
-  const usaCc = mp1EsCc || mp2EsCc;
+  const mp3EsCc = data.mp3_id ? codigoById.get(data.mp3_id) === "CC" : false;
+  const usaCc = mp1EsCc || mp2EsCc || mp3EsCc;
   if (usaCc && !data.cliente_id) {
     return {
       ok: false,
@@ -607,6 +614,7 @@ export async function createIngreso(
   // empleada cobra su comisión; lo único que no pasa es que entre plata.
   const mp1EsGift = codigoById.get(data.mp1_id) === "GIFT";
   const mp2EsGift = data.mp2_id ? codigoById.get(data.mp2_id) === "GIFT" : false;
+  const mp3EsGift = data.mp3_id ? codigoById.get(data.mp3_id) === "GIFT" : false;
   if (mp1EsGift && !data.gift_card_1_id) {
     return {
       ok: false,
@@ -619,6 +627,12 @@ export async function createIngreso(
       errors: { gift_card_2_id: ["Elegí qué gift card se está canjeando"] },
     };
   }
+  if (mp3EsGift && !data.gift_card_3_id) {
+    return {
+      ok: false,
+      errors: { gift_card_3_id: ["Elegí qué gift card se está canjeando"] },
+    };
+  }
 
   // Cobro en otra moneda: sin la cotización el importe en pesos no se puede
   // explicar ni rehacer. Es el dato que hoy se perdía, porque la sacaban con la
@@ -626,7 +640,8 @@ export async function createIngreso(
   const monedaById = new Map(mediosRows.map((m) => [m.id, m.moneda]));
   const usaOtraMoneda =
     monedaById.get(data.mp1_id) !== "ARS" ||
-    (!!data.mp2_id && monedaById.get(data.mp2_id) !== "ARS");
+    (!!data.mp2_id && monedaById.get(data.mp2_id) !== "ARS") ||
+    (!!data.mp3_id && monedaById.get(data.mp3_id) !== "ARS");
   if (usaOtraMoneda && !(Number(data.cotizacion) > 0)) {
     return {
       ok: false,
@@ -634,13 +649,15 @@ export async function createIngreso(
     };
   }
 
-  const { valor1Cobrado, valor2Cobrado, total } =
+  const { valor1Cobrado, valor2Cobrado, valor3Cobrado, total } =
     computeRecargos({
       totalNeto,
       mp1Id: data.mp1_id,
       valor1: data.valor1,
       mp2Id: data.mp2_id,
       valor2: data.valor2,
+      mp3Id: data.mp3_id,
+      valor3: data.valor3,
       recargoPctById,
     });
 
@@ -851,6 +868,9 @@ export async function createIngreso(
         mp2Id: data.mp2_id ?? null,
         valor2: valor2Cobrado,
         mp2CuentaId: data.mp2_cuenta_id ?? null,
+        mp3Id: data.mp3_id ?? null,
+        valor3: valor3Cobrado,
+        mp3CuentaId: data.mp3_cuenta_id ?? null,
         cotizacion: usaOtraMoneda ? (Number(data.cotizacion) || null) : null,
         observacion: data.observacion ?? null,
         usuarioId: user.id,
@@ -1097,6 +1117,15 @@ export async function createIngreso(
           cuentaOverride: data.mp2_cuenta_id,
           esCc: mp2EsCc,
           giftCardId: mp2EsGift ? data.gift_card_2_id : undefined,
+        });
+      }
+      if (data.mp3_id && valor3Cobrado != null) {
+        cobros.push({
+          mpId: data.mp3_id,
+          monto: valor3Cobrado,
+          cuentaOverride: data.mp3_cuenta_id,
+          esCc: mp3EsCc,
+          giftCardId: mp3EsGift ? data.gift_card_3_id : undefined,
         });
       }
 

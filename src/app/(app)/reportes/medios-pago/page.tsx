@@ -6,6 +6,7 @@ import { listIngresos } from "@/lib/data/ingresos";
 import { listSucursales } from "@/lib/data/sucursales";
 import { listMediosPago } from "@/lib/data/medios-pago";
 import { listCuentas, sumImpuestosByCuenta } from "@/lib/data/cuentas-bancarias";
+import { tramosDePago } from "@/lib/data/ingresos-helpers";
 import { formatARS } from "@/lib/utils";
 import { parseReporteFiltros, type ReporteFiltrosInput } from "../_filters";
 import { ReporteFiltroForm } from "../_filter-form";
@@ -62,7 +63,7 @@ export default async function ReportesMediosPagoPage({
   const cuentaNombreById = new Map(cuentas.map((c) => [c.id, c.nombre]));
 
   // Agregamos por medio de pago: monto cobrado y cantidad de operaciones.
-  // Cada tramo pagado (mp1 y, si hay, mp2) cuenta como una operación.
+  // Cada tramo pagado (mp1 y, si hay, mp2 y mp3) cuenta como una operación.
   const filasById = new Map<string, FilaMedio>();
   function acumular(mpId: string, monto: number) {
     const mp = mpById.get(mpId);
@@ -85,10 +86,7 @@ export default async function ReportesMediosPagoPage({
   }
 
   for (const row of ingresos) {
-    acumular(row.ingreso.mp1_id, row.ingreso.valor1);
-    if (row.ingreso.mp2_id && row.ingreso.valor2) {
-      acumular(row.ingreso.mp2_id, row.ingreso.valor2);
-    }
+    for (const tramo of tramosDePago(row.ingreso)) acumular(tramo.mpId, tramo.valor);
   }
 
   const filas = Array.from(filasById.values())

@@ -72,6 +72,8 @@ async function main() {
         valor1: ingresos.valor1,
         mp2Id: ingresos.mp2Id,
         valor2: ingresos.valor2,
+        mp3Id: ingresos.mp3Id,
+        valor3: ingresos.valor3,
       })
       .from(ingresos)
       .where(
@@ -108,6 +110,10 @@ async function main() {
       if (r.mp2Id && r.valor2 != null && !esCC(r.mp2Id)) {
         if (esEfectivo(r.mp2Id)) ingEf += r.valor2;
         else ingResto += r.valor2;
+      }
+      if (r.mp3Id && r.valor3 != null && !esCC(r.mp3Id)) {
+        if (esEfectivo(r.mp3Id)) ingEf += r.valor3;
+        else ingResto += r.valor3;
       }
     }
     for (const r of egrs) {
