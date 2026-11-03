@@ -8,6 +8,7 @@ import { profiles, sucursales } from "@/lib/db/schema";
 import type { Sucursal, Usuario } from "@/lib/types";
 import { ordenarSucursalesPermitidas } from "./sucursales-permitidas";
 import { cache } from "react";
+import { contextoMcp } from "./contexto-mcp";
 
 const COOKIE_SUCURSAL = "malala_sucursal";
 const COOKIE_OPTS = {
@@ -38,6 +39,16 @@ const getSupabaseCurrentUser = cache(async (): Promise<Usuario | null> => {
 
   if (error || !userId) return null;
 
+  return cargarUsuario(userId);
+});
+
+/**
+ * El usuario con sus sucursales permitidas, a partir del id. Lo usa la sesión
+ * del navegador y también el MCP, que llega con un token en vez de cookie: los
+ * dos tienen que terminar con el mismo Usuario. Null si no existe o está dado
+ * de baja.
+ */
+export async function cargarUsuario(userId: string): Promise<Usuario | null> {
   const db = getDb();
   const [profile] = await db
     .select()
@@ -82,9 +93,13 @@ const getSupabaseCurrentUser = cache(async (): Promise<Usuario | null> => {
     sucursal_ids_permitidas: sucursalIdsPermitidas,
     activo: profile.activo,
   };
-});
+}
 
 export async function getCurrentUser(): Promise<Usuario | null> {
+  // Una consulta que llega por MCP no trae cookie: trae el usuario dueño del
+  // token. Ver contexto-mcp.ts.
+  const mcp = contextoMcp();
+  if (mcp) return mcp.usuario;
   return getSupabaseCurrentUser();
 }
 
@@ -106,6 +121,10 @@ const getSupabaseActiveSucursal = cache(async (user: Usuario): Promise<Sucursal 
       ? overrideId
       : user.sucursal_default_id;
 
+  return cargarSucursal(targetId);
+});
+
+async function cargarSucursal(targetId: string): Promise<Sucursal | null> {
   const db = getDb();
   const [sucursal] = await db
     .select()
@@ -128,11 +147,14 @@ const getSupabaseActiveSucursal = cache(async (user: Usuario): Promise<Sucursal 
     mapa_url: sucursal.mapaUrl ?? undefined,
     descripcion_corta: sucursal.descripcionCorta ?? undefined,
   };
-});
+}
 
 export async function getActiveSucursalForUser(
   user: Usuario,
 ): Promise<Sucursal | null> {
+  // Por MCP la sucursal no sale del selector (cookie) sino de la consulta.
+  const mcp = contextoMcp();
+  if (mcp && mcp.usuario.id === user.id) return cargarSucursal(mcp.sucursalId);
   return getSupabaseActiveSucursal(user);
 }
 

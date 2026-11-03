@@ -1475,3 +1475,81 @@ export const descuentos = pgTable(
     ),
   }),
 );
+
+// ───────────────────────── Conexión con IA (MCP + OAuth) ─────────────────────────
+// Ver drizzle/0072_mcp_oauth.sql y src/lib/mcp/.
+
+/** App que se registró sola para pedir acceso (Claude, ChatGPT...). */
+export const oauthClientes = pgTable("oauth_clientes", {
+  id: text("id").primaryKey(),
+  nombre: text("nombre").notNull(),
+  redirectUris: jsonb("redirect_uris").$type<string[]>().notNull(),
+  /** Solo si el cliente pidió autenticarse con secreto; los públicos usan PKCE. */
+  secretoHash: text("secreto_hash"),
+  creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Código de un solo uso que sale de la pantalla "Permitir". */
+export const oauthCodigos = pgTable("oauth_codigos", {
+  codigoHash: text("codigo_hash").primaryKey(),
+  clienteId: text("cliente_id")
+    .notNull()
+    .references(() => oauthClientes.id, { onDelete: "cascade" }),
+  usuarioId: uuid("usuario_id")
+    .notNull()
+    .references(() => profiles.userId, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: text("code_challenge").notNull(),
+  expiraEn: timestamp("expira_en", { withTimezone: true }).notNull(),
+  usadoEn: timestamp("usado_en", { withTimezone: true }),
+  creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Una fila por conexión. Los tokens se guardan como hash, nunca en claro. */
+export const oauthTokens = pgTable(
+  "oauth_tokens",
+  {
+    id: text("id").primaryKey(),
+    clienteId: text("cliente_id")
+      .notNull()
+      .references(() => oauthClientes.id, { onDelete: "cascade" }),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => profiles.userId, { onDelete: "cascade" }),
+    accessHash: text("access_hash").notNull().unique(),
+    accessExpiraEn: timestamp("access_expira_en", { withTimezone: true }).notNull(),
+    refreshHash: text("refresh_hash").notNull().unique(),
+    refreshExpiraEn: timestamp("refresh_expira_en", { withTimezone: true }).notNull(),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+    ultimoUsoEn: timestamp("ultimo_uso_en", { withTimezone: true }),
+    revocadoEn: timestamp("revocado_en", { withTimezone: true }),
+  },
+  (table) => ({
+    usuarioIdx: index("oauth_tokens_usuario_idx").on(table.usuarioId),
+  }),
+);
+
+/** Cada consulta que hizo una IA conectada. */
+export const mcpRegistro = pgTable(
+  "mcp_registro",
+  {
+    id: text("id").primaryKey(),
+    tokenId: text("token_id").references(() => oauthTokens.id, { onDelete: "set null" }),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => profiles.userId, { onDelete: "cascade" }),
+    herramienta: text("herramienta").notNull(),
+    argumentos: jsonb("argumentos"),
+    sucursalId: text("sucursal_id"),
+    ok: boolean("ok").notNull(),
+    error: text("error"),
+    duracionMs: integer("duracion_ms"),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    usuarioFechaIdx: index("mcp_registro_usuario_fecha_idx").on(
+      table.usuarioId,
+      table.creadoEn,
+    ),
+  }),
+);

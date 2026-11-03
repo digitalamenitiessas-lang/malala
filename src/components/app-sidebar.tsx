@@ -15,6 +15,7 @@ import {
   Package,
   Receipt,
   ShoppingBag,
+  Sparkles,
   Users,
   Wallet,
   X,
@@ -36,6 +37,7 @@ const ICONS: Record<string, ComponentType<{ className?: string }>> = {
   BookOpen,
   BarChart3,
   MessageCircle,
+  Sparkles,
   Users,
 };
 

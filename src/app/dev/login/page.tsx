@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
 import { loginWithPassword } from "@/lib/auth/actions";
+import { destinoSeguro } from "@/lib/auth/destino-login";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/db/env";
 
 interface SearchParams {
   error?: string;
+  /** Vuelta a la pantalla "Permitir" de la conexión con IA. */
+  next?: string;
 }
 
 export default async function DevLoginPage({
@@ -13,7 +16,8 @@ export default async function DevLoginPage({
   searchParams: Promise<SearchParams>;
 }) {
   const [user, sp] = await Promise.all([getCurrentUser(), searchParams]);
-  if (user) redirect("/dashboard");
+  const next = destinoSeguro(sp.next);
+  if (user) redirect(next ?? "/dashboard");
 
   const supabaseEnabled = isSupabaseConfigured();
 
@@ -64,6 +68,7 @@ export default async function DevLoginPage({
         ) : null}
 
         <form action={loginWithPassword} className="mt-8 space-y-4">
+          {next ? <input type="hidden" name="next" value={next} /> : null}
           <label className="block space-y-2">
             <span className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
               Email
