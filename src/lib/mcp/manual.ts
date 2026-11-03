@@ -92,9 +92,12 @@ export function buscarTemas(temas: TemaManual[], pregunta: string, max = 3): Tem
       0,
     );
   };
+  // Hace falta pegarle al título o a las palabras clave (3 puntos): con una
+  // palabra suelta del texto, "facturación electrónica AFIP" traía Reportes
+  // por "Facturado" y la IA lo usaba para contestar algo que no existe.
   return temas
     .map((tema) => ({ tema, p: puntaje(tema) }))
-    .filter((x) => x.p > 0)
+    .filter((x) => x.p >= 3)
     .sort((a, b) => b.p - a.p)
     .slice(0, max)
     .map((x) => x.tema);
@@ -129,7 +132,14 @@ export function consultarManual(
   }
   if (args.buscar) {
     const encontrados = buscarTemas(temas, args.buscar);
-    if (encontrados.length) return { encontrados };
+    // La búsqueda es por palabras: "factura electrónica" trae Gastos por las
+    // facturas de proveedores. Quien decide si el tema responde es la IA.
+    if (encontrados.length) {
+      return {
+        encontrados,
+        aviso: "Son los temas más parecidos por palabras. Usalos solo si de verdad responden la pregunta; si ninguno la cubre, decilo y no inventes pasos.",
+      };
+    }
     return {
       encontrados: [],
       aviso: "El manual no tiene nada sobre eso. No inventes pasos: decilo, y si hace falta usá reportar_problema.",

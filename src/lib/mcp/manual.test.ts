@@ -66,6 +66,21 @@ describe("el manual del repo responde lo que preguntan los salones", () => {
   it.each(casos)("«%s» → %s", (pregunta, tema) => {
     expect(buscarTemas(manual, pregunta).map((t) => t.id)).toContain(tema);
   });
+
+  it("lo que el sistema no hace trae «lo que no hace»", () => {
+    for (const q of [
+      // (Excel cae en reportes-y-pdf, que ya dice que no hay.)
+      "facturación electrónica AFIP",
+      "productos a comisión en consignación",
+      "ocupación por hora de cada profesional",
+    ]) {
+      expect(buscarTemas(manual, q).map((t) => t.id), q).toContain("lo-que-no-hace");
+    }
+  });
+
+  it("una pregunta sin nada parecido no trae ningún tema", () => {
+    expect(buscarTemas(manual, "receta de tortilla")).toEqual([]);
+  });
 });
 
 describe("el manual del repo", () => {
