@@ -65,6 +65,8 @@ describe("el manual del repo responde lo que preguntan los salones", () => {
     ["me olvidé de cargar una venta de ayer y la caja ya está cerrada", "caja-corregir-dia-pasado"],
     ["cómo le pago a un proveedor lo que le debemos", "proveedores-deuda-y-pagos"],
     ["le di un adelanto de sueldo a una chica", "anticipos"],
+    // Elu (Yerba Buena), 03/11: lo estaba haciendo por Ajuste manual.
+    ["estoy por retirar un producto del depósito para bacha desde ajuste manual, me aparece stock en cero", "stock"],
   ];
   it.each(casos)("«%s» → %s", (pregunta, tema) => {
     expect(buscarTemas(manual, pregunta).map((t) => t.id)).toContain(tema);

@@ -1,5 +1,5 @@
 # Stock de insumos y reventa
-palabras: stock, insumos, reventa, productos, depósito, góndola, exhibición, reponer, ajuste, conteo, uso interno, bacha, movimientos, stock bajo, negativo
+palabras: stock, insumos, reventa, productos, depósito, góndola, exhibición, reponer, ajuste, conteo, uso interno, bacha, retirar para bacha, sacar del depósito, movimientos, stock bajo, negativo
 quién: dueño/admin y encargada (ver, reponer, uso interno); solo dueño/admin hace "Ajuste manual"
 
 Muestra cuánto hay de cada insumo y producto de reventa. En reventa el stock se divide en depósito y exhibición (góndola).
@@ -18,6 +18,8 @@ Muestra cuánto hay de cada insumo y producto de reventa. En reventa el stock se
 "Reponer exhibición" → "Producto" → "Cantidad que pasa a la góndola" (envases enteros) → "Reponer". No cambia el total. Si una venta se lleva algo que no figuraba en exhibición, el sistema lo repone solo desde el depósito.
 
 ## Retiro para uso interno o bacha
+Para sacar un producto (del depósito o de la góndola) y usarlo en bacha **no se usa "Ajuste manual"**: es "Uso interno". Así queda registrado quién lo sacó y por qué.
+
 "Uso interno" → "Producto de venta" → "De dónde sale" ("Exhibición" o "Depósito") → "Envases retirados" → "Quién lo retiró" → "Motivo" → "Retirar para uso interno". Baja el stock y queda valuado a costo; no genera gasto.
 
 ## Ajuste manual
