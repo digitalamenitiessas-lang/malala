@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
@@ -14,6 +14,10 @@ import type { Insumo, Receta, Servicio } from "@/lib/types";
 import { recetaItemSchema } from "@/lib/validations/receta";
 import { getActiveSucursalForUser } from "@/lib/auth/session";
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
+import {
+  tinturasElegiblesPorServicio,
+  type TinturaElegible,
+} from "@/lib/ventas/tinturas";
 
 export interface RecetaResumen {
   servicio: Servicio;
@@ -64,6 +68,7 @@ function mapInsumo(row: typeof insumosTable.$inferSelect): Insumo {
     vendible: row.vendible,
     precio_venta: row.precioVenta ?? undefined,
     precio_venta_efectivo: row.precioVentaEfectivo ?? undefined,
+    grupo_reemplazo: row.grupoReemplazo ?? undefined,
   };
 }
 
@@ -193,6 +198,55 @@ export async function listRecetasByServicio(
 ): Promise<Receta[]> {
   const items = await getRecetaItems(servicioId, sucursalId);
   return items.map((item) => item.receta);
+}
+
+/**
+ * Por servicio, qué tinturas de su receta se pueden cambiar al cobrar y por
+ * cuáles (ver lib/ventas/tinturas). Solo mira insumos con grupo de reemplazo.
+ */
+export async function listTinturasElegibles(
+  sucursalId: string,
+): Promise<Record<string, TinturaElegible[]>> {
+  const db = getDb();
+  const insumosRows = await db
+    .select()
+    .from(insumosTable)
+    .where(
+      and(
+        eq(insumosTable.sucursalId, sucursalId),
+        isNotNull(insumosTable.grupoReemplazo),
+      ),
+    );
+  if (insumosRows.length === 0) return {};
+  const recetasRows = await db
+    .select()
+    .from(recetasTable)
+    .where(
+      and(
+        eq(recetasTable.sucursalId, sucursalId),
+        inArray(
+          recetasTable.insumoId,
+          insumosRows.map((r) => r.id),
+        ),
+      ),
+    );
+  return tinturasElegiblesPorServicio(
+    recetasRows.map((r) => ({
+      servicio_id: r.servicioId,
+      sucursal_id: r.sucursalId,
+      insumo_id: r.insumoId,
+      cantidad: r.cantidad,
+    })),
+    insumosRows.map((r) => ({
+      id: r.id,
+      sucursal_id: r.sucursalId,
+      nombre: r.nombre,
+      unidad_medida: r.unidadMedida,
+      activo: r.activo,
+      grupo_reemplazo: r.grupoReemplazo,
+    })),
+    sucursalId,
+  );
 }
 
 export interface ServicioDeInsumo {

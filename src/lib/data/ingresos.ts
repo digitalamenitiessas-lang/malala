@@ -21,6 +21,7 @@ import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import {
   buildCostoInsumosByServicio,
+  buildRecetasByServicio,
   comisionMontoServicio,
   factorEfectivoSobreLista,
   computeBreakdown,
@@ -29,6 +30,11 @@ import {
   detallarLineas,
   type IngresoConDetalle,
 } from "./ingresos-helpers";
+import {
+  insumoUsado,
+  limpiarReemplazos,
+  type Reemplazos,
+} from "@/lib/ventas/tinturas";
 import {
   ingresoDesdeFormData,
   ingresoSchema,
@@ -107,6 +113,7 @@ function mapIngresoLinea(row: typeof ingresoLineasTable.$inferSelect): IngresoLi
     comision_monto: row.comisionMonto,
     soporta_descuento: row.soportaDescuento,
     promo_servicio_id: row.promoServicioId ?? undefined,
+    reemplazos: row.reemplazos ?? undefined,
   };
 }
 
@@ -188,6 +195,7 @@ function mapInsumo(row: typeof insumosTable.$inferSelect): Insumo {
     vendible: row.vendible,
     precio_venta: row.precioVenta ?? undefined,
     precio_venta_efectivo: row.precioVentaEfectivo ?? undefined,
+    grupo_reemplazo: row.grupoReemplazo ?? undefined,
   };
 }
 
@@ -275,6 +283,8 @@ async function loadIngresoCatalogs(args: {
     new Set([
       ...recetaRowsMapped.map((item) => item.insumo_id),
       ...insumoIdsDirectos,
+      // La tintura que se usó en lugar de la de la receta, para su costo.
+      ...args.lineas.flatMap((item) => Object.values(item.reemplazos ?? {})),
     ]),
   );
   const insumosRows =
@@ -302,6 +312,7 @@ async function loadIngresoCatalogs(args: {
     insumosById: new Map(insumos.map((item) => [item.id, item])),
     empleadosById: new Map(empleados.map((item) => [item.id, item])),
     costoInsumosByServicio,
+    recetasByServicio: buildRecetasByServicio(recetaRowsMapped),
   };
 }
 
@@ -314,6 +325,7 @@ function buildIngresosConDetalle(args: {
   insumosById: Map<string, Insumo>;
   empleadosById: Map<string, Empleado>;
   costoInsumosByServicio: Map<string, number>;
+  recetasByServicio: Map<string, Receta[]>;
 }) {
   const lineasByIngreso = new Map<string, IngresoLinea[]>();
   for (const linea of args.lineas) {
@@ -330,6 +342,7 @@ function buildIngresosConDetalle(args: {
         insumosById: args.insumosById,
         empleadosById: args.empleadosById,
         costoInsumosByServicio: args.costoInsumosByServicio,
+        recetasByServicio: args.recetasByServicio,
       },
       ingreso.sucursal_id,
     );
@@ -878,6 +891,71 @@ export async function createIngreso(
         }
       }
 
+      const servicioIds = Array.from(
+        new Set(lineasServicio.map((linea) => linea.servicio_id)),
+      );
+      const recetasRows =
+        servicioIds.length > 0
+          ? await tx
+              .select()
+              .from(recetasTable)
+              .where(
+                and(
+                  inArray(recetasTable.servicioId, servicioIds),
+                  eq(recetasTable.sucursalId, data.sucursal_id),
+                ),
+              )
+          : [];
+      const recetaMap = new Map<string, Array<(typeof recetasTable.$inferSelect)>>(
+        servicioIds.map((servicioId) => [servicioId, []]),
+      );
+      for (const receta of recetasRows) {
+        const current = recetaMap.get(receta.servicioId) ?? [];
+        current.push(receta);
+        recetaMap.set(receta.servicioId, current);
+      }
+
+      // La tintura elegida al cobrar (ver lib/ventas/tinturas). Se valida antes
+      // de guardar: si no corresponde, la venta no se registra.
+      const insumoIdsReemplazo = Array.from(
+        new Set([
+          ...recetasRows.map((r) => r.insumoId),
+          ...lineasServicio.flatMap((l) => Object.values(l.reemplazos ?? {})),
+        ]),
+      );
+      const insumosReemplazoById = new Map(
+        (insumoIdsReemplazo.length > 0 &&
+        lineasServicio.some((l) => l.reemplazos && Object.keys(l.reemplazos).length > 0)
+          ? await tx
+              .select()
+              .from(insumosTable)
+              .where(inArray(insumosTable.id, insumoIdsReemplazo))
+          : []
+        ).map((row) => [
+          row.id,
+          {
+            id: row.id,
+            sucursal_id: row.sucursalId,
+            nombre: row.nombre,
+            unidad_medida: row.unidadMedida,
+            activo: row.activo,
+            grupo_reemplazo: row.grupoReemplazo,
+          },
+        ]),
+      );
+      const reemplazosDeLinea = new Map<(typeof data.lineas)[number], Reemplazos | null>();
+      for (const linea of lineasServicio) {
+        reemplazosDeLinea.set(
+          linea,
+          limpiarReemplazos({
+            reemplazos: linea.reemplazos,
+            insumosReceta: (recetaMap.get(linea.servicio_id) ?? []).map((r) => r.insumoId),
+            insumosById: insumosReemplazoById,
+            sucursalId: data.sucursal_id,
+          }),
+        );
+      }
+
       await tx.insert(ingresoLineasTable).values(
         data.lineas.map((linea) => {
           if (linea.tipo === "producto") {
@@ -937,33 +1015,11 @@ export async function createIngreso(
             // y el número mostraría otro.
             soportaDescuento: linea.soporta_descuento && !motivoIgnoraDescuento,
             promoServicioId: linea.promo_servicio_id ?? null,
+            reemplazos: reemplazosDeLinea.get(linea) ?? null,
           };
         }),
       );
 
-      const servicioIds = Array.from(
-        new Set(lineasServicio.map((linea) => linea.servicio_id)),
-      );
-      const recetasRows =
-        servicioIds.length > 0
-          ? await tx
-              .select()
-              .from(recetasTable)
-              .where(
-                and(
-                  inArray(recetasTable.servicioId, servicioIds),
-                  eq(recetasTable.sucursalId, data.sucursal_id),
-                ),
-              )
-          : [];
-      const recetaMap = new Map<string, Array<(typeof recetasTable.$inferSelect)>>(
-        servicioIds.map((servicioId) => [servicioId, []]),
-      );
-      for (const receta of recetasRows) {
-        const current = recetaMap.get(receta.servicioId) ?? [];
-        current.push(receta);
-        recetaMap.set(receta.servicioId, current);
-      }
 
       const deltasPorInsumo = new Map<string, number>();
       for (const linea of lineasServicio) {
@@ -972,9 +1028,11 @@ export async function createIngreso(
           // Por la cantidad de la línea: cinco cortes gastan cinco veces la
           // receta. Sin esto el stock se descontaría una sola vez y el faltante
           // aparecería recién en el próximo recuento, sin explicación.
+          // Los gramos de la receta, de la tintura que se usó.
+          const insumoId = insumoUsado(receta.insumoId, reemplazosDeLinea.get(linea));
           deltasPorInsumo.set(
-            receta.insumoId,
-            (deltasPorInsumo.get(receta.insumoId) ?? 0) -
+            insumoId,
+            (deltasPorInsumo.get(insumoId) ?? 0) -
               receta.cantidad * linea.cantidad,
           );
         }

@@ -1,5 +1,5 @@
 # Cargar una venta
-palabras: venta, cargar venta, ticket, cobrar, nueva venta, servicio, producto, comisión, promo, descuento, venta de otro día
+palabras: venta, cargar venta, ticket, cobrar, nueva venta, servicio, producto, comisión, promo, descuento, venta de otro día, tintura usada, igora, majirel
 quién: dueño/admin, encargada (las empleadas no cargan ventas; solo ven "Mis ventas")
 
 Sirve para registrar lo que se le hizo y vendió a una clienta. Al guardar, el stock se descuenta solo y la plata entra en la caja del día.
@@ -28,3 +28,5 @@ Sirve para registrar lo que se le hizo y vendió a una clienta. Al guardar, el s
 - Enter no guarda: hay que tocar el botón.
 - Caja ya cerrada: "La caja de hoy ya está cerrada para esta sucursal. Reabrí el cierre desde Caja para registrar más ventas."
 - Sin stock suficiente se guarda igual, con aviso "Stock negativo en …".
+- Tinturas: en los servicios de color aparece "Tintura usada", con la de la receta ya elegida (dice "(receta)"). Si se usó otra, por ejemplo Igora en un color L'Oréal, elegila ahí: se descuentan los mismos gramos de la receta pero de esa tintura. El precio y la comisión no cambian. Solo aparece si la tintura de la receta tiene "Grupo de reemplazo" (Catalogos → Insumos), y ofrece las del mismo grupo.
+- Las tinturas no se sacan con "Uso interno" ni con "Ajuste manual": ya se descuentan al cobrar el servicio.

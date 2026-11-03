@@ -32,6 +32,13 @@ export const insumoSchema = z
     precio_venta_efectivo: z
       .union([z.coerce.number().nonnegative(), z.literal("").transform(() => undefined)])
       .optional(),
+    // Ver Insumo.grupo_reemplazo. Vacío = no se reemplaza.
+    grupo_reemplazo: z
+      .string()
+      .trim()
+      .max(60, "Máximo 60 caracteres")
+      .nullish()
+      .transform((s) => (s ? s : undefined)),
   })
   .superRefine((data, ctx) => {
     if (data.tipo === "venta" && (data.precio_venta == null || data.precio_venta <= 0)) {

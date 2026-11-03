@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
@@ -16,8 +16,10 @@ import {
   movimientosStock as movimientosStockTable,
   empleados as empleadosTable,
   insumos as insumosTable,
+  recetas as recetasTable,
   servicios as serviciosTable,
 } from "@/lib/db/schema";
+import { insumoUsado, limpiarReemplazos } from "@/lib/ventas/tinturas";
 import { deleteMovimientosByRefTx } from "./movimientos-bancarios-helpers";
 import { getCierreQueBloqueaFecha } from "./caja";
 import { applyMovementTx } from "./stock";
@@ -587,5 +589,140 @@ export async function asignarVendedoraLinea(
   revalidatePath("/ventas");
   revalidatePath("/liquidaciones");
   revalidatePath("/reportes/empleadas");
+  return { ok: true };
+}
+
+/**
+ * Corrige qué tintura se usó en una línea ya cobrada (ver lib/ventas/tinturas).
+ *
+ * Se eligió Majirel por costumbre y era Igora: sin esto había que anular la
+ * venta y volver a cargarla, y eso se traba con la caja del día cerrada.
+ *
+ * NO se frena con el cierre de caja: no toca el total, ni el cobro, ni la
+ * comisión. Mueve el stock (vuelve lo de la anterior, sale lo de la nueva, con
+ * movimientos colgados de la venta para que anularla después devuelva lo
+ * correcto) y el costo de insumos de la línea.
+ */
+export async function cambiarTinturaLinea(
+  ingresoLineaId: string,
+  insumoRecetaId: string,
+  insumoNuevoId: string,
+): Promise<ActionResult> {
+  const user = await requireRole(["admin", "encargada"]);
+  const scope = buildAccessScope(user);
+  const db = getDb();
+
+  const [linea] = await db
+    .select({
+      id: ingresoLineasTable.id,
+      ingresoId: ingresoLineasTable.ingresoId,
+      servicioId: ingresoLineasTable.servicioId,
+      cantidad: ingresoLineasTable.cantidad,
+      reemplazos: ingresoLineasTable.reemplazos,
+      ventaSucursalId: ingresosTable.sucursalId,
+      ventaAnulada: ingresosTable.anulado,
+    })
+    .from(ingresoLineasTable)
+    .innerJoin(ingresosTable, eq(ingresoLineasTable.ingresoId, ingresosTable.id))
+    .where(eq(ingresoLineasTable.id, ingresoLineaId))
+    .limit(1);
+
+  if (!linea || !linea.servicioId) return failure("No encontré esa línea de la venta");
+  if (!scope.sucursalIdsPermitidas.includes(linea.ventaSucursalId)) {
+    return failure("No tenés acceso a esa venta");
+  }
+  if (linea.ventaAnulada) return failure("Esta venta está anulada");
+
+  const recetas = await db
+    .select()
+    .from(recetasTable)
+    .where(
+      and(
+        eq(recetasTable.servicioId, linea.servicioId),
+        eq(recetasTable.sucursalId, linea.ventaSucursalId),
+      ),
+    );
+  const receta = recetas.find((r) => r.insumoId === insumoRecetaId);
+  if (!receta) return failure("Esa tintura no está en la receta del servicio");
+
+  const anteriorId = insumoUsado(insumoRecetaId, linea.reemplazos);
+  if (anteriorId === insumoNuevoId) return { ok: true };
+
+  const insumosRows = await db
+    .select()
+    .from(insumosTable)
+    .where(inArray(insumosTable.id, [insumoRecetaId, anteriorId, insumoNuevoId]));
+  const insumosById = new Map(
+    insumosRows.map((row) => [
+      row.id,
+      {
+        id: row.id,
+        sucursal_id: row.sucursalId,
+        nombre: row.nombre,
+        unidad_medida: row.unidadMedida,
+        activo: row.activo,
+        grupo_reemplazo: row.grupoReemplazo,
+      },
+    ]),
+  );
+
+  // Solo se valida la nueva: las otras tinturas de la línea ya se aceptaron
+  // al cobrar, aunque hoy alguna esté desactivada.
+  let nuevos: Record<string, string>;
+  try {
+    const validado = limpiarReemplazos({
+      reemplazos: { [insumoRecetaId]: insumoNuevoId },
+      insumosReceta: recetas.map((r) => r.insumoId),
+      insumosById,
+      sucursalId: linea.ventaSucursalId,
+    });
+    nuevos = { ...(linea.reemplazos ?? {}) };
+    delete nuevos[insumoRecetaId];
+    Object.assign(nuevos, validado ?? {});
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : "No se puede usar esa tintura");
+  }
+
+  const cantidad = receta.cantidad * linea.cantidad;
+  const nombreNuevo = insumosById.get(insumoNuevoId)?.nombre ?? "otra tintura";
+  const nombreAnterior = insumosById.get(anteriorId)?.nombre ?? "la anterior";
+  const motivo = `Corrección de tintura: ${nombreNuevo} en vez de ${nombreAnterior}`;
+
+  try {
+    await db.transaction(async (tx) => {
+      await applyMovementTx(tx, {
+        insumo_id: anteriorId,
+        sucursal_id: linea.ventaSucursalId,
+        delta: cantidad,
+        tipo: "venta",
+        motivo,
+        ref_tipo: "ingreso",
+        ref_id: linea.ingresoId,
+        usuario_id: user.id,
+      });
+      await applyMovementTx(tx, {
+        insumo_id: insumoNuevoId,
+        sucursal_id: linea.ventaSucursalId,
+        delta: -cantidad,
+        tipo: "venta",
+        motivo,
+        ref_tipo: "ingreso",
+        ref_id: linea.ingresoId,
+        usuario_id: user.id,
+      });
+      await tx
+        .update(ingresoLineasTable)
+        .set({ reemplazos: Object.keys(nuevos).length > 0 ? nuevos : null })
+        .where(eq(ingresoLineasTable.id, ingresoLineaId));
+    });
+  } catch (error) {
+    return failure(error instanceof Error ? error.message : "No se pudo cambiar la tintura");
+  }
+
+  revalidatePath(`/ventas/${linea.ingresoId}`);
+  revalidatePath("/ventas");
+  revalidatePath("/stock");
+  revalidatePath("/caja");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

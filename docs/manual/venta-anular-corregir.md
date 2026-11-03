@@ -1,5 +1,5 @@
 # Anular o corregir una venta
-palabras: anular venta, borrar venta, corregir venta, venta mal cargada, cambiar profesional, cambiar vendedora, cambiar clienta, comisión mal, error en ticket
+palabras: anular venta, borrar venta, corregir venta, venta mal cargada, cambiar profesional, cambiar vendedora, cambiar clienta, comisión mal, error en ticket, cambiar tintura, tintura equivocada
 quién: dueño/admin, encargada
 
 Una venta guardada no se edita ni se borra. Se pueden corregir algunas cosas sueltas; para todo lo demás se anula y se vuelve a cargar bien.
@@ -24,12 +24,13 @@ Una venta guardada no se edita ni se borra. Se pueden corregir algunas cosas sue
 
 ## Otras correcciones sin anular
 - Clienta: en "Cliente" tocá "Cambiar", buscá por nombre o teléfono y tocala (o "Crear … y asignarle la venta", o "Dejarla en Consumidor Final"). Si se fió, la deuda pasa a la nueva clienta.
+- Tintura: debajo del servicio dice "Tintura: …". Tocá "Cambiar", elegí la que se usó y "Guardar". Vuelve el stock de la anterior y sale el de la nueva.
 - Base de la comisión (solo si la venta tiene descuento): en "Reparto del ticket" → "Cambiar" → elegí "Sobre lo que se cobró" o "Sin descontarles el descuento" y tocá "Usar".
 
 ## Ojo con / casos comunes
 - Importes, líneas, descuento, medio de pago o fecha NO se corrigen: hay que anular y volver a cargar.
 - Si la caja de ese día ya se cerró, no deja anular: "La caja del … ya está cerrada y esta venta entró en ese arqueo. Reabrí ese cierre desde Caja y volvé a intentarlo."
-- Cambiar profesional, clienta o base de comisión SÍ se puede con la caja cerrada (no mueve plata).
+- Cambiar profesional, clienta, tintura o base de comisión SÍ se puede con la caja cerrada (no mueve plata).
 - Línea ya liquidada: "Esta línea ya entró en una liquidación: su comisión está pagada y no se puede cambiar."
 - Al cambiar de profesional, el % de la línea NO se reemplaza por el de la nueva (solo se completa si estaba en 0). Revisalo.
 - Un servicio cargado con "+ Lo hicieron dos" se ve como dos líneas, una por persona.

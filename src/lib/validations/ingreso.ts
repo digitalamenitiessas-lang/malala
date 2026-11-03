@@ -30,6 +30,9 @@ export const lineaServicioSchema = z.object({
   // Sólo importa en una promo: si se cobró a precio de lista (tarjeta), la
   // comisión igual sale del precio en efectivo. Ver comisionMontoServicio.
   precio_tipo: z.enum(["lista", "efectivo"]).optional(),
+  // Tintura que se usó en vez de la de la receta: {insumo de la receta: insumo
+  // usado}. La valida createIngreso contra la receta y el grupo de reemplazo.
+  reemplazos: z.record(z.string(), z.string()).nullish(),
 });
 
 export const lineaProductoSchema = z.object({

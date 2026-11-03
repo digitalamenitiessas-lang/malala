@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { InsumoForm } from "@/components/forms/insumo-form";
-import { createInsumo, getBloquesCodigoInsumo } from "@/lib/data/insumos";
+import {
+  createInsumo,
+  getBloquesCodigoInsumo,
+  listGruposReemplazo,
+} from "@/lib/data/insumos";
 import { listMediosPago } from "@/lib/data/medios-pago";
 import { listProveedores } from "@/lib/data/proveedores";
 import { listSucursales } from "@/lib/data/sucursales";
@@ -18,6 +22,10 @@ export default async function NuevoInsumoPage() {
       getActiveSucursal(),
       getBloquesCodigoInsumo(),
     ]);
+
+  const gruposReemplazo = sucursalActiva
+    ? await listGruposReemplazo(sucursalActiva.id)
+    : [];
 
   // La compra inicial debe ir a la MISMA sucursal donde se crea el insumo
   // (sucursales aisladas), así que el selector solo ofrece la sucursal activa.
@@ -43,6 +51,7 @@ export default async function NuevoInsumoPage() {
         mediosPago={mediosPago}
         defaultSucursalId={sucursalActiva?.id}
         bloquesCodigo={bloquesCodigo}
+        gruposReemplazo={gruposReemplazo}
         action={action}
         submitLabel="Crear"
       />

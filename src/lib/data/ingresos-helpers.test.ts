@@ -5,7 +5,11 @@ import {
   computeDescuento,
   computeRecargos,
   buildFacturadoPorLineaMap,
+  buildCostoInsumosByServicio,
+  buildRecetasByServicio,
+  detallarLineas,
 } from "./ingresos-helpers";
+import type { IngresoLinea, Insumo } from "@/lib/types";
 
 describe("computeDescuento", () => {
   it("descuento por porcentaje", () => {
@@ -352,5 +356,51 @@ describe("promo cobrada a precio de lista", () => {
       new Map([["semi-mp", 50000]]),
     );
     expect(map.get("a")! + map.get("b")!).toBeCloseTo(50000, 2);
+  });
+});
+
+describe("detallarLineas: tintura cambiada al cobrar", () => {
+  const insumo = (id: string, nombre: string, precio_unitario: number) =>
+    ({ id, nombre, precio_unitario }) as unknown as Insumo;
+  const insumosById = new Map([
+    ["majirel", insumo("majirel", "Tintura Majirel", 170)],
+    ["igora", insumo("igora", "Tintura Igora Royal", 311.5)],
+    ["oxi", insumo("oxi", "Oxidante", 20)],
+  ]);
+  const recetas = [
+    { id: "r1", sucursal_id: "yb", servicio_id: "raiz", insumo_id: "majirel", cantidad: 30, confirmada: true },
+    { id: "r2", sucursal_id: "yb", servicio_id: "raiz", insumo_id: "oxi", cantidad: 45, confirmada: true },
+  ];
+  const lookups = {
+    serviciosById: new Map(),
+    insumosById,
+    empleadosById: new Map(),
+    costoInsumosByServicio: buildCostoInsumosByServicio(recetas, [...insumosById.values()]),
+    recetasByServicio: buildRecetasByServicio(recetas),
+  };
+  const linea = (reemplazos?: Record<string, string>) =>
+    ({
+      id: "l1",
+      ingreso_id: "v1",
+      servicio_id: "raiz",
+      precio_efectivo: 100000,
+      cantidad: 2,
+      subtotal: 200000,
+      comision_pct: 30,
+      comision_monto: 0,
+      soporta_descuento: true,
+      reemplazos,
+    }) as IngresoLinea;
+
+  it("sin cambio, el costo es el de la receta", () => {
+    const [l] = detallarLineas([linea()], lookups, "yb");
+    expect(l.costoInsumos).toBeCloseTo(2 * (30 * 170 + 45 * 20));
+    expect(l.tinturasCambiadas).toBeUndefined();
+  });
+
+  it("con Igora, los mismos gramos a precio de Igora", () => {
+    const [l] = detallarLineas([linea({ majirel: "igora" })], lookups, "yb");
+    expect(l.costoInsumos).toBeCloseTo(2 * (30 * 311.5 + 45 * 20));
+    expect(l.tinturasCambiadas).toEqual([{ receta: "Tintura Majirel", usada: "Tintura Igora Royal" }]);
   });
 });

@@ -5,6 +5,7 @@ import { InsumoForm } from "@/components/forms/insumo-form";
 import { InsumoServiciosCard } from "@/components/forms/insumo-servicios-card";
 import {
   getInsumo,
+  listGruposReemplazo,
   toggleInsumoActivo,
   updateInsumo,
 } from "@/lib/data/insumos";
@@ -31,6 +32,7 @@ export default async function EditarInsumoPage({
       getActiveSucursal(),
     ]);
   if (!insumo) notFound();
+  const gruposReemplazo = await listGruposReemplazo(insumo.sucursal_id);
 
   const usadosIds = new Set(serviciosUsando.map((s) => s.servicio.id));
   const serviciosDisponibles = todosServicios.filter(
@@ -71,6 +73,7 @@ export default async function EditarInsumoPage({
       <InsumoForm
         insumo={insumo}
         proveedores={proveedores}
+        gruposReemplazo={gruposReemplazo}
         action={update}
         submitLabel="Guardar"
       />

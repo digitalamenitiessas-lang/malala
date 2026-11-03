@@ -10,6 +10,9 @@ import { AnularVenta } from "@/components/forms/anular-venta";
 import { CambiarClienteVenta } from "@/components/forms/cambiar-cliente-venta";
 import { BaseComisionVenta } from "@/components/forms/base-comision-venta";
 import { AsignarVendedoraForm } from "@/components/forms/asignar-vendedora-form";
+import { CambiarTinturaForm } from "@/components/forms/cambiar-tintura-form";
+import { listTinturasElegibles } from "@/lib/data/recetas";
+import { insumoUsado } from "@/lib/ventas/tinturas";
 import { listEmpleados } from "@/lib/data/empleados";
 import { comisionMontoServicio } from "@/lib/data/ingresos-helpers";
 import { formatARS, formatDateTimeLong } from "@/lib/utils";
@@ -34,9 +37,11 @@ export default async function VentaDetallePage({
   const { ingreso, cliente, mp1, mp2, lineas, breakdown } = row;
   // Para poder poner la vendedora que faltó. Son las de la sucursal de la
   // venta, no las de la que esté en pantalla.
-  const empleadosSucursal = puedeRevisar
-    ? await listEmpleados({ sucursalId: ingreso.sucursal_id })
-    : [];
+  const [empleadosSucursal, tinturasPorServicio] = await Promise.all([
+    puedeRevisar ? listEmpleados({ sucursalId: ingreso.sucursal_id }) : [],
+    // Qué tintura se usó en cada color, y por cuáles se puede corregir.
+    listTinturasElegibles(ingreso.sucursal_id),
+  ]);
   const sucursal = sucursales.find((item) => item.id === ingreso.sucursal_id);
   const motivoDescuento = ingreso.descuento_motivo_id
     ? motivos.find((m) => m.id === ingreso.descuento_motivo_id)
@@ -218,6 +223,17 @@ export default async function VentaDetallePage({
                           {l.servicio.rubro}
                         </p>
                       )}
+                      {l.servicio_id &&
+                        (tinturasPorServicio[l.servicio_id] ?? []).map((t) => (
+                          <CambiarTinturaForm
+                            key={t.insumo_receta_id}
+                            lineaId={l.id}
+                            insumoRecetaId={t.insumo_receta_id}
+                            usadaId={insumoUsado(t.insumo_receta_id, l.reemplazos)}
+                            opciones={t.opciones}
+                            puedeCambiar={puedeRevisar && !ingreso.anulado}
+                          />
+                        ))}
                     </td>
                     <td className="px-4 py-3">
                       <div className="space-y-1">

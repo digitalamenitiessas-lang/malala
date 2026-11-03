@@ -11,6 +11,7 @@ import { listServiciosHorariosAll } from "@/lib/data/servicios-horarios";
 import { listMotivosDescuento } from "@/lib/data/motivos-descuento";
 import { listCuentas } from "@/lib/data/cuentas-bancarias";
 import { listGiftCards } from "@/lib/data/gift-cards";
+import { listTinturasElegibles } from "@/lib/data/recetas";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import type { ServicioHorario } from "@/lib/types";
 
@@ -32,6 +33,7 @@ export default async function NuevaVentaPage() {
     promociones,
     horariosAll,
     giftCards,
+    tinturasPorServicio,
   ] = await Promise.all([
     listClientes({ sucursalId: sucursal.id }),
     listServicios({ sucursalId: sucursal.id }),
@@ -50,6 +52,7 @@ export default async function NuevaVentaPage() {
     // las anuladas, deshabilitadas y con el motivo al lado. Una lista vacía y
     // una tarjeta falsa se ven igual desde el mostrador.
     listGiftCards({ sucursalId: sucursal.id }),
+    listTinturasElegibles(sucursal.id),
   ]);
 
   const mediosActivos = mediosPago;
@@ -91,6 +94,7 @@ export default async function NuevaVentaPage() {
         cuentasBanco={cuentasBanco}
         promociones={promociones}
         promoHorariosById={promoHorariosById}
+        tinturasPorServicio={tinturasPorServicio}
       />
     </div>
   );

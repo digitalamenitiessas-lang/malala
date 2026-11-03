@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNotNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
@@ -43,6 +43,7 @@ function mapInsumo(
     vendible: row.vendible,
     precio_venta: row.precioVenta ?? undefined,
     precio_venta_efectivo: row.precioVentaEfectivo ?? undefined,
+    grupo_reemplazo: row.grupoReemplazo ?? undefined,
   };
 }
 
@@ -86,6 +87,23 @@ async function syncProveedoresInsumo(
       );
     }
   });
+}
+
+/** Los grupos de reemplazo que ya usa la sucursal, para sugerirlos al editar. */
+export async function listGruposReemplazo(sucursalId: string): Promise<string[]> {
+  const rows = await getDb()
+    .selectDistinct({ grupo: insumosTable.grupoReemplazo })
+    .from(insumosTable)
+    .where(
+      and(
+        eq(insumosTable.sucursalId, sucursalId),
+        isNotNull(insumosTable.grupoReemplazo),
+      ),
+    );
+  return rows
+    .map((r) => r.grupo)
+    .filter((g): g is string => !!g)
+    .sort((a, b) => a.localeCompare(b, "es"));
 }
 
 export async function listInsumos(opts?: {
@@ -159,6 +177,7 @@ function parse(formData: FormData) {
     tipo: formData.get("tipo") === "venta" ? "venta" : "bacha",
     precio_venta: formData.get("precio_venta"),
     precio_venta_efectivo: formData.get("precio_venta_efectivo"),
+    grupo_reemplazo: formData.get("grupo_reemplazo"),
   });
 }
 
@@ -567,6 +586,7 @@ export async function createInsumo(formData: FormData): Promise<ActionResult> {
       vendible: parsed.data.vendible,
       precioVenta: parsed.data.precio_venta ?? null,
       precioVentaEfectivo: parsed.data.precio_venta_efectivo ?? null,
+      grupoReemplazo: parsed.data.grupo_reemplazo ?? null,
     });
   } catch (err) {
     if (esCodigoDuplicado(err))
@@ -703,6 +723,7 @@ export async function updateInsumo(
         vendible: parsed.data.vendible,
         precioVenta: parsed.data.precio_venta ?? null,
         precioVentaEfectivo: parsed.data.precio_venta_efectivo ?? null,
+        grupoReemplazo: parsed.data.grupo_reemplazo ?? null,
       })
       .where(eq(insumosTable.id, insumoId));
   } catch (err) {

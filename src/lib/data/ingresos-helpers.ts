@@ -13,6 +13,7 @@ import type {
   Receta,
   Servicio,
 } from "@/lib/types";
+import { ajusteCostoPorReemplazos } from "@/lib/ventas/tinturas";
 
 /**
  * Desglose financiero de un ingreso.
@@ -183,6 +184,8 @@ export interface IngresoLineaConDetalle extends IngresoLinea {
   insumo: Insumo | null;
   empleado: Empleado | null;
   costoInsumos: number;
+  /** Las tinturas que se usaron en vez de las de la receta, con nombre. */
+  tinturasCambiadas?: { receta: string; usada: string }[];
 }
 
 export interface IngresoConDetalle {
@@ -199,6 +202,11 @@ interface IngresoLookups {
   insumosById: Map<string, Insumo>;
   empleadosById: Map<string, Empleado>;
   costoInsumosByServicio: Map<string, number>;
+  /**
+   * Las recetas por (sucursal, servicio). Solo hacen falta para las líneas
+   * donde se eligió otra tintura: el costo de esas se corrige con la usada.
+   */
+  recetasByServicio?: Map<string, Receta[]>;
 }
 
 /**
@@ -228,6 +236,17 @@ export function buildCostoInsumosByServicio(
   }
 
   return costoByServicio;
+}
+
+export function buildRecetasByServicio(recetas: Receta[]): Map<string, Receta[]> {
+  const out = new Map<string, Receta[]>();
+  for (const receta of recetas) {
+    const key = costoServicioKey(receta.sucursal_id, receta.servicio_id);
+    const current = out.get(key) ?? [];
+    current.push(receta);
+    out.set(key, current);
+  }
+  return out;
 }
 
 export function costoInsumosDeServicio(
@@ -271,16 +290,33 @@ export function detallarLineas(
 
     let costoInsumos = 0;
     if (linea.servicio_id) {
+      // Si se usó otra tintura, los mismos gramos a precio de esa.
+      const ajuste = ajusteCostoPorReemplazos(
+        lookups.recetasByServicio?.get(
+          costoServicioKey(sucursalId, linea.servicio_id),
+        ) ?? [],
+        linea.reemplazos,
+        (id) => lookups.insumosById.get(id)?.precio_unitario,
+      );
       costoInsumos =
-        costoInsumosDeServicio(
+        (costoInsumosDeServicio(
           sucursalId,
           linea.servicio_id,
           lookups.costoInsumosByServicio,
-        ) * linea.cantidad;
+        ) +
+          ajuste) *
+        linea.cantidad;
     } else if (insumo && insumo.precio_unitario != null) {
       // Para productos vendidos, el "costo" del local es el precio unitario × cantidad
       costoInsumos = insumo.precio_unitario * linea.cantidad;
     }
+
+    const tinturasCambiadas = Object.entries(linea.reemplazos ?? {}).map(
+      ([receta, usada]) => ({
+        receta: lookups.insumosById.get(receta)?.nombre ?? receta,
+        usada: lookups.insumosById.get(usada)?.nombre ?? usada,
+      }),
+    );
 
     return {
       ...linea,
@@ -288,6 +324,7 @@ export function detallarLineas(
       insumo,
       empleado,
       costoInsumos,
+      ...(tinturasCambiadas.length > 0 ? { tinturasCambiadas } : {}),
     };
   });
 }

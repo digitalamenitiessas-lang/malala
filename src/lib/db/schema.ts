@@ -386,6 +386,10 @@ export const insumos = pgTable(
     // Segundo precio para la reventa, el equivalente de servicios.precio_efectivo.
     // null = el producto tiene un solo precio. Ver drizzle/0035.
     precioVentaEfectivo: doublePrecision("precio_venta_efectivo"),
+    // Insumos con el mismo grupo (misma sucursal y unidad) se pueden elegir al
+    // cobrar en lugar del de la receta: "Color L'Oréal" junta Majirel e Igora.
+    // null = no se reemplaza. Ver drizzle/0074.
+    grupoReemplazo: text("grupo_reemplazo"),
   },
   (table) => ({
     // Cada sede tiene su catálogo, así que el código es único por sucursal.
@@ -764,6 +768,9 @@ export const ingresoLineas = pgTable("ingreso_lineas", {
   soportaDescuento: boolean("soporta_descuento").notNull().default(true),
   // Trazabilidad: si esta línea proviene de una promo, apunta al servicio-promo.
   promoServicioId: text("promo_servicio_id").references(() => servicios.id),
+  // Tintura que se usó en vez de la de la receta: {insumo de la receta: insumo
+  // usado}. Solo los que cambiaron; null = lo de la receta. Ver drizzle/0074.
+  reemplazos: jsonb("reemplazos").$type<Record<string, string>>(),
 });
 
 export const egresos = pgTable("egresos", {

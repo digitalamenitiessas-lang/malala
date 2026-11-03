@@ -35,6 +35,7 @@ import {
 } from "@/lib/db/schema";
 import type { AccessScope, TurnoEstado } from "@/lib/types";
 import { costoServicioKey } from "./ingresos-helpers";
+import { ajusteCostoPorReemplazos } from "@/lib/ventas/tinturas";
 
 export interface AnalyticsFilters {
   desde?: string;
@@ -251,6 +252,13 @@ export async function getAnalyticsSnapshot(
     ingresosRows.map((item) => [item.id, item.sucursalId]),
   );
   const costoInsumosByServicio = new Map<string, number>();
+  const recetasByServicio = new Map<string, Array<{ insumo_id: string; cantidad: number }>>();
+  for (const receta of recetasRows) {
+    const keyReceta = costoServicioKey(receta.sucursalId, receta.servicioId);
+    const lista = recetasByServicio.get(keyReceta) ?? [];
+    lista.push({ insumo_id: receta.insumoId, cantidad: receta.cantidad });
+    recetasByServicio.set(keyReceta, lista);
+  }
   for (const receta of recetasRows) {
     const insumo = insumoMap.get(receta.insumoId);
     if (!insumo || insumo.precioUnitario == null) continue;
@@ -272,7 +280,13 @@ export async function getAnalyticsSnapshot(
       const sucursalId = ingresoSucursalById.get(item.ingresoId);
       if (!sucursalId) return 0;
       const key = costoServicioKey(sucursalId, item.servicioId);
-      return (costoInsumosByServicio.get(key) ?? 0) * item.cantidad;
+      // Si se usó otra tintura, los mismos gramos a precio de esa.
+      const ajuste = ajusteCostoPorReemplazos(
+        recetasByServicio.get(key) ?? [],
+        item.reemplazos,
+        (id) => insumoMap.get(id)?.precioUnitario,
+      );
+      return ((costoInsumosByServicio.get(key) ?? 0) + ajuste) * item.cantidad;
     }),
   );
   const netoTotal = ingresosTotal - comisionesTotal - costoInsumosTotal;

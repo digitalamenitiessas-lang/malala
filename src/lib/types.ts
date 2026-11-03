@@ -325,6 +325,9 @@ export interface Insumo {
   // Segundo precio, el que se cobra pagando en efectivo/transferencia. Opcional:
   // si no está, el producto tiene un precio solo y la venta no ofrece el botón.
   precio_venta_efectivo?: number;
+  // Los del mismo grupo se pueden elegir al cobrar en lugar del de la receta
+  // ("Color L'Oréal": Majirel, Igora Royal…). Sin grupo, no se reemplaza.
+  grupo_reemplazo?: string;
 }
 
 /**
@@ -514,6 +517,8 @@ export interface IngresoLinea {
   // = sobre el precio de lista. Sin esto, el ticket no puede explicar el número.
   soporta_descuento: boolean;
   promo_servicio_id?: ID;
+  // {insumo de la receta: insumo que se usó}, solo los que cambiaron.
+  reemplazos?: Record<ID, ID>;
 }
 
 export interface Egreso {

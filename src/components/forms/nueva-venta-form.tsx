@@ -32,6 +32,7 @@ import { CurrencyInput } from "@/components/forms/currency-input";
 import { ClienteCombobox } from "@/components/forms/cliente-combobox";
 import { expandirLineas } from "@/lib/ventas/reparto-comision";
 import { sumarDiasYmd } from "@/lib/fecha-ar";
+import type { TinturaElegible } from "@/lib/ventas/tinturas";
 
 type LineaServicioForm = {
   tempId: string;
@@ -74,6 +75,11 @@ type LineaServicioForm = {
     /** Qué parte del 100% le toca a la empleada principal. */
     parte: number;
   };
+  /**
+   * La tintura que se usó, si no es la de la receta: {insumo de la receta:
+   * insumo usado}. Ver lib/ventas/tinturas.
+   */
+  reemplazos?: Record<string, string>;
 };
 
 type LineaProductoForm = {
@@ -108,6 +114,8 @@ interface Props {
   promoHorariosById: Record<string, ServicioHorario[]>;
   /** Tarjetas canjeables. Incluye las vencidas: se avisa, no se bloquea. */
   giftCards: GiftCard[];
+  /** Por servicio, las tinturas de su receta que se pueden cambiar al cobrar. */
+  tinturasPorServicio: Record<string, TinturaElegible[]>;
 }
 
 /**
@@ -228,6 +236,7 @@ export function NuevaVentaForm({
   promociones,
   promoHorariosById,
   giftCards,
+  tinturasPorServicio,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -553,6 +562,8 @@ export function NuevaVentaForm({
     const empleado = empleados.find((e) => e.id === l.empleado_id);
     updateLinea(idx, {
       servicio_id: servicioId,
+      // Otro servicio, otra receta: la tintura elegida ya no corresponde.
+      reemplazos: undefined,
       precio: l.precio_tipo === "efectivo" ? s.precio_efectivo : s.precio_lista,
       // La comisión la define solo el % del empleado (el servicio ya no aporta %).
       comision_pct: empleado?.porcentaje_default ?? 0,
@@ -848,6 +859,7 @@ export function NuevaVentaForm({
             soporta_descuento: l.soporta_descuento,
             promo_servicio_id: l.promo_servicio_id,
             precio_tipo: l.precio_tipo,
+            reemplazos: l.reemplazos,
           };
         }),
       ),
@@ -1119,6 +1131,12 @@ export function NuevaVentaForm({
                   onPrecioTipo={(t) => handlePrecioTipoChange(idx, t)}
                   onComisionPct={(v) => updateLinea(idx, { comision_pct: v })}
                   onReparto={(r) => updateLinea(idx, { reparto: r })}
+                  tinturas={tinturasPorServicio[l.servicio_id]}
+                  onTintura={(recetaId, usadoId) =>
+                    updateLinea(idx, {
+                      reemplazos: { ...l.reemplazos, [recetaId]: usadoId },
+                    })
+                  }
                   partes={partesDe(l)}
                   onRemove={() => removeLinea(idx)}
                   removable={lineas.length > 1 || !!l.promo_servicio_id}
@@ -1965,6 +1983,8 @@ function LineaServicioRow({
   onPrecioTipo,
   onComisionPct,
   onReparto,
+  tinturas,
+  onTintura,
   partes,
   onRemove,
   removable,
@@ -1984,6 +2004,9 @@ function LineaServicioRow({
   onPrecioTipo: (t: "lista" | "efectivo") => void;
   onComisionPct: (v: number) => void;
   onReparto: (r: LineaServicioForm["reparto"]) => void;
+  /** Las tinturas de la receta que se pueden cambiar. */
+  tinturas?: TinturaElegible[];
+  onTintura: (insumoRecetaId: string, insumoUsadoId: string) => void;
   /** Comisión de cada una, ya calculada por el padre sobre la línea partida. */
   partes: { a: number; b: number } | null;
   onRemove: () => void;
@@ -2128,6 +2151,34 @@ function LineaServicioRow({
           </button>
         </div>
       </div>
+
+      {/* La tintura que se usó. Arranca en la de la receta; si fue otra del
+          mismo grupo (Igora en un color L'Oréal), se descuenta esa. */}
+      {tinturas && tinturas.length > 0 && (
+        <div className="grid grid-cols-12 gap-2">
+          <div className="col-span-12 sm:col-start-3 sm:col-span-9 flex flex-wrap items-center gap-x-4 gap-y-2">
+            {tinturas.map((t) => (
+              <label key={t.insumo_receta_id} className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                  Tintura usada
+                </span>
+                <select
+                  value={linea.reemplazos?.[t.insumo_receta_id] ?? t.insumo_receta_id}
+                  onChange={(e) => onTintura(t.insumo_receta_id, e.target.value)}
+                  className="px-2 py-1 border border-border rounded-md bg-card text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {t.opciones.map((o, i) => (
+                    <option key={o.id} value={o.id}>
+                      {o.nombre}
+                      {i === 0 ? " (receta)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* En líneas de promo el precio es fijo (lo define la promo). */}
       {locked && (

@@ -25,6 +25,8 @@ interface Props {
   defaultSucursalId?: string;
   /** Numeración actual de la sucursal, para seguir la del salón. */
   bloquesCodigo?: BloqueCodigoInsumo[];
+  /** Grupos de reemplazo que ya existen en la sucursal, para sugerirlos. */
+  gruposReemplazo?: string[];
   action: (
     state: ActionResult | null,
     formData: FormData,
@@ -51,6 +53,7 @@ export function InsumoForm({
   mediosPago,
   defaultSucursalId,
   bloquesCodigo = [],
+  gruposReemplazo = [],
   action,
   submitLabel,
 }: Props) {
@@ -241,6 +244,24 @@ export function InsumoForm({
                 ? "Producto de venta: envase chico que se vende directo. No se usa en recetas."
                 : "Producto de bacha: envase grande de uso interno. Solo estos alimentan las recetas."}
             </p>
+            {tipo === "bacha" && (
+              <>
+                <Field
+                  label="Grupo de reemplazo"
+                  name="grupo_reemplazo"
+                  list="grupos-reemplazo"
+                  defaultValue={insumo?.grupo_reemplazo ?? ""}
+                  error={errors.grupo_reemplazo}
+                  placeholder="Ej.: Color L'Oréal"
+                  hint="Opcional. Al cobrar un servicio se puede elegir cualquier insumo del mismo grupo (y la misma unidad) en lugar del que dice la receta, por ejemplo Igora Royal en vez de Majirel."
+                />
+                <datalist id="grupos-reemplazo">
+                  {gruposReemplazo.map((g) => (
+                    <option key={g} value={g} />
+                  ))}
+                </datalist>
+              </>
+            )}
             {tipo === "venta" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <CurrencyField
