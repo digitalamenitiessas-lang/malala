@@ -19,6 +19,7 @@ function mapSucursal(row: typeof sucursalesTable.$inferSelect): Sucursal {
     reviews: row.reviews ?? undefined,
     mapa_url: row.mapaUrl ?? undefined,
     descripcion_corta: row.descripcionCorta ?? undefined,
+    medio3_habilitado: row.medio3Habilitado,
   };
 }
 

@@ -103,6 +103,8 @@ type LineaForm = LineaServicioForm | LineaProductoForm;
 interface Props {
   sucursalId: string;
   sucursalNombre: string;
+  /** Si esta sucursal tiene el tercer medio de pago (función paga). */
+  medio3Habilitado: boolean;
   clientes: Cliente[];
   servicios: Servicio[];
   empleados: Empleado[];
@@ -226,6 +228,7 @@ function subtotalLinea(l: LineaForm): number {
 export function NuevaVentaForm({
   sucursalId,
   sucursalNombre,
+  medio3Habilitado,
   clientes,
   servicios,
   empleados,
@@ -1767,9 +1770,11 @@ export function NuevaVentaForm({
         {/* Medio 3: sólo con un Medio 2 elegido, y se lleva lo que falte.
             Lo pidió YB el 03/11/2026: dos gift cards y el resto por
             transferencia no entraban en dos medios y partían la venta en dos.
+            Es función paga: sólo aparece si la sucursal lo tiene prendido
+            (sucursales.medio3_habilitado, ver drizzle/0075).
             Moneda extranjera no se ofrece acá: la cotización es una por
             ticket y la conversión de arriba completa el Medio 1 o el 2. */}
-        {mp2Id && (
+        {medio3Habilitado && mp2Id && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">

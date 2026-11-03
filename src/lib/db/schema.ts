@@ -117,6 +117,9 @@ export const sucursales = pgTable("sucursales", {
   reviews: integer("reviews"),
   mapaUrl: text("mapa_url"),
   descripcionCorta: text("descripcion_corta"),
+  // Tercer medio de pago en ventas: función paga, apagada hasta que el salón
+  // la contrate. Se prende con un UPDATE, sin pantalla. Ver drizzle/0075.
+  medio3Habilitado: boolean("medio3_habilitado").notNull().default(false),
 });
 
 export const empleados = pgTable("empleados", {

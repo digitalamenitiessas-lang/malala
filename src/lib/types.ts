@@ -44,6 +44,8 @@ export interface Sucursal {
   reviews?: number;
   mapa_url?: string;
   descripcion_corta?: string;
+  /** Si la venta ofrece "Medio 3". Ver drizzle/0075. */
+  medio3_habilitado?: boolean;
 }
 
 export interface Usuario {

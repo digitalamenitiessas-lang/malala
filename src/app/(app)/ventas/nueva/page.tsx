@@ -84,6 +84,7 @@ export default async function NuevaVentaPage() {
       <NuevaVentaForm
         sucursalId={sucursal.id}
         sucursalNombre={sucursal.nombre}
+        medio3Habilitado={!!sucursal.medio3_habilitado}
         clientes={clientes}
         servicios={servicios}
         empleados={empleados}

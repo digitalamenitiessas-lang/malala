@@ -2,13 +2,13 @@
 palabras: medio de pago, cobrar, efectivo, transferencia, tarjeta, recargo, dos medios, tres medios, medio 3, pago dividido, gift card, fiado, cuenta corriente, dólares
 quién: dueño/admin, encargada
 
-Es la parte "Medios de pago" de "Nueva venta": con qué pagó la clienta. Se puede cobrar con uno, dos o tres medios.
+Es la parte "Medios de pago" de "Nueva venta": con qué pagó la clienta. Se puede cobrar con uno o dos medios, y con tres si la sucursal tiene habilitado el tercer medio (hoy apagado en las dos; es una función aparte que se contrata).
 
 ## Paso a paso
 1. En "Medio 1" elegí cómo cobrás. Si existe efectivo ("EF") viene elegido; si no, dice "— Elegí cómo cobrás —".
 2. Con un solo medio, "Valor 1" se llena solo con el total.
 3. Para dos medios, elegí "Medio 2 (opcional)": "Valor 2" se completa con lo que falta y, si corregís uno, el otro se ajusta.
-4. Para tres medios (por ejemplo dos gift cards y el resto por transferencia), con el Medio 2 ya elegido aparece "Medio 3 (opcional)": "Valor 3" se lleva lo que falta. Si corregís el Valor 1 o el 2, se ajusta el 3; si corregís el 3, se ajusta el 2. Si sacás el Medio 2, el 3 se va con él.
+4. Para tres medios (por ejemplo dos gift cards y el resto por transferencia), si la sucursal lo tiene habilitado, con el Medio 2 ya elegido aparece "Medio 3 (opcional)": "Valor 3" se lleva lo que falta. Si corregís el Valor 1 o el 2, se ajusta el 3; si corregís el 3, se ajusta el 2. Si sacás el Medio 2, el 3 se va con él.
 5. En medios bancarios aparece "Cuenta de cobro (Medio 1)" (o del 2 o el 3): dejá "— Cuenta por defecto del medio —" o elegí la cuenta.
 6. "Pagado · Total · Diferencia" tiene que dar diferencia $0 para poder guardar.
 

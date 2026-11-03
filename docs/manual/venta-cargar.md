@@ -25,7 +25,7 @@ Sirve para registrar lo que se le hizo y vendió a una clienta. Al guardar, el s
 - Línea en "Efectivo" + descuento: avisa "Cuidado: estás acumulando descuentos".
 - Con descuento el motivo es obligatorio. Algunos motivos no le bajan la comisión a la empleada (se configura en Catalogos → Motivos de descuento).
 - Promo vencida o fuera de horario: avisa "Promo fuera de vigencia" pero deja vender. Se puede quitar un servicio suelto de un combo.
-- Hasta tres medios de pago en una misma venta (ej. dos gift cards y el resto por transferencia): elegí el "Medio 2" y aparece "Medio 3 (opcional)", que se lleva lo que falta. No hace falta partir la venta en dos. Ver tema medios de pago.
+- Tres medios de pago en una misma venta (ej. dos gift cards y el resto por transferencia): solo si la sucursal tiene habilitado el tercer medio, que hoy está apagado en las dos (es una función aparte que se contrata). Habilitado, al elegir el "Medio 2" aparece "Medio 3 (opcional)", que se lleva lo que falta. Si no aparece, hay que partir la venta en dos. Ver tema medios de pago.
 - Enter no guarda: hay que tocar el botón.
 - Caja ya cerrada: "La caja de hoy ya está cerrada para esta sucursal. Reabrí el cierre desde Caja para registrar más ventas."
 - Sin stock suficiente se guarda igual, con aviso "Stock negativo en …".

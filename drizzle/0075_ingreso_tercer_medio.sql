@@ -15,3 +15,11 @@ alter table ingresos
   add column if not exists mp3_id text references medios_pago(id),
   add column if not exists valor3 double precision,
   add column if not exists mp3_cuenta_id text references cuentas_bancarias(id);
+
+-- Se ofrece como función paga y todavía no se contrató: queda apagado en las
+-- dos sucursales. Apagado, el formulario no muestra "Medio 3" y el servidor
+-- rechaza una venta que lo traiga; todo lo demás funciona igual que antes.
+-- No hay pantalla para prenderlo. Cuando el salón diga que sí:
+--   update sucursales set medio3_habilitado = true where id = 'seed-000002';
+alter table sucursales
+  add column if not exists medio3_habilitado boolean not null default false;

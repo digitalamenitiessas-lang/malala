@@ -16,6 +16,7 @@ import {
   movimientosCc as movimientosCcTable,
   recetas as recetasTable,
   servicios as serviciosTable,
+  sucursales as sucursalesTable,
 } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
@@ -577,6 +578,24 @@ export async function createIngreso(
   });
 
   const db = getDb();
+
+  // El tercer medio es función paga: si la sucursal no lo tiene prendido, el
+  // formulario no lo muestra, y esto frena una venta que lo traiga igual.
+  if (data.mp3_id) {
+    const [suc] = await db
+      .select({ medio3Habilitado: sucursalesTable.medio3Habilitado })
+      .from(sucursalesTable)
+      .where(eq(sucursalesTable.id, data.sucursal_id))
+      .limit(1);
+    if (!suc?.medio3Habilitado) {
+      return {
+        ok: false,
+        errors: {
+          mp3_id: ["Esta sucursal no tiene habilitado el tercer medio de pago"],
+        },
+      };
+    }
+  }
 
   // Recargo automático según el medio de pago (ej. tarjeta de crédito).
   // El recargo se calcula sobre la porción base cobrada con cada medio.
