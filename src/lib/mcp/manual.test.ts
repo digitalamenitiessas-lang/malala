@@ -67,6 +67,10 @@ describe("el manual del repo responde lo que preguntan los salones", () => {
     ["le di un adelanto de sueldo a una chica", "anticipos"],
     // Elu (Yerba Buena), 03/11: lo estaba haciendo por Ajuste manual.
     ["estoy por retirar un producto del depósito para bacha desde ajuste manual, me aparece stock en cero", "stock"],
+    // Malala YB, 04/11: el pedido que dio origen al control de stock.
+    ["cómo cargo el conteo de stock que hicimos", "stock-conteo-reporte-compras"],
+    ["quiero un reporte semanal del stock", "stock-conteo-reporte-compras"],
+    ["qué tenemos que comprar esta semana", "stock-conteo-reporte-compras"],
   ];
   it.each(casos)("«%s» → %s", (pregunta, tema) => {
     expect(buscarTemas(manual, pregunta).map((t) => t.id)).toContain(tema);
@@ -74,7 +78,7 @@ describe("el manual del repo responde lo que preguntan los salones", () => {
 
   it("lo que el sistema no hace trae «lo que no hace»", () => {
     for (const q of [
-      // (Excel cae en reportes-y-pdf, que ya dice que no hay.)
+      // (Excel cae en reportes-y-pdf, que dice que solo se baja en Stock.)
       "facturación electrónica AFIP",
       "productos a comisión en consignación",
       "ocupación por hora de cada profesional",

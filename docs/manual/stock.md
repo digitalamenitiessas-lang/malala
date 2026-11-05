@@ -25,13 +25,16 @@ Para sacar un producto (del depósito o de la góndola) y usarlo en bacha **no s
 ## Ajuste manual
 "Ajuste manual" → "Insumo" (en reventa, "Dónde") → "Sumar / restar" o "Fijar stock en" (para un conteo) → cantidad en envases ("Cargar en ml", "g" o "ud" cambia la unidad) → revisá "Movimiento" y "Queda en" → "Motivo" → "Aplicar ajuste".
 
+## Conteo, reporte y lista para comprar
+Ver el tema "Conteo de stock, reporte semanal o mensual y lista para comprar": "Cargar conteo", "Conteos", "Reporte semanal / mensual" y "Para comprar".
+
 ## Ver movimientos
 "Movimientos": filtrá por "Tipo" (Compra, Venta, Ajuste manual, Uso interno, Reposición…), "Desde" y "Hasta", y tocá "Ver". Sin filtros muestra los últimos 200.
 
 ## Ojo con / casos comunes
 - Un insumo creado desde una compra nace como uso del salón. Si es de reventa, cambiá "Tipo de producto" a "Venta — venta directa al público" en Catalogos → Insumos.
 - "Uso interno" y "Reponer exhibición" solo aceptan productos de venta; los de bacha se consumen por receta.
-- Tinturas: se descuentan solas al cobrar el servicio de color, en gramos según la receta. Si se usó otra del mismo grupo (Igora en vez de Majirel), se elige en la venta en "Tintura usada". Para cargar un conteo, "Ajuste manual" → "Fijar stock en", con todo junto (depósito + abiertas).
+- Tinturas: se descuentan solas al cobrar el servicio de color, en gramos según la receta. Si se usó otra del mismo grupo (Igora en vez de Majirel), se elige en la venta en "Tintura usada". Para cargar un conteo, "Cargar conteo", con todo junto (cerrados + abiertos como fracción).
 - Del depósito no se saca más de lo que hay: "En depósito hay …: no se puede reponer más que eso" (ese número va en ml/g/ud).
 - El ajuste pide "Motivo" y no acepta cero.
 - Anular la compra en "Gastos" descuenta el stock que había sumado.

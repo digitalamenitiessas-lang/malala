@@ -710,6 +710,50 @@ export const movimientosStock = pgTable("movimientos_stock", {
   ubicacion: text("ubicacion").$type<UbicacionStock>(),
 });
 
+// Un conteo físico cargado de una vez. `fecha` es cuándo se contó: el sistema
+// se compara contra lo que había a esa hora. Ver drizzle/0076.
+export const conteosStock = pgTable(
+  "conteos_stock",
+  {
+    id: text("id").primaryKey(),
+    sucursalId: text("sucursal_id")
+      .notNull()
+      .references(() => sucursales.id),
+    fecha: timestamp("fecha", { withTimezone: true }).notNull(),
+    cargadoEn: timestamp("cargado_en", { withTimezone: true }).notNull().defaultNow(),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => profiles.userId),
+    contadoPor: text("contado_por"),
+    nota: text("nota"),
+  },
+  (table) => ({
+    sucursalFecha: index("conteos_stock_sucursal_fecha_idx").on(table.sucursalId, table.fecha),
+  }),
+);
+
+// En unidad base del insumo. Los *_deposito sólo en reventa.
+export const conteoStockItems = pgTable(
+  "conteo_stock_items",
+  {
+    id: text("id").primaryKey(),
+    conteoId: text("conteo_id")
+      .notNull()
+      .references(() => conteosStock.id, { onDelete: "cascade" }),
+    insumoId: text("insumo_id")
+      .notNull()
+      .references(() => insumos.id),
+    sistema: doublePrecision("sistema").notNull(),
+    contado: doublePrecision("contado").notNull(),
+    sistemaDeposito: doublePrecision("sistema_deposito"),
+    contadoDeposito: doublePrecision("contado_deposito"),
+    costoUnitario: doublePrecision("costo_unitario"),
+  },
+  (table) => ({
+    conteo: index("conteo_stock_items_conteo_idx").on(table.conteoId),
+  }),
+);
+
 export const ingresos =pgTable("ingresos", {
   id: text("id").primaryKey(),
   fecha: timestamp("fecha", { withTimezone: true }).notNull(),
@@ -1385,6 +1429,8 @@ export const schema = {
   motivosDescuento,
   stockSucursal,
   movimientosStock,
+  conteosStock,
+  conteoStockItems,
   ingresos,
   ingresoLineas,
   egresos,

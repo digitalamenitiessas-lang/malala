@@ -2,7 +2,7 @@
 palabras: reportes, informe, estadísticas, facturación, cuánto vendimos, comisiones, ganancia, PDF, imprimir, exportar, Excel, planilla
 quién: dueño/admin, encargada
 
-En "Reportes" están los números del salón por período. Se pueden guardar en PDF; no hay exportación a Excel.
+En "Reportes" están los números del salón por período. Se pueden guardar en PDF; a Excel solo se bajan los de Stock (ver el tema de conteo y reporte de stock).
 
 ## Paso a paso
 1. Menú "Reportes". Arriba se ve el resumen del período: "Ventas", "Facturado", "Ticket prom.", "Comisiones", "Costo insumos", "Neto operativo", "Egresos pagados" y "Neto del período".
@@ -26,7 +26,7 @@ En "Reportes" están los números del salón por período. Se pueden guardar en 
 - Cualquier otro reporte también se puede guardar con Ctrl+P → "Guardar como PDF"; el menú lateral y la barra de arriba no salen en la impresión.
 
 ## Ojo con / casos comunes
-- NO hay exportación a Excel ni a CSV. Lo más cercano es el PDF.
+- Fuera de Stock NO hay exportación a Excel ni a CSV. Lo más cercano es el PDF.
 - "Exportar PDF" sale solo de la sucursal en la que estás trabajando.
 - Las encargadas ven solo su sucursal; el selector "Sucursal" aparece únicamente a quien tiene acceso a las dos.
 - Las ventas anuladas no cuentan en ningún reporte.

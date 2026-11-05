@@ -2,8 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowRightLeft,
+  ClipboardList,
+  FileSpreadsheet,
   History,
   PackageMinus,
+  ShoppingCart,
   SlidersHorizontal,
 } from "lucide-react";
 import { listStockBySucursal } from "@/lib/data/stock";
@@ -97,6 +100,23 @@ export default async function StockPage({
         </div>
       </header>
 
+      <nav className="-mt-4 flex flex-wrap gap-2" aria-label="Control de stock">
+        {scope.puedeGestionarStock && (
+          <ControlLink href="/stock/conteo" icon={<ClipboardList className="h-4 w-4 stroke-[1.5]" />}>
+            Cargar conteo
+          </ControlLink>
+        )}
+        <ControlLink href="/stock/conteos" icon={<History className="h-4 w-4 stroke-[1.5]" />}>
+          Conteos
+        </ControlLink>
+        <ControlLink href="/stock/reporte" icon={<FileSpreadsheet className="h-4 w-4 stroke-[1.5]" />}>
+          Reporte semanal / mensual
+        </ControlLink>
+        <ControlLink href="/stock/compras" icon={<ShoppingCart className="h-4 w-4 stroke-[1.5]" />}>
+          Para comprar
+        </ControlLink>
+      </nav>
+
       <form action="/stock" method="get" className="rounded-[1.5rem] border border-border bg-card p-4">
         <label className="space-y-1.5 text-sm">
           <span className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -143,6 +163,26 @@ export default async function StockPage({
 
       <StockTabla filas={rows} />
     </div>
+  );
+}
+
+function ControlLink({
+  href,
+  icon,
+  children,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-2 rounded-md border border-sage-700/30 bg-sage-100/60 px-3 py-2 text-sm font-medium text-sage-900 transition-colors hover:bg-sage-100"
+    >
+      {icon}
+      {children}
+    </Link>
   );
 }
 

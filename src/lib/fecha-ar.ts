@@ -93,3 +93,19 @@ export function instanteEnFechaAr(ymd: string, ahora: Date = new Date()): string
   });
   return new Date(`${ymd}T${hora}.000${AR_OFFSET}`).toISOString();
 }
+
+/**
+ * Instante ISO → "YYYY-MM-DDTHH:mm" en hora argentina, el formato de un
+ * <input type="datetime-local">.
+ */
+export function momentoLocalAr(iso: string = new Date().toISOString()): string {
+  const d = new Date(new Date(iso).getTime() - 3 * 3_600_000);
+  return d.toISOString().slice(0, 16);
+}
+
+/** "YYYY-MM-DDTHH:mm" en hora argentina → instante ISO. null si no es válido. */
+export function instanteDeMomentoAr(local: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return null;
+  const d = new Date(`${local}:00.000${AR_OFFSET}`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}

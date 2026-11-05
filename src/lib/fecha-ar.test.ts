@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  instanteDeMomentoAr,
+  momentoLocalAr,
   fechaArDeISO,
   finDeDiaArISO,
   inicioDeDiaArISO,
@@ -135,5 +137,14 @@ describe("instanteEnFechaAr — un gasto con fecha elegida a mano", () => {
     const iso = instanteEnFechaAr("2026-09-18", ahora);
     expect(fechaArDeISO(iso)).toBe("2026-09-18");
     expect(iso).toBe("2026-09-19T00:30:00.000Z");
+  });
+});
+
+describe("momento del datetime-local en hora argentina", () => {
+  it("ida y vuelta", () => {
+    expect(momentoLocalAr("2026-11-03T21:30:00.000Z")).toBe("2026-11-03T18:30");
+    expect(momentoLocalAr("2026-11-04T01:15:00.000Z")).toBe("2026-11-03T22:15");
+    expect(instanteDeMomentoAr("2026-11-03T18:30")).toBe("2026-11-03T21:30:00.000Z");
+    expect(instanteDeMomentoAr("ayer")).toBeNull();
   });
 });
