@@ -3,6 +3,7 @@ import {
   esCanjeable,
   estadoGiftCard,
   montoAplicable,
+  textoFormaDePago,
   vencimientoPorDefecto,
 } from "./gift-card-estado";
 
@@ -83,5 +84,44 @@ describe("vencimientoPorDefecto", () => {
     // 22 h en Argentina ya es el día siguiente en UTC: si se calculara sobre la
     // fecha UTC, esta tarjeta vencería el 26 en vez del 25.
     expect(vencimientoPorDefecto(new Date("2026-08-26T22:00:00-03:00"))).toBe("2026-09-25");
+  });
+});
+
+describe("textoFormaDePago", () => {
+  const venta = { origen: "venta" as const };
+
+  it("muestra el medio y la cuenta cuando la cuenta agrega algo", () => {
+    expect(textoFormaDePago(venta, { medio: "Transferencia", cuenta: "Galicia" })).toBe(
+      "Transferencia (Galicia)",
+    );
+    expect(textoFormaDePago(venta, { medio: "Efectivo", cuenta: "Caja Efectivo" })).toBe(
+      "Efectivo",
+    );
+    expect(textoFormaDePago(venta, { medio: "Cuenta corriente" })).toBe("Cuenta corriente");
+  });
+
+  it("cuenta las cuotas del descuento de sueldo", () => {
+    expect(textoFormaDePago(venta, { medio: "Descuento de sueldo", cuotas: 3 })).toBe(
+      "Descuento de sueldo · 3 cuotas",
+    );
+    expect(textoFormaDePago(venta, { medio: "Descuento de sueldo", cuotas: 1 })).toBe(
+      "Descuento de sueldo",
+    );
+  });
+
+  it("de una vieja a cuenta compartida dice los medios posibles", () => {
+    expect(
+      textoFormaDePago(venta, { cuenta: "Macro", posibles: ["Crédito", "Débito"] }),
+    ).toBe("Crédito o Débito (Macro) · no quedó registrado cuál");
+    expect(
+      textoFormaDePago(venta, { cuenta: "Macro", posibles: ["Crédito", "Débito", "Transferencias"] }),
+    ).toBe("Crédito, Débito o Transferencias (Macro) · no quedó registrado cuál");
+  });
+
+  it("cortesía, antes del sistema y sin rastro", () => {
+    expect(textoFormaDePago({ origen: "cortesia" }, {})).toBe("No se cobró: la regaló el salón");
+    expect(textoFormaDePago({ origen: "pre_sistema" }, {})).toBe("Se cobró antes del sistema");
+    expect(textoFormaDePago(venta, { cuenta: "Galicia" })).toBe("Entró a Galicia");
+    expect(textoFormaDePago(venta, {})).toBe("No quedó registrada");
   });
 });

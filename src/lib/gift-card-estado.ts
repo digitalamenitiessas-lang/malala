@@ -112,3 +112,45 @@ export const MOV_BADGE: Record<GiftCardMovimientoTipo, string> = {
   ajuste: "bg-stone-100 text-stone-500",
   correccion_codigo: "bg-stone-100 text-stone-500",
 };
+
+/**
+ * Lo que se sabe de cómo se pagó una tarjeta, para la pantalla de detalle.
+ *
+ * `medio` es el que se eligió al venderla. Las viejas no lo guardaban (ver
+ * drizzle/0078): de esas queda la cuenta a la que entró la plata y los medios
+ * que llegan a esa cuenta, que pueden ser varios.
+ */
+export interface PagoGiftCard {
+  medio?: string;
+  cuenta?: string;
+  posibles?: string[];
+  /** Descuento de sueldo en más de una cuota. */
+  cuotas?: number;
+}
+
+/** El renglón "Forma de pago". */
+export function textoFormaDePago(
+  gc: Pick<GiftCard, "origen">,
+  pago: PagoGiftCard,
+): string {
+  if (gc.origen === "cortesia") return "No se cobró: la regaló el salón";
+  if (gc.origen === "pre_sistema") return "Se cobró antes del sistema";
+
+  // La cuenta va sólo si agrega algo: "Efectivo (Caja Efectivo)" no dice más.
+  const conCuenta = (texto: string) =>
+    pago.cuenta && !pago.cuenta.toLowerCase().includes(texto.toLowerCase())
+      ? `${texto} (${pago.cuenta})`
+      : texto;
+
+  if (pago.medio) {
+    const texto = conCuenta(pago.medio);
+    return pago.cuotas && pago.cuotas > 1 ? `${texto} · ${pago.cuotas} cuotas` : texto;
+  }
+  if (pago.posibles?.length === 1) return conCuenta(pago.posibles[0]);
+  if (pago.posibles && pago.posibles.length > 1) {
+    const lista = `${pago.posibles.slice(0, -1).join(", ")} o ${pago.posibles.at(-1)}`;
+    return `${conCuenta(lista)} · no quedó registrado cuál`;
+  }
+  if (pago.cuenta) return `Entró a ${pago.cuenta}`;
+  return "No quedó registrada";
+}

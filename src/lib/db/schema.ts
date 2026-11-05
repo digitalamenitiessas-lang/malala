@@ -1287,6 +1287,12 @@ export const giftCards = pgTable(
      * la tarjeta vale $100.000 y entran $60.000. Ver drizzle/0059.
      */
     cobrado: doublePrecision("cobrado"),
+    /**
+     * Con qué medio se pagó. Null en cortesías, en las de antes del sistema y
+     * en las viejas que entraron a una cuenta compartida por varios medios
+     * (Débito y Crédito van los dos a Macro). Ver drizzle/0078.
+     */
+    mpId: text("mp_id").references(() => mediosPago.id),
     saldo: doublePrecision("saldo").notNull(),
     estado: text("estado").notNull().default("activa"), // "activa" | "anulada"
     fechaEmision: timestamp("fecha_emision", { withTimezone: true }).notNull(),

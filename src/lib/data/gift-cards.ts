@@ -5,12 +5,14 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   clientes as clientesTable,
+  cuentasBancarias as cuentasBancariasTable,
   descuentos as descuentosTable,
   empleados as empleadosTable,
   egresos as egresosTable,
   giftCardMovimientos as giftCardMovimientosTable,
   giftCards as giftCardsTable,
   mediosPago as mediosPagoTable,
+  movimientosBancarios as movimientosBancariosTable,
   movimientosCc as movimientosCcTable,
   rubrosGasto as rubrosGastoTable,
 } from "@/lib/db/schema";
@@ -28,7 +30,7 @@ import {
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope, isSucursalAllowed } from "@/lib/auth/access";
 import type { GiftCard, GiftCardMovimiento } from "@/lib/types";
-import { esCanjeable, hoyAr } from "@/lib/gift-card-estado";
+import { esCanjeable, hoyAr, type PagoGiftCard } from "@/lib/gift-card-estado";
 import { finDeDiaArISO, inicioDeDiaArISO, sumarDiasYmd } from "@/lib/fecha-ar";
 import {
   giftCardAnularSchema,
@@ -235,6 +237,85 @@ export async function listMovimientosGiftCard(
       desc(giftCardMovimientosTable.creadoEn),
     );
   return rows.map(mapMovimiento);
+}
+
+/**
+ * Cómo se pagó la tarjeta. Ver textoFormaDePago para cómo se muestra.
+ *
+ * El medio está guardado desde drizzle/0078. De las anteriores sólo queda la
+ * cuenta a la que entró el cobro; si a esa cuenta llega más de un medio (Débito
+ * y Crédito a Macro), se devuelven todos y la pantalla dice que no se sabe cuál.
+ */
+export async function getPagoGiftCard(giftCardId: string): Promise<PagoGiftCard> {
+  const tarjeta = await getGiftCard(giftCardId);
+  if (!tarjeta || tarjeta.origen !== "venta") return {};
+
+  const db = getDb();
+  const [[gc], [mov]] = await Promise.all([
+    db
+      .select({
+        mpId: giftCardsTable.mpId,
+        medio: mediosPagoTable.nombre,
+        codigoMedio: mediosPagoTable.codigo,
+      })
+      .from(giftCardsTable)
+      .leftJoin(mediosPagoTable, eq(mediosPagoTable.id, giftCardsTable.mpId))
+      .where(eq(giftCardsTable.id, giftCardId))
+      .limit(1),
+    db
+      .select({
+        cuentaId: movimientosBancariosTable.cuentaId,
+        cuenta: cuentasBancariasTable.nombre,
+      })
+      .from(movimientosBancariosTable)
+      .innerJoin(
+        cuentasBancariasTable,
+        eq(cuentasBancariasTable.id, movimientosBancariosTable.cuentaId),
+      )
+      .where(
+        and(
+          eq(movimientosBancariosTable.refTipo, "gift_card_venta"),
+          eq(movimientosBancariosTable.refId, giftCardId),
+          eq(movimientosBancariosTable.tipo, "ingreso"),
+        ),
+      )
+      .limit(1),
+  ]);
+
+  const pago: PagoGiftCard = { medio: gc?.medio ?? undefined, cuenta: mov?.cuenta };
+
+  if (gc?.codigoMedio?.toUpperCase() === "DTOSUELDO") {
+    // El descuento no apunta a la tarjeta: el concepto lleva el código.
+    const [row] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(descuentosTable)
+      .where(
+        and(
+          eq(descuentosTable.sucursalId, tarjeta.sucursal_id),
+          or(
+            eq(descuentosTable.concepto, `Gift card ${tarjeta.codigo}`),
+            ilike(descuentosTable.concepto, `Gift card ${tarjeta.codigo} (cuota %`),
+          ),
+        ),
+      );
+    pago.cuotas = row?.n ?? undefined;
+  }
+
+  if (!pago.medio && mov) {
+    const posibles = await db
+      .select({ nombre: mediosPagoTable.nombre })
+      .from(mediosPagoTable)
+      .where(
+        and(
+          eq(mediosPagoTable.cuentaId, mov.cuentaId),
+          eq(mediosPagoTable.sucursalId, tarjeta.sucursal_id),
+        ),
+      )
+      .orderBy(asc(mediosPagoTable.nombre));
+    pago.posibles = posibles.map((p) => p.nombre);
+  }
+
+  return pago;
 }
 
 export interface PasivoGiftCards {
@@ -466,6 +547,9 @@ export async function emitirGiftCard(
         codigo: parsed.data.codigo,
         importe: parsed.data.importe,
         cobrado: cobrado === parsed.data.importe ? null : cobrado,
+        // Cortesía y antes del sistema no se cobran hoy: un medio que viniera
+        // del formulario no diría nada de cómo se pagó.
+        mpId: parsed.data.origen === "venta" ? (parsed.data.mp_id ?? null) : null,
         saldo: parsed.data.importe,
         estado: "activa",
         fechaEmision: fecha,

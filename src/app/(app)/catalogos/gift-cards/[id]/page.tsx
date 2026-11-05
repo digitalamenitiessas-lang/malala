@@ -5,6 +5,7 @@ import {
   anularGiftCard,
   corregirCodigoGiftCard,
   getGiftCard,
+  getPagoGiftCard,
   listMovimientosGiftCard,
 } from "@/lib/data/gift-cards";
 import { requireUser } from "@/lib/auth/session";
@@ -16,6 +17,7 @@ import {
   MOV_LABEL,
   estadoGiftCard,
   hoyAr,
+  textoFormaDePago,
 } from "@/lib/gift-card-estado";
 import { formatARS, formatDateTime } from "@/lib/utils";
 import { AnularGiftCard, CorregirCodigo } from "./gift-card-acciones";
@@ -34,9 +36,10 @@ export default async function GiftCardPage({
   if (!scope.puedeVerCatalogos) redirect("/dashboard");
   const { id } = await params;
 
-  const [giftCard, movimientos] = await Promise.all([
+  const [giftCard, movimientos, pago] = await Promise.all([
     getGiftCard(id),
     listMovimientosGiftCard(id),
+    getPagoGiftCard(id),
   ]);
   if (!giftCard) notFound();
 
@@ -172,27 +175,31 @@ export default async function GiftCardPage({
         </p>
       ) : null}
 
-      {giftCard.compradora || giftCard.observacion ? (
-        <section className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
-            Datos
-          </h2>
-          <dl className="rounded-md border border-border bg-card divide-y divide-border text-sm">
-            {giftCard.compradora ? (
-              <div className="flex justify-between px-4 py-2.5">
-                <dt className="text-muted-foreground">La compró</dt>
-                <dd>{giftCard.compradora}</dd>
-              </div>
-            ) : null}
-            {giftCard.observacion ? (
-              <div className="flex justify-between gap-6 px-4 py-2.5">
-                <dt className="text-muted-foreground">Observación</dt>
-                <dd className="text-right">{giftCard.observacion}</dd>
-              </div>
-            ) : null}
-          </dl>
-        </section>
-      ) : null}
+      <section className="space-y-3">
+        <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
+          Datos
+        </h2>
+        <dl className="rounded-md border border-border bg-card divide-y divide-border text-sm">
+          {/* Pedido de Yerba Buena: al atender a quien viene a canjear, o al
+              revisar la caja, quieren ver cómo se pagó sin ir a buscarlo. */}
+          <div className="flex justify-between gap-6 px-4 py-2.5">
+            <dt className="text-muted-foreground">Forma de pago</dt>
+            <dd className="text-right">{textoFormaDePago(giftCard, pago)}</dd>
+          </div>
+          {giftCard.compradora ? (
+            <div className="flex justify-between px-4 py-2.5">
+              <dt className="text-muted-foreground">La compró</dt>
+              <dd>{giftCard.compradora}</dd>
+            </div>
+          ) : null}
+          {giftCard.observacion ? (
+            <div className="flex justify-between gap-6 px-4 py-2.5">
+              <dt className="text-muted-foreground">Observación</dt>
+              <dd className="text-right">{giftCard.observacion}</dd>
+            </div>
+          ) : null}
+        </dl>
+      </section>
 
       <section className="space-y-3 border-t border-border pt-6">
         <h2 className="font-display text-xl tracking-[0.15em] uppercase">
