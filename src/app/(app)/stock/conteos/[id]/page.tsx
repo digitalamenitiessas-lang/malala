@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { Download } from "lucide-react";
-import { requireUser } from "@/lib/auth/session";
+import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { controlStockVisible } from "@/lib/stock-control";
 import { buildAccessScope } from "@/lib/auth/access";
 import { getConteo } from "@/lib/data/stock-control";
 import { aEnvases, envaseDe, fmtEnvases } from "@/lib/stock-planillas";
@@ -16,6 +17,7 @@ export default async function ConteoDetallePage({
 }) {
   const user = await requireUser();
   if (!buildAccessScope(user).puedeVerStock) redirect("/dashboard");
+  if (!controlStockVisible(user, await getActiveSucursal())) redirect("/stock");
   const { id } = await params;
   const conteo = await getConteo(id);
   if (!conteo) notFound();

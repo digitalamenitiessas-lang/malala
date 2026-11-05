@@ -1,4 +1,5 @@
-import { requireUser } from "@/lib/auth/session";
+import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { controlStockVisible } from "@/lib/stock-control";
 import { buildAccessScope } from "@/lib/auth/access";
 import { getConteo } from "@/lib/data/stock-control";
 import { listSucursales } from "@/lib/data/sucursales";
@@ -9,6 +10,9 @@ import { crearXlsx, respuestaXlsx } from "@/lib/xlsx";
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   if (!buildAccessScope(user).puedeVerStock) return new Response("Sin permiso", { status: 403 });
+  if (!controlStockVisible(user, await getActiveSucursal())) {
+    return new Response("No disponible", { status: 404 });
+  }
   const { id } = await params;
   const conteo = await getConteo(id);
   if (!conteo) return new Response("No existe", { status: 404 });

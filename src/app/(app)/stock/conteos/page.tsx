@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { controlStockVisible } from "@/lib/stock-control";
 import { buildAccessScope } from "@/lib/auth/access";
 import { listConteos } from "@/lib/data/stock-control";
 import { formatARS, formatDateTime } from "@/lib/utils";
@@ -13,7 +14,7 @@ export default async function ConteosPage() {
   const scope = buildAccessScope(user);
   if (!scope.puedeVerStock) redirect("/dashboard");
   const sucursal = await getActiveSucursal();
-  if (!sucursal) redirect("/stock");
+  if (!sucursal || !controlStockVisible(user, sucursal)) redirect("/stock");
 
   const conteos = await listConteos(sucursal.id);
 

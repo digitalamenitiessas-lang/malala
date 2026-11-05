@@ -1,5 +1,6 @@
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
+import { controlStockVisible } from "@/lib/stock-control";
 import { sugerenciasCompra } from "@/lib/data/stock-control";
 import { formatYmdAr, hoyAr } from "@/lib/fecha-ar";
 import { hojaCompras } from "@/lib/stock-planillas";
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
   if (!buildAccessScope(user).puedeVerStock) return new Response("Sin permiso", { status: 403 });
   const sucursal = await getActiveSucursal();
   if (!sucursal) return new Response("Sin sucursal", { status: 400 });
+  if (!controlStockVisible(user, sucursal)) return new Response("No disponible", { status: 404 });
 
   const sp = new URL(request.url).searchParams;
   const dias = entero(sp.get("dias"), 60, 7, 180);

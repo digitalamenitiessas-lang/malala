@@ -147,6 +147,7 @@ async function cargarSucursal(targetId: string): Promise<Sucursal | null> {
     mapa_url: sucursal.mapaUrl ?? undefined,
     descripcion_corta: sucursal.descripcionCorta ?? undefined,
     medio3_habilitado: sucursal.medio3Habilitado,
+    control_stock_habilitado: sucursal.controlStockHabilitado,
   };
 }
 

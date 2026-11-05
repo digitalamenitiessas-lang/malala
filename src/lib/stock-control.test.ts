@@ -171,3 +171,16 @@ describe("compararProveedor", () => {
     expect(["Loreal", null, "Alfaparf", ""].sort(compararProveedor)).toEqual(["Alfaparf", "Loreal", null, ""]);
   });
 });
+
+describe("controlStockVisible", () => {
+  it("apagado solo lo ven los emails de prueba", async () => {
+    const { controlStockVisible } = await import("./stock-control");
+    const preview = "luciano@x.com, otro@x.com";
+    const apagado = { control_stock_habilitado: false };
+    expect(controlStockVisible({ email: "duena@x.com" }, apagado, preview)).toBe(false);
+    expect(controlStockVisible({ email: "Luciano@x.com" }, apagado, preview)).toBe(true);
+    expect(controlStockVisible({ email: "luciano@x.com" }, null, undefined)).toBe(false);
+    expect(controlStockVisible({ email: "" }, apagado, "")).toBe(false);
+    expect(controlStockVisible({ email: "duena@x.com" }, { control_stock_habilitado: true }, undefined)).toBe(true);
+  });
+});

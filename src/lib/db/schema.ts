@@ -120,6 +120,9 @@ export const sucursales = pgTable("sucursales", {
   // Tercer medio de pago en ventas: función paga, apagada hasta que el salón
   // la contrate. Se prende con un UPDATE, sin pantalla. Ver drizzle/0075.
   medio3Habilitado: boolean("medio3_habilitado").notNull().default(false),
+  // Conteo, reporte y lista para comprar. Apagado hasta que se entrega al
+  // salón; antes solo lo ven los emails de MALALA_PREVIEW_EMAILS. Ver drizzle/0077.
+  controlStockHabilitado: boolean("control_stock_habilitado").notNull().default(false),
 });
 
 export const empleados = pgTable("empleados", {

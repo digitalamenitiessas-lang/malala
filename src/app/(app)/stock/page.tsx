@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { listStockBySucursal } from "@/lib/data/stock";
 import { getAccessScopeForUser } from "@/lib/auth/access";
-import { requireUser } from "@/lib/auth/session";
+import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { controlStockVisible } from "@/lib/stock-control";
 import { formatARS } from "@/lib/utils";
 import { listSucursales } from "@/lib/data/sucursales";
 import { StockTabla } from "@/components/stock-tabla";
@@ -37,9 +38,10 @@ export default async function StockPage({
       ? sp.sucursal
       : scope.sucursalIdsPermitidas[0]) ?? "";
 
-  const [rows, sucursales] = await Promise.all([
+  const [rows, sucursales, sucursalActiva] = await Promise.all([
     listStockBySucursal(sucursalId),
     listSucursales({ soloActivas: true }),
+    getActiveSucursal(),
   ]);
   const negativos = rows.filter((r) => r.estado === "negativo").length;
   const bajos = rows.filter((r) => r.estado === "bajo").length;
@@ -100,6 +102,7 @@ export default async function StockPage({
         </div>
       </header>
 
+      {controlStockVisible(user, sucursalActiva) && (
       <nav className="-mt-4 flex flex-wrap gap-2" aria-label="Control de stock">
         {scope.puedeGestionarStock && (
           <ControlLink href="/stock/conteo" icon={<ClipboardList className="h-4 w-4 stroke-[1.5]" />}>
@@ -116,6 +119,7 @@ export default async function StockPage({
           Para comprar
         </ControlLink>
       </nav>
+      )}
 
       <form action="/stock" method="get" className="rounded-[1.5rem] border border-border bg-card p-4">
         <label className="space-y-1.5 text-sm">

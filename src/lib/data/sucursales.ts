@@ -20,6 +20,7 @@ function mapSucursal(row: typeof sucursalesTable.$inferSelect): Sucursal {
     mapa_url: row.mapaUrl ?? undefined,
     descripcion_corta: row.descripcionCorta ?? undefined,
     medio3_habilitado: row.medio3Habilitado,
+    control_stock_habilitado: row.controlStockHabilitado,
   };
 }
 

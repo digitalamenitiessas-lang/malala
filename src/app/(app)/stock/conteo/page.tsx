@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { History } from "lucide-react";
 import { ConteoStockForm } from "@/components/forms/conteo-stock-form";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { controlStockVisible } from "@/lib/stock-control";
 import { buildAccessScope } from "@/lib/auth/access";
 import { datosConteo } from "@/lib/data/stock-control";
 import { instanteDeMomentoAr, momentoLocalAr } from "@/lib/fecha-ar";
@@ -30,7 +31,7 @@ export default async function ConteoPage({
   const scope = buildAccessScope(user);
   if (!scope.puedeVerStock) redirect("/dashboard");
   const sucursal = await getActiveSucursal();
-  if (!sucursal) redirect("/stock");
+  if (!sucursal || !controlStockVisible(user, sucursal)) redirect("/stock");
 
   const sp = await searchParams;
   const momento = momentoPedido(sp.fecha);

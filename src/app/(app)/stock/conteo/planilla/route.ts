@@ -1,5 +1,6 @@
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
+import { controlStockVisible } from "@/lib/stock-control";
 import { datosConteo } from "@/lib/data/stock-control";
 import { formatYmdAr, instanteDeMomentoAr, momentoLocalAr } from "@/lib/fecha-ar";
 import { hojasPlanillaConteo } from "@/lib/stock-planillas";
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   if (!buildAccessScope(user).puedeVerStock) return new Response("Sin permiso", { status: 403 });
   const sucursal = await getActiveSucursal();
   if (!sucursal) return new Response("Sin sucursal", { status: 400 });
+  if (!controlStockVisible(user, sucursal)) return new Response("No disponible", { status: 404 });
 
   const pedido = new URL(request.url).searchParams.get("fecha");
   const instante = (pedido && instanteDeMomentoAr(pedido)) || new Date().toISOString();

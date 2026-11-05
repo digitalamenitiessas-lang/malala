@@ -46,6 +46,8 @@ export interface Sucursal {
   descripcion_corta?: string;
   /** Si la venta ofrece "Medio 3". Ver drizzle/0075. */
   medio3_habilitado?: boolean;
+  /** Si se ven conteo, reporte y lista para comprar. Ver drizzle/0077. */
+  control_stock_habilitado?: boolean;
 }
 
 export interface Usuario {

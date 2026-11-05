@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Download } from "lucide-react";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { controlStockVisible } from "@/lib/stock-control";
 import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { sugerenciasCompra } from "@/lib/data/stock-control";
 import { ComprasTabla } from "./tabla";
@@ -26,7 +27,7 @@ export default async function ComprasPage({
   const user = await requireUser();
   if (!buildAccessScope(user).puedeVerStock) redirect("/dashboard");
   const sucursal = await getActiveSucursal();
-  if (!sucursal) redirect("/stock");
+  if (!sucursal || !controlStockVisible(user, sucursal)) redirect("/stock");
 
   const sp = await searchParams;
   const dias = entero(sp.dias, 60, 7, 180);

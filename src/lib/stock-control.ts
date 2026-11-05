@@ -10,6 +10,25 @@
 import type { SaldoStock, UbicacionStock } from "./stock-ubicacion";
 import type { TipoMovimientoStock } from "./types";
 
+/**
+ * Si se ven conteo, reporte y lista para comprar en la sucursal. Apagado
+ * (sucursales.control_stock_habilitado), solo lo ven los emails de
+ * MALALA_PREVIEW_EMAILS (separados por coma), para revisarlo en producción
+ * antes de entregarlo. No alcanza con ser superadmin: la dueña también lo es.
+ */
+export function controlStockVisible(
+  user: { email: string },
+  sucursal: { control_stock_habilitado?: boolean } | null | undefined,
+  previewEmails: string | undefined = process.env.MALALA_PREVIEW_EMAILS,
+): boolean {
+  if (sucursal?.control_stock_habilitado) return true;
+  const email = user.email.trim().toLowerCase();
+  return (previewEmails ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .some((e) => e !== "" && e === email);
+}
+
 export interface MovimientoCalculo {
   insumo_id: string;
   tipo: TipoMovimientoStock;
