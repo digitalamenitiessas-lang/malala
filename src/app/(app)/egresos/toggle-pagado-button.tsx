@@ -6,6 +6,7 @@ import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { LoadingButton } from "@/components/forms/field";
 import { togglePagadoEgreso } from "@/lib/data/egresos-actions";
 import type { MedioPago } from "@/lib/types";
+import { formatARS } from "@/lib/utils";
 
 /**
  * Marca un gasto como pagado, o lo vuelve a dejar a pagar.
@@ -20,32 +21,49 @@ export function TogglePagadoButton({
   pagado,
   tieneMedio,
   mediosPago = [],
+  falta,
 }: {
   egresoId: string;
   pagado: boolean;
   /** false = quedó a pagar sin medio elegido; hay que preguntarlo. */
   tieneMedio?: boolean;
   mediosPago?: MedioPago[];
+  /**
+   * Lo que falta pagar de la factura después de los pagos a cuenta, cuando se
+   * sabe (ficha del proveedor). Es lo único que sale de la caja al marcarla.
+   */
+  falta?: number;
 }) {
   const { pending, run } = useTransitionFeedback();
   const [eligiendo, setEligiendo] = useState(false);
   const [mpId, setMpId] = useState("");
 
+  // Cubierta entera con pagos a cuenta: no sale plata, no hay medio que elegir.
+  const cubiertaEntera = !pagado && falta !== undefined && falta <= 0;
   const debePreguntar =
-    !pagado && tieneMedio === false && mediosPago.length > 0;
+    !pagado && !cubiertaEntera && tieneMedio === false && mediosPago.length > 0;
 
   function confirmar(medio?: string) {
     run(() => togglePagadoEgreso(egresoId, medio), {
       refreshOnSuccess: true,
       successMessage: pagado
         ? "Egreso marcado como pendiente"
-        : "Egreso marcado como pagado",
+        : cubiertaEntera
+          ? "Factura saldada con los pagos a cuenta"
+          : falta !== undefined
+            ? `Factura pagada: salieron ${formatARS(falta)}`
+            : "Egreso marcado como pagado",
     });
   }
 
   if (eligiendo) {
     return (
-      <div className="flex items-center justify-end gap-1.5">
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {falta !== undefined && (
+          <span className="w-full text-right text-[11px] text-muted-foreground tabular-nums">
+            Sale {formatARS(falta)}, lo que falta
+          </span>
+        )}
         <select
           value={mpId}
           onChange={(e) => setMpId(e.target.value)}

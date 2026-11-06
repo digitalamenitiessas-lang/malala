@@ -858,6 +858,9 @@ export const egresos = pgTable("egresos", {
   // la cuenta corriente contra los papeles del proveedor. Ver drizzle/0068.
   comprobante: text("comprobante"),
   pagado: boolean("pagado").notNull().default(false),
+  // La parte de la factura que ya estaba pagada con pagos a cuenta cuando se la
+  // marcó pagada: esa no sale de la caja de nuevo. Ver drizzle/0079.
+  cubiertoACuenta: doublePrecision("cubierto_a_cuenta"),
   // Anulado: el gasto no se borra, se marca, y las lecturas lo filtran. Ver
   // drizzle/0034_egresos_anulado.sql.
   anulado: boolean("anulado").notNull().default(false),

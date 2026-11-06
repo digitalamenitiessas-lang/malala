@@ -547,6 +547,11 @@ export interface Egreso {
   /** Número de factura o remito del proveedor. Ver drizzle/0068. */
   comprobante?: string;
   pagado: boolean;
+  /**
+   * Lo que ya estaba pagado con pagos a cuenta al marcarla pagada: esa parte no
+   * salió de la caja. Ver drizzle/0079.
+   */
+  cubierto_a_cuenta?: number;
   anulado: boolean;
   usuario_id: ID;
 }

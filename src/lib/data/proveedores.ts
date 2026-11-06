@@ -20,6 +20,8 @@ import {
   emitMovimientoBancarioTx,
   getCuentaIdForMpTx,
 } from "./movimientos-bancarios-helpers";
+import { coberturaFacturasTx } from "./proveedor-cuenta-helpers";
+import type { Cobertura } from "@/lib/proveedor-cuenta";
 import {
   fieldErrors,
   normPhone,
@@ -306,6 +308,16 @@ export interface PagoProveedor {
   mp_codigo?: string;
   observacion?: string;
   anulado: boolean;
+}
+
+/**
+ * Por factura impaga del proveedor, cuánto ya cubren los pagos a cuenta y
+ * cuánto falta. Ver @/lib/proveedor-cuenta.
+ */
+export async function getCoberturaFacturas(
+  proveedorId: string,
+): Promise<Record<string, Cobertura>> {
+  return Object.fromEntries(await coberturaFacturasTx(getDb(), proveedorId));
 }
 
 export async function listPagosProveedor(

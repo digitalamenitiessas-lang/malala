@@ -41,6 +41,8 @@ import type {
 } from "@/lib/types";
 import type { EgresoConDetalle } from "./egresos-helpers";
 import { resolverProveedorInline } from "./proveedores";
+import { coberturaFacturasTx } from "./proveedor-cuenta-helpers";
+import { montosAPagar } from "@/lib/proveedor-cuenta";
 
 export interface EgresoFiltros {
   sucursalId?: string;
@@ -75,6 +77,7 @@ function mapEgreso(row: typeof egresosTable.$inferSelect): Egreso {
     observacion: row.observacion ?? undefined,
     comprobante: row.comprobante ?? undefined,
     pagado: row.pagado,
+    cubierto_a_cuenta: row.cubiertoACuenta ?? undefined,
     anulado: row.anulado,
     usuario_id: row.usuarioId,
   };
@@ -582,7 +585,19 @@ export async function togglePagadoEgreso(
 
   const vaAPagarse = !egreso.pagado;
   const mpEfectivo = vaAPagarse ? (mpId ?? egreso.mpId) : egreso.mpId;
-  if (vaAPagarse && !mpEfectivo) {
+
+  // Lo que ya cubren los pagos a cuenta no vuelve a salir de la caja. Sin esto,
+  // la factura de Walter de $686.917 con $400.000 ya pagados a cuenta sacaba
+  // los $686.917 enteros. Ver drizzle/0079.
+  const cubierto =
+    vaAPagarse && egreso.proveedorId
+      ? ((await coberturaFacturasTx(db, egreso.proveedorId)).get(egreso.id)
+          ?.cubierto ?? 0)
+      : 0;
+  const falta = egreso.valor - cubierto;
+
+  // Cubierta entera no mueve plata, así que no hace falta saber con qué.
+  if (vaAPagarse && falta > 0 && !mpEfectivo) {
     return { ok: false, errors: { mp_id: ["Elegí con qué se pagó"] } };
   }
 
@@ -598,13 +613,20 @@ export async function togglePagadoEgreso(
         ...(nuevoPagado && mpId
           ? { mpId, mp1CuentaId: mpCuentaId ?? egreso.mp1CuentaId }
           : {}),
+        // Queda guardado para que esa plata no cubra otra factura, y para
+        // devolverla al saldo si se la vuelve a dejar pendiente.
+        cubiertoACuenta: nuevoPagado && cubierto > 0 ? cubierto : null,
       })
       .where(eq(egresosTable.id, egresoId));
 
     if (nuevoPagado) {
-      // Un movimiento por cada medio usado, igual que al crear el egreso.
-      const valor2 = egreso.mp2Id ? (egreso.valor2 ?? 0) : 0;
-      const valor1 = egreso.valor - valor2;
+      // Un movimiento por cada medio usado, igual que al crear el egreso, por lo
+      // que falta: lo cubierto a cuenta ya salió de la caja cuando se pagó.
+      const { valor1, valor2 } = montosAPagar(
+        egreso.valor - (egreso.mp2Id ? (egreso.valor2 ?? 0) : 0),
+        egreso.mp2Id ? (egreso.valor2 ?? 0) : 0,
+        cubierto,
+      );
       const pagos: Array<{
         mpId: string;
         cuentaOverride: string | null;
@@ -654,9 +676,11 @@ export async function togglePagadoEgreso(
         .where(eq(proveedoresTable.id, egreso.proveedorId))
         .limit(1);
       if (proveedor) {
+        // La deuda se mueve por lo que salió de la caja: lo cubierto a cuenta
+        // ya la había bajado cuando se registró el pago.
         const nextDebt = egreso.pagado
-          ? proveedor.deudaPendiente + egreso.valor
-          : Math.max(0, proveedor.deudaPendiente - egreso.valor);
+          ? proveedor.deudaPendiente + egreso.valor - (egreso.cubiertoACuenta ?? 0)
+          : Math.max(0, proveedor.deudaPendiente - falta);
         await tx
           .update(proveedoresTable)
           .set({ deudaPendiente: nextDebt })
@@ -801,6 +825,23 @@ export async function anularEgreso(
           // Sale de donde había entrado (el depósito, si era reventa).
           ubicacion: compra.ubicacion ?? undefined,
         });
+      }
+
+      // Pagada con una parte cubierta a cuenta: esos pagos quedan libres para
+      // las otras facturas, así que la deuda baja en lo que cubrían. Ver
+      // drizzle/0079.
+      if (egreso.pagado && egreso.proveedorId && egreso.cubiertoACuenta) {
+        const [prov] = await tx
+          .select({ deuda: proveedoresTable.deudaPendiente })
+          .from(proveedoresTable)
+          .where(eq(proveedoresTable.id, egreso.proveedorId))
+          .limit(1);
+        if (prov) {
+          await tx
+            .update(proveedoresTable)
+            .set({ deudaPendiente: prov.deuda - egreso.cubiertoACuenta })
+            .where(eq(proveedoresTable.id, egreso.proveedorId));
+        }
       }
 
       // Deuda con el proveedor: sólo se había sumado si quedó sin pagar.

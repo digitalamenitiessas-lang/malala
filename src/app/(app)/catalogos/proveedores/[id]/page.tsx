@@ -10,7 +10,10 @@ import {
 } from "@/lib/data/proveedores";
 import { listEgresos } from "@/lib/data/egresos";
 import { listMediosPago } from "@/lib/data/medios-pago";
-import { listPagosProveedor } from "@/lib/data/proveedores";
+import {
+  getCoberturaFacturas,
+  listPagosProveedor,
+} from "@/lib/data/proveedores";
 import { listSucursales } from "@/lib/data/sucursales";
 import { PagoProveedorForm } from "./pago-proveedor-form";
 import { PagosHistorial } from "./pagos-historial";
@@ -61,14 +64,22 @@ export default async function EditarProveedorPage({
   const rango = sp.rango ?? "3meses";
   const { desde, hasta } = rangoToFechas(rango);
 
-  const [proveedor, egresos, insumosDelProveedor, mediosPago, sucursales, pagos] =
-    await Promise.all([
+  const [
+    proveedor,
+    egresos,
+    insumosDelProveedor,
+    mediosPago,
+    sucursales,
+    pagos,
+    cobertura,
+  ] = await Promise.all([
     getProveedor(id),
     listEgresos({ proveedorId: id, desde, hasta }),
     listInsumosByProveedor(id),
     listMediosPago({ soloActivos: true, excluirGiftCard: true }),
     listSucursales({ soloActivas: true }),
     listPagosProveedor(id),
+    getCoberturaFacturas(id),
   ]);
   if (!proveedor) notFound();
 
@@ -435,12 +446,20 @@ export default async function EditarProveedorPage({
                     </td>
                     <td className="px-4 py-3 text-center">
                       {row.egreso.pagado ? (
-                        <span
-                          className="text-xs uppercase tracking-wider"
-                          style={{ color: "var(--sage-700)" }}
-                        >
-                          Pagado
-                        </span>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span
+                            className="text-xs uppercase tracking-wider"
+                            style={{ color: "var(--sage-700)" }}
+                          >
+                            Pagado
+                          </span>
+                          {row.egreso.cubierto_a_cuenta ? (
+                            <span className="text-[11px] text-muted-foreground tabular-nums">
+                              {formatARS(row.egreso.cubierto_a_cuenta)} con
+                              pagos a cuenta
+                            </span>
+                          ) : null}
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center gap-1.5">
                           {/* "En cuenta" y no "Pendiente": el salón no paga
@@ -453,6 +472,28 @@ export default async function EditarProveedorPage({
                           >
                             En cuenta
                           </span>
+                          {/* Lo que ya cubren los pagos a cuenta, de la factura
+                              más vieja a la más nueva. Sin esto la factura
+                              mostraba el total después de pagar y se leía como
+                              que el pago no había entrado: "se le pagó dos
+                              veces y la cuenta no resta lo abonado". */}
+                          {cobertura[row.egreso.id]?.cubierto ? (
+                            <span className="text-[11px] leading-tight text-muted-foreground tabular-nums">
+                              {cobertura[row.egreso.id].falta > 0 ? (
+                                <>
+                                  Pagado a cuenta{" "}
+                                  {formatARS(cobertura[row.egreso.id].cubierto)}
+                                  <br />
+                                  <span className="font-medium text-foreground">
+                                    Faltan{" "}
+                                    {formatARS(cobertura[row.egreso.id].falta)}
+                                  </span>
+                                </>
+                              ) : (
+                                "Ya cubierta con pagos a cuenta"
+                              )}
+                            </span>
+                          ) : null}
                           {/* El botón de pagar vivía sólo en Gastos, así que
                               quien venía a la ficha del proveedor a saldar una
                               factura veía la deuda y no tenía con qué pagarla.
@@ -464,6 +505,7 @@ export default async function EditarProveedorPage({
                               pagado={false}
                               tieneMedio={!!row.egreso.mp_id}
                               mediosPago={mediosPago}
+                              falta={cobertura[row.egreso.id]?.falta}
                             />
                           )}
                         </div>
@@ -494,9 +536,11 @@ export default async function EditarProveedorPage({
 
 function computarHistorial(egresos: EgresoConDetalle[]) {
   const total = egresos.reduce((acc, r) => acc + r.egreso.valor, 0);
+  // Sin lo cubierto a cuenta: esa parte ya está en los pagos a cuenta, y
+  // sumarla de los dos lados la contaría dos veces.
   const pagado = egresos
     .filter((r) => r.egreso.pagado)
-    .reduce((acc, r) => acc + r.egreso.valor, 0);
+    .reduce((acc, r) => acc + r.egreso.valor - (r.egreso.cubierto_a_cuenta ?? 0), 0);
   const cantidad = egresos.length;
   const ticketPromedio = cantidad > 0 ? total / cantidad : 0;
 
