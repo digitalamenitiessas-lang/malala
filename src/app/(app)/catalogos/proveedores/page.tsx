@@ -39,8 +39,12 @@ export default async function ProveedoresPage() {
             <tr>
               <th className="text-left font-medium px-4 py-3">Proveedor</th>
               <th className="text-left font-medium px-4 py-3">Teléfono</th>
+              {/* Lo que se le debe hoy, no lo comprado. Yerba Buena: "serviría
+                  más que se vea lo que se debe actualmente y no el monto de la
+                  compra inicial". Es la columna que miraban en el sistema
+                  anterior; lo comprado sigue en la ficha de cada uno. */}
               <th className="text-right font-medium px-4 py-3">
-                Total comprado
+                Se le debe
               </th>
             </tr>
           </thead>
@@ -71,14 +75,26 @@ export default async function ProveedoresPage() {
                     href={`/catalogos/proveedores/${p.id}`}
                     className="block"
                   >
-                    <span className="font-medium">
-                      {formatARS(p.total_comprado)}
-                    </span>
-                    {p.cantidad_compras > 0 && (
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
-                        {p.cantidad_compras} compra
-                        {p.cantidad_compras !== 1 ? "s" : ""}
-                      </p>
+                    {p.deuda_pendiente > 0 ? (
+                      <span
+                        className="font-medium"
+                        style={{ color: "var(--danger)" }}
+                      >
+                        {formatARS(p.deuda_pendiente)}
+                      </span>
+                    ) : p.deuda_pendiente < 0 ? (
+                      <>
+                        <span className="font-medium">
+                          {formatARS(-p.deuda_pendiente)}
+                        </span>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
+                          A favor del salón
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {formatARS(0)}
+                      </span>
                     )}
                   </Link>
                 </td>

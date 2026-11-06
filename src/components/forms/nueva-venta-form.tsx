@@ -243,6 +243,10 @@ export function NuevaVentaForm({
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // Un id por venta, el mismo en cada reintento: si la misma venta llega dos
+  // veces al servidor, la segunda no se carga. Ver createIngreso.
+  const [envioId] = useState(() => crypto.randomUUID());
+  const guardadaRef = useRef(false);
   const { notifySuccess, notifyError } = useToast();
 
   // Header
@@ -802,6 +806,10 @@ export function NuevaVentaForm({
 
   // ----- Submit -----
   function handleSubmit(formData: FormData) {
+    // Ya se guardó y se está yendo a la venta: un segundo clic en ese hueco
+    // —el botón vuelve a estar habilitado— la cargaba de nuevo. El servidor
+    // también lo frena por envio_id; esto evita siquiera mandarla.
+    if (pending || guardadaRef.current) return;
     setErrors({});
     setWarnings([]);
 
@@ -961,6 +969,8 @@ export function NuevaVentaForm({
       !clienteSatisfecho ? satisfaccionNota : "",
     );
 
+    formData.set("envio_id", envioId);
+
     startTransition(async () => {
       const result = await createIngreso(formData);
       if (!result.ok) {
@@ -968,6 +978,7 @@ export function NuevaVentaForm({
         notifyError("No se pudo guardar la venta");
         return;
       }
+      guardadaRef.current = true;
       if (result.warnings) {
         setWarnings(result.warnings);
         setTimeout(() => {

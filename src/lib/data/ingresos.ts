@@ -73,6 +73,17 @@ function createId() {
   return crypto.randomUUID();
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function existeIngreso(id: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ id: ingresosTable.id })
+    .from(ingresosTable)
+    .where(eq(ingresosTable.id, id))
+    .limit(1);
+  return !!row;
+}
+
 function mapIngreso(row: typeof ingresosTable.$inferSelect): Ingreso {
   return {
     id: row.id,
@@ -559,6 +570,17 @@ export async function createIngreso(
 
   const data = parsed.data;
 
+  // La misma venta que llega dos veces. Centro, 02/11: Ana Camila Segli quedó
+  // cargada dos veces con dos segundos de diferencia —el botón se rehabilita
+  // entre que termina el guardado y cambia la pantalla—, y la comisión de la
+  // peluquera salió doble. El formulario manda un id por venta y se usa como id
+  // del ingreso: si ya existe, ésta es la repetición y se devuelve la primera.
+  const envioId = String(formData.get("envio_id") ?? "");
+  const idDelEnvio = UUID_RE.test(envioId) ? envioId : null;
+  if (idDelEnvio && (await existeIngreso(idDelEnvio))) {
+    return { ok: true, ingresoId: idDelEnvio };
+  }
+
   // Satisfacción del cliente (la marca quien registra la venta). Por defecto
   // se asume satisfecho; solo se guarda "no satisfecho" si se desmarca.
   const satisfechoRaw = formData.get("cliente_satisfecho");
@@ -773,7 +795,7 @@ export async function createIngreso(
       descuentoMonto,
     });
 
-  const ingresoId = createId();
+  const ingresoId = idDelEnvio ?? createId();
 
   // Fecha retroactiva: una venta que no se cargó el día que pasó.
   //
@@ -1228,6 +1250,11 @@ export async function createIngreso(
       }
     });
   } catch (error) {
+    // Las dos llegaron a la vez y ésta perdió contra la clave primaria: la
+    // venta está guardada una vez, que es lo que se quería.
+    if (idDelEnvio && (await existeIngreso(idDelEnvio))) {
+      return { ok: true, ingresoId: idDelEnvio };
+    }
     return {
       ok: false,
       errors: {
