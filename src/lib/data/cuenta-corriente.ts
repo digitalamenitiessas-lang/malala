@@ -7,8 +7,12 @@ import { requireSupabaseRuntime } from "@/lib/db/env";
 import {
   cierresCaja as cierresCajaTable,
   clientes as clientesTable,
+  empleados as empleadosTable,
+  ingresoLineas as ingresoLineasTable,
+  insumos as insumosTable,
   movimientosBancarios as movimientosBancariosTable,
   movimientosCc as movimientosCcTable,
+  servicios as serviciosTable,
 } from "@/lib/db/schema";
 import { fechaArDeISO, formatYmdAr, hoyAr } from "@/lib/fecha-ar";
 import { reversoDe, type TipoMovCc } from "@/lib/cuenta-corriente-reverso";
@@ -75,7 +79,43 @@ export async function listMovimientosCc(
         : eq(movimientosCcTable.clienteId, clienteId),
     )
     .orderBy(desc(movimientosCcTable.fecha), desc(movimientosCcTable.creadoEn));
-  return rows.map(mapMovimiento);
+  const movimientos = rows.map(mapMovimiento);
+
+  // El detalle de cada venta fiada. Lucía, desde la ficha de una clienta: "me
+  // pide detalle de la cuenta para que ella recuerde qué se hizo". Cada cargo
+  // decía sólo "Venta fiada a cuenta corriente".
+  const ventaIds = movimientos
+    .filter((m) => m.ref_tipo === "ingreso" && m.ref_id)
+    .map((m) => m.ref_id!);
+  if (ventaIds.length > 0) {
+    const lineas = await db
+      .select({
+        ingresoId: ingresoLineasTable.ingresoId,
+        servicio: serviciosTable.nombre,
+        producto: insumosTable.nombre,
+        cantidad: ingresoLineasTable.cantidad,
+        empleada: empleadosTable.nombre,
+      })
+      .from(ingresoLineasTable)
+      .leftJoin(serviciosTable, eq(serviciosTable.id, ingresoLineasTable.servicioId))
+      .leftJoin(insumosTable, eq(insumosTable.id, ingresoLineasTable.insumoId))
+      .leftJoin(empleadosTable, eq(empleadosTable.id, ingresoLineasTable.empleadoId))
+      .where(inArray(ingresoLineasTable.ingresoId, ventaIds));
+    const porVenta = new Map<string, NonNullable<MovimientoCc["venta_lineas"]>>();
+    for (const l of lineas) {
+      const lista = porVenta.get(l.ingresoId) ?? [];
+      lista.push({
+        nombre: l.servicio ?? l.producto ?? "Ítem",
+        cantidad: l.cantidad,
+        empleada: l.empleada ?? undefined,
+      });
+      porVenta.set(l.ingresoId, lista);
+    }
+    for (const m of movimientos) {
+      if (m.ref_tipo === "ingreso" && m.ref_id) m.venta_lineas = porVenta.get(m.ref_id);
+    }
+  }
+  return movimientos;
 }
 
 export interface DeudorCc {

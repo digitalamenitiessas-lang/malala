@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   CreditCard,
   Plus,
@@ -511,6 +512,27 @@ export function CuentaCorrientePanel({
                     {movimiento.descripcion && (
                       <p className="mt-0.5 truncate text-sm">{movimiento.descripcion}</p>
                     )}
+                    {/* Qué se hizo en esa venta: lo que la clienta pide para
+                        acordarse de qué está debiendo. */}
+                    {movimiento.venta_lineas?.length ? (
+                      <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                        {movimiento.venta_lineas.map((l, i) => (
+                          <li key={i}>
+                            {l.cantidad > 1 ? `${l.cantidad} × ` : ""}
+                            {l.nombre}
+                            {l.empleada ? ` · ${l.empleada}` : ""}
+                          </li>
+                        ))}
+                        <li>
+                          <Link
+                            href={`/ventas/${movimiento.ref_id}`}
+                            className="underline underline-offset-2 hover:text-foreground"
+                          >
+                            Ver la venta
+                          </Link>
+                        </li>
+                      </ul>
+                    ) : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <span

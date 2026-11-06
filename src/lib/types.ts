@@ -128,6 +128,11 @@ export interface MovimientoCc {
   descripcion?: string;
   usuario_id: ID;
   creado_en: string; // ISO
+  /**
+   * Qué se hizo, cuando el cargo es una venta fiada: la clienta pide el detalle
+   * para acordarse de qué está debiendo, y "Venta fiada" no se lo dice.
+   */
+  venta_lineas?: { nombre: string; cantidad: number; empleada?: string }[];
 }
 
 export interface Proveedor {
