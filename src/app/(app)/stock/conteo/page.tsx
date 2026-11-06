@@ -60,6 +60,7 @@ export default async function ConteoPage({
       <ConteoStockForm
         sucursalId={sucursal.id}
         momento={momento}
+        momentoElegido={!!sp.fecha}
         filas={filas}
         puedeCargar={scope.puedeGestionarStock}
       />

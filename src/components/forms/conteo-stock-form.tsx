@@ -15,6 +15,8 @@ interface Borrador {
   valores: Record<string, Valores>;
   contadoPor: string;
   nota: string;
+  /** Contra qué momento se estaba comparando. Ver el efecto que lo restaura. */
+  momento?: string;
 }
 
 /** "0,5" → 0.5; vacío → null; basura → NaN. */
@@ -42,12 +44,15 @@ function invalido(s: string | undefined): boolean {
 export function ConteoStockForm({
   sucursalId,
   momento,
+  momentoElegido,
   filas,
   puedeCargar,
 }: {
   sucursalId: string;
   /** "YYYY-MM-DDTHH:mm" en hora argentina. */
   momento: string;
+  /** El momento vino en la URL; si no, es "ahora" y puede ceder al del borrador. */
+  momentoElegido: boolean;
   filas: FilaConteo[];
   puedeCargar: boolean;
 }) {
@@ -71,21 +76,35 @@ export function ConteoStockForm({
         setValores(b.valores ?? {});
         setContadoPor(b.contadoPor ?? "");
         setNota(b.nota ?? "");
+        // Un borrador se compara contra el momento en que se empezó, no
+        // contra el de la última vez que se abrió la pantalla. Yerba Buena,
+        // 06/11: contando la reventa durante el día, la pantalla se recargó y
+        // el "sistema" pasó a ser el de ese momento, con una venta de suero de
+        // argán ya descontada. La diferencia que había visto desapareció y
+        // nadie entendía por qué.
+        if (!momentoElegido && b.momento && b.momento !== momento && Object.keys(b.valores ?? {}).length > 0) {
+          router.replace(`/stock/conteo?fecha=${b.momento}`);
+        }
       }
     } catch {
       // Sin almacenamiento (modo privado): se carga igual, sin borrador.
     }
     setCargado(true);
+    // Sólo al abrir: después el momento cambia únicamente desde su campo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clave]);
 
   useEffect(() => {
     if (!cargado) return;
     try {
-      localStorage.setItem(clave, JSON.stringify({ valores, contadoPor, nota } satisfies Borrador));
+      localStorage.setItem(
+        clave,
+        JSON.stringify({ valores, contadoPor, nota, momento } satisfies Borrador),
+      );
     } catch {
       // Idem.
     }
-  }, [cargado, clave, valores, contadoPor, nota]);
+  }, [cargado, clave, valores, contadoPor, nota, momento]);
 
   const resultados = useMemo(() => {
     const out = new Map<string, NonNullable<ReturnType<typeof calcularConteo>>>();
@@ -373,6 +392,18 @@ export function ConteoStockForm({
                           {r.diferencia > 0 ? "+" : ""}
                           {fmtEnvases(aEnvases(r.diferencia, f))} env.
                         </div>
+                        {/* El reparto también se corrige, aunque el total
+                            coincida. Sin esto la fila decía "0 env." y el
+                            resumen la contaba igual como "con diferencia":
+                            "se iban a ajustar 3 productos pero se veían 2". */}
+                        {venta && r.diferenciaDeposito !== 0 && (
+                          <div className="text-[11px] text-brown-700">
+                            dep. {r.diferenciaDeposito > 0 ? "+" : ""}
+                            {fmtEnvases(aEnvases(r.diferenciaDeposito, f))} · exh.{" "}
+                            {r.diferenciaExhibicion > 0 ? "+" : ""}
+                            {fmtEnvases(aEnvases(r.diferenciaExhibicion, f))}
+                          </div>
+                        )}
                         <div className="text-[11px] text-muted-foreground">{formatARS(r.valor)}</div>
                       </>
                     )}
