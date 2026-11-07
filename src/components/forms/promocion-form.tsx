@@ -36,11 +36,17 @@ export function PromocionForm({
 
   const errors = state && !state.ok ? state.errors : {};
 
-  const sumaLista = useMemo(() => {
+  const { sumaLista, sumaEfectivo } = useMemo(() => {
     const byId = new Map(servicios.map((servicio) => [servicio.id, servicio]));
     return seleccionados.reduce(
-      (acc, id) => acc + (byId.get(id)?.precio_lista ?? 0),
-      0,
+      (acc, id) => {
+        const s = byId.get(id);
+        return {
+          sumaLista: acc.sumaLista + (s?.precio_lista ?? 0),
+          sumaEfectivo: acc.sumaEfectivo + (s?.precio_efectivo ?? 0),
+        };
+      },
+      { sumaLista: 0, sumaEfectivo: 0 },
     );
   }, [seleccionados, servicios]);
 
@@ -87,8 +93,13 @@ export function PromocionForm({
                   className="h-4 w-4 rounded border-border accent-sage-500"
                 />
                 <span className="flex-1">{servicio.nombre}</span>
-                <span className="tabular-nums text-muted-foreground">
-                  {formatARS(servicio.precio_lista)}
+                {/* Los dos precios, como en la lista de servicios: con uno solo
+                    no se sabía cuál era y parecía mal cargado. */}
+                <span className="text-right tabular-nums text-muted-foreground">
+                  {formatARS(servicio.precio_efectivo)} efectivo
+                  <span className="block text-xs">
+                    {formatARS(servicio.precio_lista)} lista
+                  </span>
                 </span>
               </label>
             ))
@@ -96,8 +107,8 @@ export function PromocionForm({
         </div>
         {seleccionados.length > 0 && (
           <p className="text-xs tabular-nums text-muted-foreground">
-            {seleccionados.length} servicios · suma de precios de lista:{" "}
-            {formatARS(sumaLista)}
+            {seleccionados.length} servicios · por separado suman{" "}
+            {formatARS(sumaEfectivo)} en efectivo y {formatARS(sumaLista)} de lista
           </p>
         )}
         {errors.componentes && (

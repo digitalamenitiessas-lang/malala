@@ -2,14 +2,18 @@ import { redirect } from "next/navigation";
 import { PromocionForm } from "@/components/forms/promocion-form";
 import { createPromocion } from "@/lib/data/promociones";
 import { listServicios } from "@/lib/data/servicios";
-import { requireUser } from "@/lib/auth/session";
+import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { esAdmin } from "@/lib/auth/access";
 
 export default async function NuevaPromocionPage() {
   const user = await requireUser();
   if (!esAdmin(user.rol)) redirect("/catalogos/promociones");
 
-  const servicios = await listServicios();
+  // Sólo los servicios de la sucursal en pantalla, que es donde queda la promo.
+  // Antes salían los de las dos, y Yerba Buena veía el "Corte" de Centro con
+  // su precio en vez del propio.
+  const sucursal = await getActiveSucursal();
+  const servicios = await listServicios({ sucursalId: sucursal?.id });
 
   async function action(_prev: unknown, formData: FormData) {
     "use server";

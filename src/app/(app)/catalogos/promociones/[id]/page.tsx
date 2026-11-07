@@ -13,7 +13,7 @@ import {
   deleteServicioHorario,
   listServicioHorarios,
 } from "@/lib/data/servicios-horarios";
-import { requireUser } from "@/lib/auth/session";
+import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { esAdmin } from "@/lib/auth/access";
 
 const DIAS = [
@@ -39,12 +39,19 @@ export default async function EditarPromocionPage({
   if (!esAdmin(user.rol)) redirect("/catalogos/promociones");
 
   const { id } = await params;
-  const [promocion, servicios, horarios] = await Promise.all([
+  const sucursal = await getActiveSucursal();
+  const [promocion, todos, deLaSucursal, horarios] = await Promise.all([
     getPromocion(id),
     listServicios(),
+    listServicios({ sucursalId: sucursal?.id }),
     listServicioHorarios(id),
   ]);
   if (!promocion) notFound();
+  // Los de la sucursal en pantalla (ver nuevo/page), más los que la promo ya
+  // tiene aunque no sean de ahí, para no sacárselos sin querer al guardar.
+  const enLaPromo = new Set(promocion.componentes.map((c) => c.servicio_id));
+  const visibles = new Set(deLaSucursal.map((s) => s.id));
+  const servicios = todos.filter((s) => visibles.has(s.id) || enLaPromo.has(s.id));
 
   async function update(_prev: unknown, formData: FormData) {
     "use server";
