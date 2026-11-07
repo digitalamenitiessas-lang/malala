@@ -12,7 +12,7 @@ import { listProveedores } from "@/lib/data/proveedores";
 import { listRubrosGasto } from "@/lib/data/rubros-gasto";
 import { listSucursales } from "@/lib/data/sucursales";
 import { formatARS, formatDateShort } from "@/lib/utils";
-import { TogglePagadoButton } from "./toggle-pagado-button";
+import { MediosPagoProvider, TogglePagadoButton } from "./toggle-pagado-button";
 import { AnularGastoButton } from "./anular-gasto-button";
 
 interface SearchParams {
@@ -258,6 +258,7 @@ export default async function EgresosPage({
           No hay gastos en el rango seleccionado.
         </div>
       ) : (
+        <MediosPagoProvider mediosPago={mediosPago}>
         <div className="overflow-hidden rounded-md border border-border bg-card">
           <table className="w-full text-sm">
             <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">
@@ -357,7 +358,6 @@ export default async function EgresosPage({
                             egresoId={row.egreso.id}
                             pagado={row.egreso.pagado}
                             tieneMedio={!!row.egreso.mp_id}
-                            mediosPago={mediosPago}
                           />
                         )}
                         <AnularGastoButton
@@ -379,6 +379,7 @@ export default async function EgresosPage({
             </tbody>
           </table>
         </div>
+        </MediosPagoProvider>
       )}
     </div>
   );

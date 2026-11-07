@@ -1,12 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { Check, Undo2 } from "lucide-react";
 import { useTransitionFeedback } from "@/components/feedback/action-feedback";
 import { LoadingButton } from "@/components/forms/field";
 import { togglePagadoEgreso } from "@/lib/data/egresos-actions";
 import type { MedioPago } from "@/lib/types";
 import { formatARS } from "@/lib/utils";
+
+const MediosPagoContext = createContext<MedioPago[] | null>(null);
+
+/**
+ * Los medios de pago de todos los botones de una tabla, una sola vez.
+ *
+ * Mandarlos como prop a cada fila es lo mismo que colgaba la lista de insumos:
+ * React no repite un objeto ya enviado, lo referencia por su camino dentro de
+ * la fila anterior, y con muchas filas encadenadas el navegador se queda
+ * esperando una referencia que no se resuelve. Pasaba al guardar un gasto: el
+ * botón quedaba pensando (se guardaba igual) porque vuelve a esta lista.
+ */
+export function MediosPagoProvider({
+  mediosPago,
+  children,
+}: {
+  mediosPago: MedioPago[];
+  children: ReactNode;
+}) {
+  return <MediosPagoContext.Provider value={mediosPago}>{children}</MediosPagoContext.Provider>;
+}
 
 /**
  * Marca un gasto como pagado, o lo vuelve a dejar a pagar.
@@ -20,13 +41,14 @@ export function TogglePagadoButton({
   egresoId,
   pagado,
   tieneMedio,
-  mediosPago = [],
+  mediosPago: mediosPagoProp,
   falta,
 }: {
   egresoId: string;
   pagado: boolean;
   /** false = quedó a pagar sin medio elegido; hay que preguntarlo. */
   tieneMedio?: boolean;
+  /** En tablas van por MediosPagoProvider, no por fila. */
   mediosPago?: MedioPago[];
   /**
    * Lo que falta pagar de la factura después de los pagos a cuenta, cuando se
@@ -34,6 +56,8 @@ export function TogglePagadoButton({
    */
   falta?: number;
 }) {
+  const mediosPagoTabla = useContext(MediosPagoContext);
+  const mediosPago = mediosPagoProp ?? mediosPagoTabla ?? [];
   const { pending, run } = useTransitionFeedback();
   const [eligiendo, setEligiendo] = useState(false);
   const [mpId, setMpId] = useState("");

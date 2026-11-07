@@ -17,7 +17,10 @@ import {
 import { listSucursales } from "@/lib/data/sucursales";
 import { PagoProveedorForm } from "./pago-proveedor-form";
 import { PagosHistorial } from "./pagos-historial";
-import { TogglePagadoButton } from "@/app/(app)/egresos/toggle-pagado-button";
+import {
+  MediosPagoProvider,
+  TogglePagadoButton,
+} from "@/app/(app)/egresos/toggle-pagado-button";
 import { listInsumosByProveedor } from "@/lib/data/insumos";
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope, esAdmin } from "@/lib/auth/access";
@@ -374,6 +377,7 @@ export default async function EditarProveedorPage({
             No hay compras a este proveedor en el rango seleccionado.
           </div>
         ) : (
+          <MediosPagoProvider mediosPago={mediosPago}>
           <div className="overflow-hidden rounded-md border border-border bg-card">
             <table className="w-full text-sm">
               <thead className="bg-cream/50 text-xs uppercase tracking-wider text-muted-foreground">
@@ -504,7 +508,6 @@ export default async function EditarProveedorPage({
                               egresoId={row.egreso.id}
                               pagado={false}
                               tieneMedio={!!row.egreso.mp_id}
-                              mediosPago={mediosPago}
                               falta={cobertura[row.egreso.id]?.falta}
                             />
                           )}
@@ -516,6 +519,7 @@ export default async function EditarProveedorPage({
               </tbody>
             </table>
           </div>
+          </MediosPagoProvider>
         )}
       </section>
 

@@ -163,6 +163,9 @@ export function EgresoForm({
       esCompraInsumo ? compraAction(prev, fd) : action(prev, fd),
     {
       redirectTo: "/egresos",
+      // Volver recargando, como en insumos: navegando sin recargar a la lista
+      // de gastos el botón quedaba pensando con el gasto ya guardado.
+      recargar: true,
       successMessage: esCompraInsumo
         ? "Compra de insumo registrada"
         : "Gasto registrado",
