@@ -384,7 +384,28 @@ export async function createTransferencia(
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   const data = parsed.data;
 
+  // Id que arma el formulario al abrirse, el mismo en cada reintento. Si ya
+  // está guardada, otro clic no la repite: en YB el botón no avisaba nada y
+  // una transferencia de $200.000 quedó cargada 19 veces.
+  const envioRaw = formData.get("envio_id");
+  const envioId =
+    typeof envioRaw === "string" && /^[0-9a-f-]{36}$/i.test(envioRaw) ? envioRaw : null;
+
   const db = getDb();
+  if (envioId) {
+    const [ya] = await db
+      .select({ id: movimientosBancariosTable.id })
+      .from(movimientosBancariosTable)
+      .where(
+        and(
+          eq(movimientosBancariosTable.refTipo, "transferencia"),
+          eq(movimientosBancariosTable.refId, envioId),
+        ),
+      )
+      .limit(1);
+    if (ya) return { ok: true };
+  }
+
   try {
     await db.transaction(async (tx) => {
       const cuentas = await tx
@@ -415,7 +436,7 @@ export async function createTransferencia(
       const fecha = new Date();
       const descripcion = data.descripcion ?? `Transferencia entre cuentas`;
       // Las dos patas comparten ref_id: así se encuentran para anularlas juntas.
-      const transferenciaId = createId();
+      const transferenciaId = envioId ?? createId();
 
       await tx.insert(movimientosBancariosTable).values([
         {

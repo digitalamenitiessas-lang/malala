@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import {
-  createTransferencia,
   listCuentas,
   listMovimientos,
   listSaldos,
@@ -8,8 +7,8 @@ import {
 import { listSucursales } from "@/lib/data/sucursales";
 import { requireUser } from "@/lib/auth/session";
 import { buildAccessScope } from "@/lib/auth/access";
-import { CurrencyField } from "@/components/forms/field";
 import { IngresoManualForm } from "@/components/forms/ingreso-manual-form";
+import { TransferenciaForm } from "@/components/forms/transferencia-form";
 import { AnularIngresoManual } from "@/components/forms/anular-ingreso-manual";
 import { finDeDiaArISO, hoyAr, inicioDeDiaArISO } from "@/lib/fecha-ar";
 import { formatDateTime } from "@/lib/utils";
@@ -146,11 +145,6 @@ export default async function BancosPage({ searchParams }: PageProps) {
   );
   const puedeAnular = ["admin", "superadmin", "encargada"].includes(user.rol);
 
-  async function transferir(formData: FormData): Promise<void> {
-    "use server";
-    await createTransferencia(formData);
-  }
-
   return (
     <div className="space-y-8 max-w-6xl">
       <header className="space-y-1">
@@ -275,11 +269,7 @@ export default async function BancosPage({ searchParams }: PageProps) {
       )}
 
       {cuentas.length >= 2 && (
-        <TransferenciaForm
-          cuentas={cuentas}
-          sucursales={sucursales}
-          action={transferir}
-        />
+        <TransferenciaForm cuentas={cuentas} sucursales={sucursales} />
       )}
 
       <section>
@@ -494,101 +484,5 @@ export default async function BancosPage({ searchParams }: PageProps) {
         </div>
       </section>
     </div>
-  );
-}
-
-function TransferenciaForm({
-  cuentas,
-  sucursales,
-  action,
-}: {
-  cuentas: Array<{ id: string; nombre: string; sucursal_id: string }>;
-  sucursales: Array<{ id: string; nombre: string }>;
-  action: (formData: FormData) => Promise<void>;
-}) {
-  const cuentasBySucursal = new Map<
-    string,
-    typeof cuentas
-  >();
-  for (const c of cuentas) {
-    const list = cuentasBySucursal.get(c.sucursal_id) ?? [];
-    list.push(c);
-    cuentasBySucursal.set(c.sucursal_id, list);
-  }
-  // Solo mostramos el form si al menos una sucursal tiene 2+ cuentas
-  const sucursalesConTransferencia = sucursales.filter(
-    (s) => (cuentasBySucursal.get(s.id)?.length ?? 0) >= 2,
-  );
-  if (sucursalesConTransferencia.length === 0) return null;
-
-  return (
-    <section className="bg-card border border-border rounded-md p-5 space-y-4">
-      <h2 className="text-xs uppercase tracking-wider text-muted-foreground">
-        Transferir entre cuentas (misma sucursal)
-      </h2>
-      {sucursalesConTransferencia.map((s) => {
-        const cs = cuentasBySucursal.get(s.id) ?? [];
-        return (
-          <form
-            key={s.id}
-            action={action}
-            className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end border-t border-border pt-4 first:border-t-0 first:pt-0"
-          >
-            <div className="sm:col-span-6 text-xs uppercase tracking-wider text-muted-foreground">
-              {s.nombre}
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Desde
-              </label>
-              <select
-                name="cuenta_origen_id"
-                required
-                className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                {cs.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Hacia
-              </label>
-              <select
-                name="cuenta_destino_id"
-                required
-                className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                {cs.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <CurrencyField label="Monto" name="monto" required />
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Detalle
-              </label>
-              <input
-                name="descripcion"
-                placeholder="Opcional"
-                className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <button
-              type="submit"
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium uppercase tracking-wider hover:bg-brown-700 transition-colors"
-            >
-              Transferir
-            </button>
-          </form>
-        );
-      })}
-    </section>
   );
 }
