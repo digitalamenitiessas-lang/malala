@@ -6,6 +6,7 @@ import { useActionStateFeedback } from "@/components/feedback/action-feedback";
 import { cn } from "@/lib/utils";
 import { CurrencyField, LoadingButton } from "./field";
 import type { Servicio } from "@/lib/types";
+import { RESERVAS_PROPIAS } from "@/lib/features";
 import type { ActionResult, CodigoSugerido } from "@/lib/data/servicios";
 
 interface Props {
@@ -172,10 +173,12 @@ export function ServicioForm({
         error={errors.duracion_min}
         required
       />
-      <p className="-mt-3 text-xs text-muted-foreground">
-        Cuánto ocupa el turno en la agenda: bloquea ese rango para que no se
-        reserve otro turno encima.
-      </p>
+      {RESERVAS_PROPIAS && (
+        <p className="-mt-3 text-xs text-muted-foreground">
+          Cuánto ocupa el turno en la agenda: bloquea ese rango para que no se
+          reserve otro turno encima.
+        </p>
+      )}
 
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -187,6 +190,15 @@ export function ServicioForm({
         <span>Activo</span>
       </label>
 
+      {/* Con la reserva propia apagada no se muestra, pero se manda el valor que
+          ya tenía: sin el campo, guardar lo marcaría "solo caja". */}
+      {!RESERVAS_PROPIAS ? (
+        <input
+          type="hidden"
+          name="visible_reserva"
+          value={String(servicio?.visible_reserva ?? true)}
+        />
+      ) : (
       <div className="space-y-1.5">
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -204,6 +216,7 @@ export function ServicioForm({
           muestra un único servicio.
         </p>
       </div>
+      )}
 
       {errors._ && <p className="text-sm text-destructive">{errors._.join(", ")}</p>}
 

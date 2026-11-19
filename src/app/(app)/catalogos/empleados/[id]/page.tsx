@@ -10,6 +10,7 @@ import { EmpleadoForm } from "@/components/forms/empleado-form";
 import { AccesoEmpleadoPanel } from "@/components/forms/acceso-empleado-panel";
 import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
+import { RESERVAS_PROPIAS } from "@/lib/features";
 import { listAnticipos } from "@/lib/data/anticipos";
 import { listDescuentos } from "@/lib/data/descuentos";
 import { listViaticos } from "@/lib/data/viaticos";
@@ -101,9 +102,11 @@ export default async function EditarEmpleadoPage({
       ? listCuentas({ soloActivas: true, sucursalId: sucursal.id })
       : Promise.resolve([]),
     getAccesoDeEmpleado(id),
-    listProfesionalAgendaConfigsByEmpleado(id, {
-      sucursalIds: sucursales.map((item) => item.id),
-    }),
+    RESERVAS_PROPIAS
+      ? listProfesionalAgendaConfigsByEmpleado(id, {
+          sucursalIds: sucursales.map((item) => item.id),
+        })
+      : Promise.resolve([]),
   ]);
   // Los servicios elegibles se filtran por la sucursal de cada agenda
   // (membresía servicio_sucursal): un profesional solo ve los servicios
@@ -187,12 +190,15 @@ export default async function EditarEmpleadoPage({
         action={crearAcceso}
       />
 
-      <DisponibilidadPublicaPanel
-        agendas={agendasConHorarios}
-        sucursalesParaHabilitar={sucursalesParaHabilitar}
-        habilitarProfesional={habilitarProfesional}
-        toggleAgenda={toggleAgenda}
-      />
+      {/* La agenda pública sólo sirve para la reserva propia, hoy apagada. */}
+      {RESERVAS_PROPIAS && (
+        <DisponibilidadPublicaPanel
+          agendas={agendasConHorarios}
+          sucursalesParaHabilitar={sucursalesParaHabilitar}
+          habilitarProfesional={habilitarProfesional}
+          toggleAgenda={toggleAgenda}
+        />
+      )}
 
       <AnticiposPanel
         // Sólo las bancarias, como en gastos: para una transferencia se elige

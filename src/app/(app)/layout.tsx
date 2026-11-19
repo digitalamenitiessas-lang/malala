@@ -11,6 +11,7 @@ import { logout } from "@/lib/auth/actions";
 import { listSucursales } from "@/lib/data/sucursales";
 import { buildAccessScope } from "@/lib/auth/access";
 import type { AccessScope } from "@/lib/types";
+import { RESERVAS_PROPIAS } from "@/lib/features";
 
 const ROL_LABEL: Record<string, string> = {
   admin: "Admin",
@@ -29,7 +30,7 @@ interface NavDef {
 const NAV: NavDef[] = [
   { href: "/dashboard", label: "Dashboard", iconKey: "LayoutDashboard", group: "Operación", visible: () => true },
   { href: "/ventas", label: "Ventas", iconKey: "ShoppingBag", group: "Operación", visible: () => true },
-  { href: "/turnos", label: "Turnos", iconKey: "CalendarDays", group: "Operación", visible: () => true },
+  { href: "/turnos", label: "Turnos", iconKey: "CalendarDays", group: "Operación", visible: () => RESERVAS_PROPIAS },
   { href: "/catalogos/clientes", label: "Clientes", iconKey: "Users", group: "Operación", visible: () => true },
   { href: "/caja", label: "Caja diaria", iconKey: "Wallet", group: "Finanzas", visible: (s) => s.puedeVerCaja },
   { href: "/bancos", label: "Cuentas y saldos", iconKey: "Landmark", group: "Finanzas", visible: (s) => s.puedeVerCaja },

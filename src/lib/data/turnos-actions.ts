@@ -2,6 +2,7 @@
 
 import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { RESERVAS_PROPIAS } from "@/lib/features";
 import { getDb } from "@/lib/db/client/postgres";
 import {
   clientes as clientesTable,
@@ -318,6 +319,11 @@ export async function createPublicTurnoAction(
   _prevState: TurnoActionState | null,
   formData: FormData,
 ) {
+  // Con la reserva propia apagada, una pestaña vieja de la landing todavía
+  // podría mandar el formulario: no se crea un turno que nadie va a mirar.
+  if (!RESERVAS_PROPIAS) {
+    return turnoFailure("La reserva online no está disponible. Reservá por Calendico.");
+  }
   return createTurnoInternal(formData, "publico");
 }
 

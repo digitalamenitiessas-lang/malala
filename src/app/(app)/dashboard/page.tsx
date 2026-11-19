@@ -18,6 +18,7 @@ import { getVapidPublicKey, isWebPushConfigured } from "@/lib/db/env";
 import { aggregate, comisionesPorEmpleado } from "@/lib/data/ingresos-helpers";
 import { ESTADO_BADGE, ESTADO_LABEL, estadoEfectivo } from "@/lib/turno-estado";
 import { formatARS } from "@/lib/utils";
+import { RESERVAS_PROPIAS } from "@/lib/features";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,9 @@ export default async function DashboardPage() {
       empleadoId: isEmployee ? scope.empleadoId : undefined,
     }),
     scope.puedeVerCaja ? listSaldos() : Promise.resolve([]),
-    listTurnos({ fecha: hoy, sucursalId: activa?.id }),
+    RESERVAS_PROPIAS
+      ? listTurnos({ fecha: hoy, sucursalId: activa?.id })
+      : Promise.resolve([]),
     listSucursales({ soloActivas: true }),
   ]);
   const sucursales = sucursalesAll.filter((s) =>
@@ -123,7 +126,9 @@ export default async function DashboardPage() {
             highlight
           />
         )}
-        <QuickAction href="/turnos" label="Turnos" Icon={CalendarClock} />
+        {RESERVAS_PROPIAS && (
+          <QuickAction href="/turnos" label="Turnos" Icon={CalendarClock} />
+        )}
         {scope.puedeVerCaja && (
           <QuickAction href="/caja" label="Caja" Icon={Wallet} />
         )}
@@ -216,6 +221,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Próximos turnos */}
+      {RESERVAS_PROPIAS && (
       <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-[0_14px_40px_rgba(44,53,37,0.04)]">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -272,6 +278,7 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }

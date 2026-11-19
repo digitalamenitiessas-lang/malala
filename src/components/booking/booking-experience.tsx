@@ -25,6 +25,7 @@ import { PromocionesBand } from "@/components/booking/promociones-band";
 import { ServiciosShowcase } from "@/components/booking/servicios-showcase";
 import { SucursalesShowcase } from "@/components/booking/sucursales-showcase";
 import { cn, formatARS } from "@/lib/utils";
+import { RESERVAS_PROPIAS, RESERVA_EXTERNA_POR_SUCURSAL } from "@/lib/features";
 import type {
   HorarioSucursal,
   ProfesionalHorario,
@@ -76,6 +77,9 @@ export function BookingExperience({ snapshot, loggedInLabel }: Props) {
     initialActionState,
   );
   const [modalOpen, setModalOpen] = useState(false);
+  // Con la reserva propia apagada, "Reservá tu turno" lleva a Calendico. Si no
+  // se sabe la sucursal, primero se pregunta cuál.
+  const [elegirSucursalOpen, setElegirSucursalOpen] = useState(false);
   const [bookingSucursalId, setBookingSucursalId] = useState("");
   const [search, setSearch] = useState("");
   const [categoria, setCategoria] = useState("TODOS");
@@ -263,6 +267,12 @@ export function BookingExperience({ snapshot, loggedInLabel }: Props) {
   }
 
   function openBooking(nextSucursalId?: string, nextServicioId?: string) {
+    if (!RESERVAS_PROPIAS) {
+      const link = nextSucursalId ? RESERVA_EXTERNA_POR_SUCURSAL[nextSucursalId] : undefined;
+      if (link) window.open(link, "_blank", "noopener,noreferrer");
+      else setElegirSucursalOpen(true);
+      return;
+    }
     if (nextSucursalId) {
       setBookingSucursalId(nextSucursalId);
       resetBooking(true);
@@ -279,6 +289,10 @@ export function BookingExperience({ snapshot, loggedInLabel }: Props) {
 
   /** Un tile de la sección Servicios: abre la reserva con el rubro precargado. */
   function openBookingConRubro(rubro: string | null) {
+    if (!RESERVAS_PROPIAS) {
+      setElegirSucursalOpen(true);
+      return;
+    }
     setCategoria(rubro ?? "TODOS");
     setModalOpen(true);
   }
@@ -505,7 +519,14 @@ export function BookingExperience({ snapshot, loggedInLabel }: Props) {
         />
       ) : null}
 
-      {!modalOpen ? (
+      {elegirSucursalOpen ? (
+        <ElegirSucursalExterna
+          sucursales={snapshot.sucursales}
+          onClose={() => setElegirSucursalOpen(false)}
+        />
+      ) : null}
+
+      {!modalOpen && !elegirSucursalOpen ? (
         <button
           type="button"
           onClick={() => openBooking()}
@@ -517,6 +538,70 @@ export function BookingExperience({ snapshot, loggedInLabel }: Props) {
     </div>
   );
 }
+/**
+ * Con la reserva propia apagada: elegir la sucursal y seguir en su Calendico.
+ */
+function ElegirSucursalExterna({
+  sucursales,
+  onClose,
+}: {
+  sucursales: Sucursal[];
+  onClose: () => void;
+}) {
+  const conLink = sucursales.filter((s) => RESERVA_EXTERNA_POR_SUCURSAL[s.id]);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/55 backdrop-blur-[2px] sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Elegí la sucursal"
+        className="w-full max-w-md rounded-t-2xl bg-white p-6 shadow-[0_30px_90px_rgba(43,34,26,0.28)] sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-display text-[0.7rem] uppercase tracking-[0.3em] text-brown-500">
+              Reserva tu turno
+            </p>
+            <p className="mt-1.5 text-sm font-medium text-ink">¿En qué sucursal?</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="rounded-lg border border-stone-200 p-2 text-stone-600 transition hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="mt-5 grid gap-3">
+          {conLink.map((s) => (
+            <a
+              key={s.id}
+              href={RESERVA_EXTERNA_POR_SUCURSAL[s.id]}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 px-4 py-3 transition hover:border-sage-500"
+            >
+              <span>
+                <span className="block text-sm font-medium text-ink">{s.nombre}</span>
+                {s.direccion ? (
+                  <span className="block text-xs text-stone-500">{s.direccion}</span>
+                ) : null}
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-stone-500" />
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface BookingModalProps {
   currentStep: number;
   currentStepMeta: { title: string; text: string };

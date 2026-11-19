@@ -16,6 +16,7 @@ import {
 import { requireUser } from "@/lib/auth/session";
 import { formatARS } from "@/lib/utils";
 import { esAdmin } from "@/lib/auth/access";
+import { RESERVAS_PROPIAS } from "@/lib/features";
 
 const DIAS = [
   { value: 1, label: "Lunes" },
@@ -122,6 +123,8 @@ export default async function EditarServicioPage({
         </dl>
       )}
 
+      {/* Franjas de la reserva online: sólo con la reserva propia prendida. */}
+      {RESERVAS_PROPIAS && (
       <section className="space-y-3 border-t border-border pt-6">
         <div className="space-y-1">
           <h2 className="font-display text-xl tracking-[0.15em] uppercase">
@@ -217,6 +220,7 @@ export default async function EditarServicioPage({
           </button>
         </form>
       </section>
+      )}
 
       {puedeEditar && (
         <div className="border-t border-border pt-6">

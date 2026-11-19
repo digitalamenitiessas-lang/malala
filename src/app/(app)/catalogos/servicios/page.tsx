@@ -7,6 +7,7 @@ import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { formatARS } from "@/lib/utils";
 import { ServiciosSearch } from "./servicios-search";
+import { RESERVAS_PROPIAS } from "@/lib/features";
 
 export default async function ServiciosPage({
   searchParams,
@@ -142,7 +143,7 @@ export default async function ServiciosPage({
                               Inactivo
                             </span>
                           )}
-                          {s.visible_reserva === false && (
+                          {RESERVAS_PROPIAS && s.visible_reserva === false && (
                             <span
                               className="bg-warning/15 text-brown-900 px-2 py-0.5 rounded text-xs"
                               title="Solo se cobra en caja: no aparece en la reserva online"
