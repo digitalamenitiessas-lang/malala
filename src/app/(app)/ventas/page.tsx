@@ -10,6 +10,7 @@ import {
 } from "@/lib/data/ingresos-helpers";
 import { listEmpleados } from "@/lib/data/empleados";
 import { listClientes } from "@/lib/data/clientes";
+import { listInsumos } from "@/lib/data/insumos";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { formatARS, formatDayTime } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ interface SearchParams {
   rango?: "hoy" | "semana" | "mes" | "todo";
   empleado?: string;
   cliente?: string;
+  producto?: string;
   revision?: "ok" | "error" | "sin";
   anuladas?: string;
 }
@@ -67,10 +69,18 @@ export default async function VentasPage({
 
   // Empleados y clientes no dependen uno del otro: van juntos. Las ventas sí
   // esperan, porque el filtro por empleada se valida contra la lista.
-  const [empleados, clientes] = await Promise.all([
+  // Los productos incluyen los inactivos: una pulsera que ya no se vende
+  // igual tiene que poder buscarse en las ventas viejas.
+  const [empleados, clientes, productos] = await Promise.all([
     listEmpleados({ sucursalId: sucursal.id }),
     listClientes({ sucursalId: sucursal.id }),
+    esEmpleado
+      ? Promise.resolve([])
+      : listInsumos({ sucursalId: sucursal.id, tipo: "venta", incluirInactivos: true }),
   ]);
+  const producto = sp.producto
+    ? productos.find((p) => p.id === sp.producto)
+    : undefined;
   const empleadoIdFiltrado =
     esEmpleado || !empleadoIdForzado
       ? empleadoIdForzado
@@ -81,6 +91,7 @@ export default async function VentasPage({
     sucursalId: sucursal.id,
     empleadoId: empleadoIdFiltrado,
     clienteId: sp.cliente,
+    insumoId: producto?.id,
     desde,
     hasta,
     revision: !esEmpleado ? sp.revision : undefined,
@@ -272,6 +283,7 @@ export default async function VentasPage({
           <p className="text-sm text-muted-foreground">
             {sucursal.nombre} ·{" "}
             {RANGOS.find((r) => r.value === rango)?.label.toLowerCase()} ·{" "}
+            {producto ? `con ${producto.nombre} · ` : ""}
             {totales.cantidad} ticket{totales.cantidad !== 1 ? "s" : ""}
           </p>
         </div>
@@ -382,6 +394,25 @@ export default async function VentasPage({
             ))}
           </select>
         </div>
+        {/* "¿A quién le vendimos esta pulsera?": deja los tickets que la llevan. */}
+        <div className="space-y-1.5">
+          <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Producto
+          </label>
+          <select
+            name="producto"
+            defaultValue={producto?.id ?? ""}
+            className="w-full px-3 py-2 border border-border rounded-md bg-card text-sm"
+          >
+            <option value="">Todos</option>
+            {productos.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+                {p.activo ? "" : " (inactivo)"}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="space-y-1.5">
           <label className="block text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Satisfacción
@@ -462,7 +493,18 @@ export default async function VentasPage({
         </h2>
         {ingresos.length === 0 ? (
           <div className="bg-card border border-border rounded-md p-8 text-center text-sm text-muted-foreground">
-            No hay ventas en el rango seleccionado.
+            {producto ? `No hay ventas de ${producto.nombre} en el rango seleccionado.` : "No hay ventas en el rango seleccionado."}
+            {producto && rango !== "todo" && (
+              <>
+                {" "}
+                <Link
+                  href={`/ventas?rango=todo&producto=${encodeURIComponent(producto.id)}`}
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  Buscar en todas las fechas
+                </Link>
+              </>
+            )}
           </div>
         ) : (
           <div className="bg-card border border-border rounded-md overflow-hidden">
@@ -491,6 +533,14 @@ export default async function VentasPage({
                       {row.ingreso.anulado && (
                         <span className="ml-2 rounded bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-destructive">
                           Anulada
+                        </span>
+                      )}
+                      {producto && (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {producto.nombre} ×{" "}
+                          {row.lineas
+                            .filter((l) => l.insumo_id === producto.id)
+                            .reduce((s, l) => s + l.cantidad, 0)}
                         </span>
                       )}
                     </td>

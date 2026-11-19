@@ -248,6 +248,7 @@ const REGISTRY: Record<string, ToolEntry> = {
           sucursalId: ctx.sucursalId,
           empleadoId: a.empleadoId as string | undefined,
           clienteId: a.clienteId as string | undefined,
+          insumoId: a.insumoId as string | undefined,
           ...rangoAr(a),
           incluirAnulados: a.incluirAnulados as boolean | undefined,
         })
@@ -257,12 +258,16 @@ const REGISTRY: Record<string, ToolEntry> = {
       function: {
         name: "list_ingresos",
         description:
-          "Lista ingresos/ventas de tu sucursal activa. Filtros por empleado, cliente y rango de fechas.",
+          "Lista ingresos/ventas de tu sucursal activa. Filtros por empleado, cliente, producto y rango de fechas. Para saber a quién se le vendió un producto, pasá su insumoId (sale de list_stock) sin rango de fechas.",
         parameters: {
           type: "object",
           properties: {
             empleadoId: { type: "string" },
             clienteId: { type: "string" },
+            insumoId: {
+              type: "string",
+              description: "Solo las ventas que llevan este producto (ID de list_stock)",
+            },
             desde: { type: "string", description: "YYYY-MM-DD (incluido)" },
             hasta: { type: "string", description: "YYYY-MM-DD (incluido)" },
             incluirAnulados: { type: "boolean" },

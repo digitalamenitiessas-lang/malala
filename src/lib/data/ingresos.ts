@@ -63,6 +63,8 @@ export interface IngresoFiltros {
   sucursalId?: string;
   empleadoId?: string;
   clienteId?: string;
+  /** Solo los tickets que llevan este producto (insumo de venta). */
+  insumoId?: string;
   desde?: string; // ISO
   hasta?: string; // ISO
   incluirAnulados?: boolean;
@@ -410,6 +412,18 @@ export async function listIngresos(
   }
   if (filtros.clienteId) {
     filters.push(eq(ingresosTable.clienteId, filtros.clienteId));
+  }
+  if (filtros.insumoId) {
+    // "¿A quién le vendimos esta pulsera?": el ticket entero, no solo la línea.
+    filters.push(
+      inArray(
+        ingresosTable.id,
+        getDb()
+          .select({ id: ingresoLineasTable.ingresoId })
+          .from(ingresoLineasTable)
+          .where(eq(ingresoLineasTable.insumoId, filtros.insumoId)),
+      ),
+    );
   }
   if (filtros.desde) {
     filters.push(gte(ingresosTable.fecha, new Date(filtros.desde)));
