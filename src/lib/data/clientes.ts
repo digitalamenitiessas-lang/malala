@@ -113,10 +113,22 @@ export async function listClientes(opts?: {
   const filters = [];
   if (!opts?.incluirInactivos) filters.push(eq(clientesTable.activo, true));
   if (q) {
+    // Un teléfono se busca por sus últimos 7 dígitos y sin mirar el formato:
+    // buscar "381 15 4154820" tiene que encontrar la ficha guardada como
+    // "5493814154820". Si no aparece, se carga otra vez y queda duplicada.
+    const digitos = (tryNormalizarTelefonoAR(q) ?? q).replace(/\D/g, "");
     filters.push(
       or(
         ilike(clientesTable.nombre, `%${q}%`),
         ilike(clientesTable.telefono, `%${q}%`),
+        ...(digitos.length >= 6
+          ? [
+              ilike(
+                sql`regexp_replace(coalesce(${clientesTable.telefono}, ''), '[^0-9]', '', 'g')`,
+                `%${digitos.slice(-7)}%`,
+              ),
+            ]
+          : []),
       )!,
     );
   }

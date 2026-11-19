@@ -17,11 +17,19 @@ const AR_COUNTRY_CODE = "54";
 const AR_MOBILE_PREFIX = "9";
 
 /**
+ * Código de área que se asume cuando el número viene sin él ("155123456",
+ * "5123456"). Las dos sucursales están en San Miguel de Tucumán, y en el
+ * mostrador es común anotarlo así.
+ */
+const AREA_LOCAL = "381";
+
+/**
  * Normaliza un teléfono argentino a E.164.
  *
  * Acepta entradas como:
  *   "11 5555 6666", "11-5555-6666", "+54 9 11 5555 6666",
- *   "5491155556666", "541155556666", "01155556666"
+ *   "5491155556666", "541155556666", "01155556666",
+ *   "381 15 5123456", "0381 15 5123456", "155123456", "5123456"
  *
  * Devuelve siempre "+549XXXXXXXXXX" para celulares.
  *
@@ -30,8 +38,17 @@ const AR_MOBILE_PREFIX = "9";
  *    el "9" (asumimos móvil para WhatsApp).
  *  - Si no empieza con +, se asume Argentina.
  *  - El "0" inicial del código de área se descarta.
- *  - El "15" intermedio (formato viejo de celular argentino) se descarta.
- *  - Se valida que el resultado tenga entre 12 y 13 dígitos (54 + 9 + 10).
+ *  - El "15" intermedio (formato viejo de celular argentino) se descarta, sea
+ *    cual sea el largo del código de área (11, 381, 3865).
+ *  - Sin código de área (7 dígitos, o 15 + 7) se asume el de Tucumán.
+ *  - Un "+549" cargado dos veces ("+549549381…") se toma una sola vez.
+ *  - El resultado tiene que ser código de área + número = 10 dígitos.
+ *
+ * Por qué importa: el control de clientas repetidas compara este valor. Con
+ * "381 15 5123456" o "155123456" devolvía error, la ficha quedaba sin número
+ * normalizado y el sistema dejaba cargar a la misma clienta otra vez. Malala
+ * YB (19/11/2026): "en un cliente se pone +549 y en el otro no y te deja
+ * sumarlo".
  */
 export function normalizarTelefonoAR(input: string | null | undefined): string {
   if (!input) {
@@ -62,11 +79,26 @@ export function normalizarTelefonoAR(input: string | null | undefined): string {
     digits = digits.slice(AR_MOBILE_PREFIX.length);
   }
 
+  // "+549 549 381…": el prefijo cargado dos veces.
+  if (digits.startsWith(AR_COUNTRY_CODE) && digits.length >= 12) {
+    digits = digits.slice(AR_COUNTRY_CODE.length);
+    if (digits.startsWith(AR_MOBILE_PREFIX) && digits.length >= 11) {
+      digits = digits.slice(AR_MOBILE_PREFIX.length);
+    }
+  }
+
   while (digits.startsWith("0")) {
     digits = digits.slice(1);
   }
 
   digits = stripLegacy15(digits);
+
+  // Sin código de área: "15 512-3456" o "512-3456".
+  if (digits.length === 9 && digits.startsWith("15")) {
+    digits = AREA_LOCAL + digits.slice(2);
+  } else if (digits.length === 7) {
+    digits = AREA_LOCAL + digits;
+  }
 
   if (digits.length < 10 || digits.length > 11) {
     throw new PhoneNormalizationError(
@@ -87,10 +119,17 @@ export function normalizarTelefonoAR(input: string | null | undefined): string {
   return `+${AR_COUNTRY_CODE}${AR_MOBILE_PREFIX}${digits}`;
 }
 
+/**
+ * Saca el "15" que va entre el código de área y el número. Código de área +
+ * número siempre suman 10 dígitos, así que con el 15 son 12: "11 15 55556666",
+ * "381 15 5123456", "3865 15 123456". El único código de área de 2 dígitos es
+ * el 11.
+ */
 function stripLegacy15(digits: string): string {
-  const areaCodeLengths = [2, 3, 4];
-  for (const len of areaCodeLengths) {
-    if (digits.length === len + 2 + 8 && digits.slice(len, len + 2) === "15") {
+  if (digits.length !== 12) return digits;
+  for (const len of [2, 3, 4]) {
+    if (len === 2 && !digits.startsWith("11")) continue;
+    if (digits.slice(len, len + 2) === "15") {
       return digits.slice(0, len) + digits.slice(len + 2);
     }
   }
