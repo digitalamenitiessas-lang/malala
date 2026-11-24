@@ -22,7 +22,7 @@ import {
   TogglePagadoButton,
 } from "@/app/(app)/egresos/toggle-pagado-button";
 import { listInsumosByProveedor } from "@/lib/data/insumos";
-import { requireUser } from "@/lib/auth/session";
+import { getActiveSucursal, requireUser } from "@/lib/auth/session";
 import { buildAccessScope, esAdmin } from "@/lib/auth/access";
 import { formatARS, formatDateShort } from "@/lib/utils";
 import type { EgresoConDetalle } from "@/lib/data/egresos-helpers";
@@ -66,6 +66,11 @@ export default async function EditarProveedorPage({
   const sp = await searchParams;
   const rango = sp.rango ?? "3meses";
   const { desde, hasta } = rangoToFechas(rango);
+  // Todo lo de esta pantalla es de la sucursal activa: compras, pagos y saldo.
+  // Con los proveedores compartidos (Walter, Question) mostrar las dos juntas
+  // hacía que Yerba Buena viera como propia una factura de Centro.
+  const sucursalActiva = await getActiveSucursal();
+  const sucursalId = sucursalActiva?.id;
 
   const [
     proveedor,
@@ -76,12 +81,12 @@ export default async function EditarProveedorPage({
     pagos,
     cobertura,
   ] = await Promise.all([
-    getProveedor(id),
-    listEgresos({ proveedorId: id, desde, hasta }),
+    getProveedor(id, sucursalId),
+    listEgresos({ proveedorId: id, sucursalId, desde, hasta }),
     listInsumosByProveedor(id),
     listMediosPago({ soloActivos: true, excluirGiftCard: true }),
     listSucursales({ soloActivas: true }),
-    listPagosProveedor(id),
+    listPagosProveedor(id, sucursalId),
     getCoberturaFacturas(id),
   ]);
   if (!proveedor) notFound();
@@ -199,7 +204,7 @@ export default async function EditarProveedorPage({
               entró. Pasó: "se redujo esa plata de mi caja pero sigue
               apareciendo la misma deuda". */}
           <Kpi
-            label="Saldo a favor del proveedor"
+            label={sucursalActiva ? `Saldo a favor del proveedor · ${sucursalActiva.nombre}` : "Saldo a favor del proveedor"}
             value={formatARS(proveedor.deuda_pendiente)}
             color={proveedor.deuda_pendiente > 0 ? "danger" : undefined}
             hint={
@@ -360,7 +365,9 @@ export default async function EditarProveedorPage({
           deuda={proveedor.deuda_pendiente}
           mediosPago={mediosPago}
           sucursales={sucursales.filter((s) =>
-            scope.sucursalIdsPermitidas.includes(s.id),
+            sucursalId
+              ? s.id === sucursalId
+              : scope.sucursalIdsPermitidas.includes(s.id),
           )}
         />
       )}

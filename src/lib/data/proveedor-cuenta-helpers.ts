@@ -90,3 +90,57 @@ export async function coberturaFacturasTx(
   }
   return resultado;
 }
+
+/**
+ * Lo que la sucursal le debe a cada proveedor: sus facturas impagas, menos sus
+ * pagos a cuenta, más lo que de esos pagos ya se usó para saldar facturas
+ * marcadas pagadas (egresos.cubierto_a_cuenta; esa plata no baja dos veces).
+ *
+ * proveedores.deuda_pendiente es UNA para las dos sucursales. Con los
+ * proveedores compartidos eso mezclaba las cuentas: Yerba Buena veía a Walter
+ * con $15.674 de deuda que era una factura de Centro, y a Question con
+ * $54.632 cuando lo suyo eran $290 (24/11/2026). Sumando lo de cada sucursal
+ * da exactamente la columna global.
+ */
+export async function deudaPorProveedorTx(
+  db: DbOrTx,
+  sucursalId: string,
+  proveedorId?: string,
+): Promise<Map<string, number>> {
+  const deFacturas = [eq(egresosTable.sucursalId, sucursalId), eq(egresosTable.anulado, false), isNotNull(egresosTable.proveedorId)];
+  const dePagos = [eq(pagosProveedorTable.sucursalId, sucursalId), eq(pagosProveedorTable.anulado, false)];
+  if (proveedorId) {
+    deFacturas.push(eq(egresosTable.proveedorId, proveedorId));
+    dePagos.push(eq(pagosProveedorTable.proveedorId, proveedorId));
+  }
+  const [facturas, pagos] = await Promise.all([
+    db
+      .select({
+        proveedorId: egresosTable.proveedorId,
+        impagas: sql<number>`coalesce(sum(${egresosTable.valor}) filter (where not ${egresosTable.pagado}), 0)::float8`,
+        cubierto: sql<number>`coalesce(sum(${egresosTable.cubiertoACuenta}) filter (where ${egresosTable.pagado}), 0)::float8`,
+      })
+      .from(egresosTable)
+      .where(and(...deFacturas))
+      .groupBy(egresosTable.proveedorId),
+    db
+      .select({
+        proveedorId: pagosProveedorTable.proveedorId,
+        total: sql<number>`coalesce(sum(${pagosProveedorTable.monto}), 0)::float8`,
+      })
+      .from(pagosProveedorTable)
+      .where(and(...dePagos))
+      .groupBy(pagosProveedorTable.proveedorId),
+  ]);
+
+  const deuda = new Map<string, number>();
+  for (const f of facturas) {
+    if (f.proveedorId) deuda.set(f.proveedorId, Number(f.impagas) + Number(f.cubierto));
+  }
+  for (const p of pagos) {
+    deuda.set(p.proveedorId, (deuda.get(p.proveedorId) ?? 0) - Number(p.total));
+  }
+  // Centavos de redondeo de float: 0,0000001 no es deuda.
+  for (const [id, v] of deuda) deuda.set(id, Math.round(v * 100) / 100);
+  return deuda;
+}

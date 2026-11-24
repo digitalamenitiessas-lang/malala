@@ -274,10 +274,10 @@ export const HERRAMIENTAS_CAJA: Record<string, ToolEntry> = {
   list_pagos_proveedor: {
     roles: GESTION,
     mode: "read",
-    execute: (a) => listPagosProveedor(String(a.proveedorId ?? "")),
+    execute: (a, ctx) => listPagosProveedor(String(a.proveedorId ?? ""), ctx.sucursalId),
     def: def(
       "list_pagos_proveedor",
-      "Pagos a cuenta hechos a un proveedor (fecha, monto, medio, si se anuló). Requiere proveedorId (ver list_proveedores).",
+      "Pagos a cuenta hechos a un proveedor desde tu sucursal activa (fecha, monto, medio, si se anuló). Requiere proveedorId (ver list_proveedores).",
       { proveedorId: { type: "string" } },
       ["proveedorId"],
     ),

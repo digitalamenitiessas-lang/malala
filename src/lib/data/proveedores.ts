@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db/client/postgres";
 import { requireSupabaseRuntime } from "@/lib/db/env";
@@ -20,7 +20,7 @@ import {
   emitMovimientoBancarioTx,
   getCuentaIdForMpTx,
 } from "./movimientos-bancarios-helpers";
-import { coberturaFacturasTx } from "./proveedor-cuenta-helpers";
+import { coberturaFacturasTx, deudaPorProveedorTx } from "./proveedor-cuenta-helpers";
 import type { Cobertura } from "@/lib/proveedor-cuenta";
 import {
   fieldErrors,
@@ -89,9 +89,15 @@ export async function listProveedoresConTotal(opts?: {
         valor: egresosTable.valor,
       })
       .from(egresosTable)
-      // Un gasto anulado no le debe plata a nadie.
-      .where(eq(egresosTable.anulado, false)),
+      // Un gasto anulado no le debe plata a nadie. Con sucursal, solo lo que
+      // le compró esa sucursal.
+      .where(
+        opts?.sucursalId
+          ? and(eq(egresosTable.anulado, false), eq(egresosTable.sucursalId, opts.sucursalId))
+          : eq(egresosTable.anulado, false),
+      ),
   ]);
+  const deudas = opts?.sucursalId ? await deudaPorProveedorTx(db, opts.sucursalId) : null;
   const proveedoresRows = opts?.sucursalId
     ? await (async () => {
         const habilitados = await proveedorIdsDeSucursal(opts.sucursalId!);
@@ -110,16 +116,24 @@ export async function listProveedoresConTotal(opts?: {
 
   return proveedoresRows.map((row) => {
     const totales = totalesById.get(row.id) ?? { total: 0, cantidad: 0 };
+    const proveedor = mapProveedor(row);
     return {
-      ...mapProveedor(row),
+      ...proveedor,
+      // La deuda de ESTA sucursal, no la suma de las dos (ver deudaPorProveedorTx).
+      deuda_pendiente: deudas ? (deudas.get(row.id) ?? 0) : proveedor.deuda_pendiente,
       total_comprado: totales.total,
       cantidad_compras: totales.cantidad,
     };
   });
 }
 
+/**
+ * Con sucursalId, deuda_pendiente es la de esa sucursal (ver
+ * deudaPorProveedorTx); sin ella, la suma de las dos.
+ */
 export async function getProveedor(
   proveedorId: string,
+  sucursalId?: string,
 ): Promise<Proveedor | null> {
   requireSupabaseRuntime(
     "Los proveedores del sistema solo se cargan desde Supabase.",
@@ -131,7 +145,11 @@ export async function getProveedor(
     .from(proveedoresTable)
     .where(eq(proveedoresTable.id, proveedorId))
     .limit(1);
-  return row ? mapProveedor(row) : null;
+  if (!row) return null;
+  const proveedor = mapProveedor(row);
+  if (!sucursalId) return proveedor;
+  const deudas = await deudaPorProveedorTx(db, sucursalId, proveedorId);
+  return { ...proveedor, deuda_pendiente: deudas.get(proveedorId) ?? 0 };
 }
 
 function parse(formData: FormData) {
@@ -322,6 +340,7 @@ export async function getCoberturaFacturas(
 
 export async function listPagosProveedor(
   proveedorId: string,
+  sucursalId?: string,
 ): Promise<PagoProveedor[]> {
   const db = getDb();
   const rows = await db
@@ -338,7 +357,14 @@ export async function listPagosProveedor(
       mediosPagoTable,
       eq(mediosPagoTable.id, pagosProveedorTable.mpId),
     )
-    .where(eq(pagosProveedorTable.proveedorId, proveedorId))
+    .where(
+      sucursalId
+        ? and(
+            eq(pagosProveedorTable.proveedorId, proveedorId),
+            eq(pagosProveedorTable.sucursalId, sucursalId),
+          )
+        : eq(pagosProveedorTable.proveedorId, proveedorId),
+    )
     .orderBy(desc(pagosProveedorTable.fecha));
   return rows.map((r) => ({
     id: r.id,
