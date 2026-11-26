@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { numeroFactura, planFactura } from "./factura-proveedor";
+import { costosNuevos, numeroFactura, planFactura } from "./factura-proveedor";
 
 describe("planFactura", () => {
   it("la diferencia con el total es el IVA, y la deuda da la factura", () => {
@@ -54,5 +54,73 @@ describe("numeroFactura", () => {
     expect(numeroFactura("remito")).toBeNull();
     expect(numeroFactura(null)).toBeNull();
     expect(numeroFactura("000")).toBeNull();
+  });
+});
+
+describe("productos nuevos", () => {
+  it("una línea de producto nuevo no necesita producto elegido", () => {
+    const r = planFactura(1275, [
+      { insumoId: "", nuevo: { nombre: "Shampoo Metal Detox 1500 ml", tipo: "bacha", unidad: "ml", tamano: 1500 }, cantidad: 1, valor: 1000 },
+    ]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("pide nombre y contenido del producto nuevo", () => {
+    const r = planFactura(1275, [
+      { insumoId: "", nuevo: { nombre: " ", tipo: "bacha", unidad: "ml", tamano: 0 }, cantidad: 1, valor: 1000 },
+    ]);
+    expect(!r.ok && r.errors.lineas).toHaveLength(2);
+  });
+
+  it("uno de reventa por unidad no pide contenido", () => {
+    const r = planFactura(1275, [
+      { insumoId: "", nuevo: { nombre: "Mascara Loreal 250ml_Absolut Repair", tipo: "venta", unidad: "ud", tamano: 0 }, cantidad: 1, valor: 1000 },
+    ]);
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe("costosNuevos", () => {
+  // Factura de Loreal: los impuestos son 27,5% sobre los productos.
+  const lineas = [
+    { insumoId: "majirel", cantidad: 2, valor: 23936 },
+    { insumoId: "majirel", cantidad: 2, valor: 23.94 },
+    { insumoId: "oxidante", cantidad: 2, valor: 48.99 },
+    { insumoId: "mascara", cantidad: 1, valor: 100358 },
+  ];
+  const total = Math.round(lineas.reduce((s, l) => s + l.valor, 0) * 1.275 * 100) / 100;
+  const r = planFactura(total, lineas);
+  if (!r.ok) throw new Error("plan");
+  const costos = costosNuevos(lineas, r.plan, new Map([["majirel", 8491.86], ["oxidante", 29060.27], ["mascara", 115651.2]]));
+
+  it("los pomos de regalo no bajan el costo de los pagos", () => {
+    expect(costos.get("majirel")).toBeCloseTo((23936 * 1.275) / 2, 0);
+  });
+
+  it("un producto pagado en varias líneas queda al promedio", () => {
+    const ls = [
+      { insumoId: "a", cantidad: 1, valor: 100 },
+      { insumoId: "a", cantidad: 3, valor: 360 },
+    ];
+    const p = planFactura(460, ls);
+    if (!p.ok) throw new Error("plan");
+    expect(costosNuevos(ls, p.plan, new Map([["a", 100]])).get("a")).toBe(115);
+  });
+
+  it("un regalo no pisa el costo", () => {
+    expect(costos.has("oxidante")).toBe(false);
+  });
+
+  it("lo demás toma el precio de la factura con impuestos", () => {
+    expect(costos.get("mascara")).toBeCloseTo(100358 * 1.275, 0);
+  });
+
+  it("los productos nuevos no están: se crean con su precio", () => {
+    const n = costosNuevos(
+      [{ insumoId: "", nuevo: { nombre: "x", tipo: "bacha", unidad: "ml", tamano: 1 }, cantidad: 1, valor: 10 }],
+      { sumaLineas: 10, diferencia: 0, precioEnvase: [10] },
+      new Map(),
+    );
+    expect(n.size).toBe(0);
   });
 });

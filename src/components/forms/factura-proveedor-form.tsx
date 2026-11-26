@@ -6,7 +6,7 @@ import { useActionStateFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyField, Field, FormButtons, GlobalError, SelectField } from "./field";
 import { CurrencyInput } from "./currency-input";
 import { formatARS } from "@/lib/utils";
-import { planFactura } from "@/lib/factura-proveedor";
+import { planFactura, type ProductoNuevo } from "@/lib/factura-proveedor";
 import { etiquetaInsumo } from "@/lib/insumo-etiqueta";
 import type { Insumo, Proveedor } from "@/lib/types";
 import type { FacturaProveedorResult } from "@/lib/data/facturas-proveedor";
@@ -14,6 +14,8 @@ import type { FacturaProveedorResult } from "@/lib/data/facturas-proveedor";
 interface Linea {
   key: number;
   insumoId: string;
+  /** Producto que no está en la lista: se crea al guardar la factura. */
+  nuevo?: ProductoNuevo;
   cantidad: number;
   valor: number;
 }
@@ -28,6 +30,9 @@ interface Props {
 }
 
 const UNIDAD_LABEL: Record<string, string> = { ud: "ud", ml: "ml", g: "g", aplicacion: "apl." };
+const NUEVO = "__nuevo__";
+const inputClase =
+  "w-full rounded-md border border-border bg-card px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
 let siguienteKey = 1;
 const lineaVacia = (): Linea => ({ key: siguienteKey++, insumoId: "", cantidad: 1, valor: 0 });
@@ -62,7 +67,7 @@ export function FacturaProveedorForm({
   const diferencia = Math.round((total - sumaLineas) * 100) / 100;
   const plan = planFactura(
     total,
-    lineas.map((l) => ({ insumoId: l.insumoId, cantidad: l.cantidad, valor: l.valor })),
+    lineas.map((l) => ({ insumoId: l.insumoId, nuevo: l.nuevo, cantidad: l.cantidad, valor: l.valor })),
   );
 
   const [state, formAction, pending] = useActionStateFeedback<FacturaProveedorResult>(action, {
@@ -81,7 +86,7 @@ export function FacturaProveedorForm({
       <input
         type="hidden"
         name="lineas"
-        value={JSON.stringify(lineas.map(({ insumoId, cantidad, valor }) => ({ insumoId, cantidad, valor })))}
+        value={JSON.stringify(lineas.map(({ insumoId, nuevo, cantidad, valor }) => ({ insumoId, nuevo, cantidad, valor })))}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -144,12 +149,20 @@ export function FacturaProveedorForm({
                     Producto {i + 1}
                   </label>
                   <select
-                    value={l.insumoId}
-                    onChange={(e) => cambiar(l.key, { insumoId: e.target.value })}
+                    value={l.nuevo ? NUEVO : l.insumoId}
+                    onChange={(e) =>
+                      e.target.value === NUEVO
+                        ? cambiar(l.key, {
+                            insumoId: "",
+                            nuevo: { nombre: "", tipo: "bacha", unidad: "ml", tamano: 0 },
+                          })
+                        : cambiar(l.key, { insumoId: e.target.value, nuevo: undefined })
+                    }
                     required
-                    className="w-full rounded-md border border-border bg-card px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className={inputClase}
                   >
                     <option value="">Elegí el producto</option>
+                    <option value={NUEVO}>➕ Producto nuevo (no está en la lista)</option>
                     {delProveedor.length > 0 && (
                       <optgroup label="De este proveedor">
                         {delProveedor.map((x) => (
@@ -202,6 +215,13 @@ export function FacturaProveedorForm({
                     className="w-full rounded-md border border-border bg-card px-2 py-2 text-right text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
+                {l.nuevo && (
+                  <NuevoProducto
+                    valor={l.nuevo}
+                    onChange={(nuevo) => cambiar(l.key, { nuevo })}
+                    precioEnvase={plan.ok ? plan.plan.precioEnvase[i] : undefined}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => setLineas((ls) => (ls.length > 1 ? ls.filter((x) => x.key !== l.key) : ls))}
@@ -283,5 +303,88 @@ export function FacturaProveedorForm({
 
       <FormButtons cancelHref="/egresos" submitLabel="Cargar factura" pending={pending} />
     </form>
+  );
+}
+
+/**
+ * Los datos de un producto que llega por primera vez. Se crea en esta
+ * sucursal al guardar la factura, con el costo de la factura.
+ */
+function NuevoProducto({
+  valor,
+  onChange,
+  precioEnvase,
+}: {
+  valor: ProductoNuevo;
+  onChange: (v: ProductoNuevo) => void;
+  precioEnvase?: number;
+}) {
+  const set = (cambio: Partial<ProductoNuevo>) => onChange({ ...valor, ...cambio });
+  return (
+    <div className="col-span-full -mt-1 order-last grid grid-cols-2 gap-2 rounded-md border border-dashed border-border bg-cream/30 p-3 sm:grid-cols-[1fr_8rem_7rem_7rem]">
+      <div className="col-span-2 space-y-1 sm:col-span-1">
+        <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+          Nombre del producto nuevo
+        </label>
+        <input
+          value={valor.nombre}
+          onChange={(e) => set({ nombre: e.target.value })}
+          placeholder="Shampoo Metal Detox 1500 ml"
+          required
+          className={inputClase}
+        />
+      </div>
+      <div className="space-y-1">
+        <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">Es de</label>
+        <select
+          value={valor.tipo}
+          onChange={(e) => {
+            const tipo = e.target.value === "venta" ? "venta" : "bacha";
+            // La reventa se cuenta por unidad, como el resto de los de venta.
+            set(tipo === "venta" ? { tipo, unidad: "ud", tamano: 1 } : { tipo, unidad: "ml", tamano: 0 });
+          }}
+          className={inputClase}
+        >
+          <option value="bacha">Bacha</option>
+          <option value="venta">Reventa</option>
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">Se mide en</label>
+        <select
+          value={valor.unidad}
+          onChange={(e) => {
+            const unidad = e.target.value === "g" ? "g" : e.target.value === "ud" ? "ud" : "ml";
+            set({ unidad, tamano: unidad === "ud" ? 1 : valor.tamano });
+          }}
+          className={inputClase}
+        >
+          <option value="ml">ml</option>
+          <option value="g">gramos</option>
+          <option value="ud">unidades</option>
+        </select>
+      </div>
+      {valor.unidad !== "ud" && (
+        <div className="space-y-1">
+          <label className="block text-[10px] uppercase tracking-wider text-muted-foreground">
+            Trae ({valor.unidad})
+          </label>
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={valor.tamano || ""}
+            onChange={(e) => set({ tamano: Number(e.target.value) })}
+            required
+            className={`${inputClase} text-right tabular-nums`}
+          />
+        </div>
+      )}
+      <p className="col-span-full text-[10px] text-muted-foreground">
+        Pongan los ml en el nombre para encontrarlo después.
+        {valor.tipo === "venta" && " El precio de venta se carga después en Catálogo → Insumos."}
+        {precioEnvase ? ` Costo: ${formatARS(precioEnvase)} el envase con IVA.` : ""}
+      </p>
+    </div>
   );
 }

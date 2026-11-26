@@ -49,7 +49,21 @@ export async function registrarFacturaProveedor(
     const crudas = JSON.parse(String(formData.get("lineas") ?? "[]")) as unknown[];
     lineas = crudas.map((l) => {
       const o = (l ?? {}) as Record<string, unknown>;
-      return { insumoId: String(o.insumoId ?? ""), cantidad: Number(o.cantidad), valor: Number(o.valor) };
+      const n = o.nuevo as Record<string, unknown> | null | undefined;
+      const nuevo = n
+        ? {
+            nombre: String(n.nombre ?? ""),
+            tipo: n.tipo === "venta" ? ("venta" as const) : ("bacha" as const),
+            unidad: n.unidad === "g" ? ("g" as const) : n.unidad === "ud" ? ("ud" as const) : ("ml" as const),
+            tamano: Number(n.tamano),
+          }
+        : undefined;
+      return {
+        insumoId: nuevo ? "" : String(o.insumoId ?? ""),
+        nuevo,
+        cantidad: Number(o.cantidad),
+        valor: Number(o.valor),
+      };
     });
   } catch {
     return { ok: false, errors: { lineas: ["No se pudieron leer los productos de la factura"] } };

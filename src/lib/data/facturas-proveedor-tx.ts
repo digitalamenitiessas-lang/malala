@@ -1,4 +1,4 @@
-import { and, eq, ilike, inArray, isNotNull, or } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import type { getDb } from "@/lib/db/client/postgres";
 import { instanteEnFechaAr } from "@/lib/fecha-ar";
 import {
@@ -8,7 +8,7 @@ import {
   proveedores as proveedoresTable,
   rubrosGasto as rubrosGastoTable,
 } from "@/lib/db/schema";
-import { numeroFactura, type LineaFactura, type PlanFactura } from "@/lib/factura-proveedor";
+import { costosNuevos, numeroFactura, type LineaFactura, type PlanFactura } from "@/lib/factura-proveedor";
 import { habilitarProveedorEnSucursalTx, verificarCajaParaGastoTx } from "./egresos-alta";
 import { applyMovementTx } from "./stock";
 
@@ -85,19 +85,68 @@ export async function cargarFacturaTx(
     }
   }
 
-  const insumoIds = [...new Set(lineas.map((l) => l.insumoId))];
-  const insumos = await tx
-    .select({ id: insumosTable.id, nombre: insumosTable.nombre, tamanoEnvase: insumosTable.tamanoEnvase, tipo: insumosTable.tipo })
-    .from(insumosTable)
-    .where(and(inArray(insumosTable.id, insumoIds), eq(insumosTable.sucursalId, sucursalId)));
+  const existentes = [...new Set(lineas.filter((l) => !l.nuevo).map((l) => l.insumoId))];
+  const insumos = existentes.length
+    ? await tx
+        .select({
+          id: insumosTable.id,
+          nombre: insumosTable.nombre,
+          tamanoEnvase: insumosTable.tamanoEnvase,
+          tipo: insumosTable.tipo,
+          precioEnvase: insumosTable.precioEnvase,
+        })
+        .from(insumosTable)
+        .where(and(inArray(insumosTable.id, existentes), eq(insumosTable.sucursalId, sucursalId)))
+    : [];
   const insumoDe = new Map(insumos.map((i) => [i.id, i]));
-  const faltan = insumoIds.filter((id) => !insumoDe.has(id));
-  if (faltan.length > 0) throw new Error("Algún producto no es de esta sucursal. Volvé a elegirlo.");
+  if (existentes.some((id) => !insumoDe.has(id))) {
+    throw new Error("Algún producto no es de esta sucursal. Volvé a elegirlo.");
+  }
+
+  // Productos nuevos: se crean en esta sucursal con el precio de la factura.
+  // "Si en la factura existen nuevos productos esta opción no nos da la
+  // alternativa de sumar ese ítem" (Yerba Buena, 26/11/2026).
+  const lineasConId = lineas.map((l) => ({ ...l }));
+  for (const [i, l] of lineasConId.entries()) {
+    if (!l.nuevo) continue;
+    const nombre = l.nuevo.nombre.trim().replace(/\s+/g, " ");
+    const [repetido] = await tx
+      .select({ id: insumosTable.id })
+      .from(insumosTable)
+      .where(and(eq(insumosTable.sucursalId, sucursalId), sql`lower(${insumosTable.nombre}) = lower(${nombre})`))
+      .limit(1);
+    if (repetido) {
+      throw new Error(`Ya existe un producto que se llama "${nombre}". Elegilo de la lista en vez de crearlo.`);
+    }
+    const tamanoEnvase = l.nuevo.unidad === "ud" ? 1 : l.nuevo.tamano;
+    const precioEnvase = plan.precioEnvase[i];
+    const id = crypto.randomUUID();
+    await tx.insert(insumosTable).values({
+      id,
+      sucursalId,
+      nombre,
+      codigo: null,
+      unidadMedida: l.nuevo.unidad,
+      tamanoEnvase,
+      precioEnvase,
+      precioUnitario: tamanoEnvase > 0 ? precioEnvase / tamanoEnvase : null,
+      rinde: null,
+      umbralStockBajo: 0,
+      activo: true,
+      tipo: l.nuevo.tipo,
+      // De reventa se vende; el precio de venta lo pone el salón después.
+      vendible: l.nuevo.tipo === "venta",
+      precioVenta: null,
+      precioVentaEfectivo: null,
+    });
+    insumoDe.set(id, { id, nombre, tamanoEnvase, tipo: l.nuevo.tipo, precioEnvase });
+    l.insumoId = id;
+  }
 
   const rubroId = await rubroInsumosTx(tx);
   await habilitarProveedorEnSucursalTx(tx, proveedorId, sucursalId);
 
-  for (const [i, l] of lineas.entries()) {
+  for (const l of lineasConId) {
     const insumo = insumoDe.get(l.insumoId)!;
     const egresoId = crypto.randomUUID();
     await tx.insert(egresosTable).values({
@@ -126,15 +175,20 @@ export async function cargarFacturaTx(
       usuario_id: usuarioId,
       ubicacion: insumo.tipo === "venta" ? "deposito" : undefined,
     });
-    if (actualizarCosto) {
-      const precioEnvase = plan.precioEnvase[i];
+  }
+
+  if (actualizarCosto) {
+    const costos = costosNuevos(
+      lineas,
+      plan,
+      new Map(insumos.map((i) => [i.id, i.precioEnvase])),
+    );
+    for (const [id, precioEnvase] of costos) {
+      const tam = insumoDe.get(id)!.tamanoEnvase;
       await tx
         .update(insumosTable)
-        .set({
-          precioEnvase,
-          precioUnitario: insumo.tamanoEnvase > 0 ? precioEnvase / insumo.tamanoEnvase : null,
-        })
-        .where(eq(insumosTable.id, l.insumoId));
+        .set({ precioEnvase, precioUnitario: tam > 0 ? precioEnvase / tam : null })
+        .where(eq(insumosTable.id, id));
     }
   }
 
@@ -156,7 +210,13 @@ export async function cargarFacturaTx(
   // Comprarle a alguien es asociarlo al producto (como la compra suelta).
   await tx
     .insert(insumoProveedoresTable)
-    .values(insumoIds.map((insumoId) => ({ id: crypto.randomUUID(), insumoId, proveedorId })))
+    .values(
+      [...new Set(lineasConId.map((l) => l.insumoId))].map((insumoId) => ({
+        id: crypto.randomUUID(),
+        insumoId,
+        proveedorId,
+      })),
+    )
     .onConflictDoNothing();
 
   const [actual] = await tx
