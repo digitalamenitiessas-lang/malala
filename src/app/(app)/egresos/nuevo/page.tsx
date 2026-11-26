@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EgresoForm } from "@/components/forms/egreso-form";
 import { getActiveSucursal, requireUser } from "@/lib/auth/session";
@@ -51,7 +52,11 @@ export default async function NuevoEgresoPage({
           {sucursal.nombre} · Sueldos, alquiler, servicios y demás gastos. Si es
           una compra de insumos, tildá{" "}
           <strong>&ldquo;Es compra de insumo&rdquo;</strong> y se suma al stock
-          automáticamente.
+          automáticamente. ¿Es una factura con varios productos e IVA?{" "}
+          <Link href="/egresos/factura" className="underline underline-offset-2 hover:text-foreground">
+            Cargala entera acá
+          </Link>
+          .
         </p>
       </header>
 

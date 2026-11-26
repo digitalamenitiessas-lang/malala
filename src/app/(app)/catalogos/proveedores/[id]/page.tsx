@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 import { TableActionLink } from "@/components/table-action-link";
 import { ProveedorForm } from "@/components/forms/proveedor-form";
 import { AumentoPreciosProveedorForm } from "@/components/forms/aumento-precios-proveedor";
@@ -123,6 +123,14 @@ export default async function EditarProveedorPage({
           </p>
         </div>
         {puedeRegistrarCompra && (
+          <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/egresos/factura?proveedor=${proveedor.id}`}
+            className="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium uppercase tracking-wider transition-colors hover:bg-cream"
+          >
+            <FileText className="h-4 w-4 stroke-[1.5]" />
+            Cargar factura
+          </Link>
           <Link
             href={`/egresos/nuevo?proveedor=${proveedor.id}&compra=1`}
             className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium uppercase tracking-wider text-primary-foreground transition-colors hover:bg-brown-700"
@@ -130,6 +138,7 @@ export default async function EditarProveedorPage({
             <Plus className="h-4 w-4 stroke-[1.5]" />
             Registrar compra
           </Link>
+          </div>
         )}
       </header>
 

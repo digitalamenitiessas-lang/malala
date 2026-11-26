@@ -1,6 +1,6 @@
 import { sucursalEnPantalla } from "@/lib/auth/session";
 import Link from "next/link";
-import { Ban, Check, Clock, Plus, Sandwich } from "lucide-react";
+import { Ban, Check, Clock, FileText, Plus, Sandwich } from "lucide-react";
 import { redirect } from "next/navigation";
 import { clampSucursalId, getAccessScopeForUser, esAdmin } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
@@ -119,6 +119,15 @@ export default async function EgresosPage({
             >
               <Sandwich className="h-4 w-4 stroke-[1.5]" />
               Cargar viático
+            </Link>
+            {/* Una factura con varios productos y su IVA, de una vez: así la
+                deuda con el proveedor queda igual a la factura. */}
+            <Link
+              href="/egresos/factura"
+              className="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium uppercase tracking-wider transition-colors hover:bg-cream"
+            >
+              <FileText className="h-4 w-4 stroke-[1.5]" />
+              Cargar factura
             </Link>
             <Link
               href="/egresos/nuevo"

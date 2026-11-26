@@ -8,10 +8,9 @@ import {
   isSucursalAllowed,
 } from "@/lib/auth/access";
 import { requireUser } from "@/lib/auth/session";
-import { formatYmdAr, hoyAr, instanteEnFechaAr } from "@/lib/fecha-ar";
+import { hoyAr, instanteEnFechaAr } from "@/lib/fecha-ar";
 import {
   anticipos as anticiposTable,
-  aperturasCaja as aperturasCajaTable,
   cierresCaja as cierresCajaTable,
   egresos as egresosTable,
   liquidaciones as liquidacionesTable,
@@ -26,6 +25,7 @@ import {
 import { fieldErrors, requireRole, type ActionResult } from "./_helpers";
 import { egresoSchema } from "@/lib/validations/egreso";
 import { applyMovementTx } from "./stock";
+import { habilitarProveedorEnSucursalTx, verificarCajaParaGastoTx } from "./egresos-alta";
 import {
   deleteMovimientosByRefTx,
   emitMovimientoBancarioTx,
@@ -379,40 +379,9 @@ export async function createEgreso(
   const db = getDb();
   try {
     await db.transaction(async (tx) => {
-      const [cierreDelDia] = await tx
-        .select({ id: cierresCajaTable.id })
-        .from(cierresCajaTable)
-        .where(
-          and(
-            eq(cierresCajaTable.sucursalId, data.sucursal_id),
-            eq(cierresCajaTable.fecha, ymdFecha),
-          ),
-        )
-        .limit(1);
-
-      if (cierreDelDia) {
-        throw new Error(
-          `La caja del ${formatYmdAr(ymdFecha)} ya está cerrada para esta sucursal. Para cargarlo igual, entrá a Caja → Cierres anteriores, abrí el cierre del ${formatYmdAr(ymdFecha)} y tocá "Reabrir cierre". Si no, cargá el gasto con otra fecha.`,
-        );
-      }
-
-      // Apertura obligatoria: no se puede cargar egresos si la caja de ese día
-      // no fue abierta en esta sucursal.
-      const [aperturaDelDia] = await tx
-        .select({ id: aperturasCajaTable.id })
-        .from(aperturasCajaTable)
-        .where(
-          and(
-            eq(aperturasCajaTable.sucursalId, data.sucursal_id),
-            eq(aperturasCajaTable.fecha, ymdFecha),
-          ),
-        )
-        .limit(1);
-
-      if (!aperturaDelDia) {
-        throw new Error(
-          `Tenés que abrir la caja del ${ymdFecha} antes de cargar egresos.`,
-        );
+      await verificarCajaParaGastoTx(tx, data.sucursal_id, ymdFecha);
+      if (data.proveedor_id) {
+        await habilitarProveedorEnSucursalTx(tx, data.proveedor_id, data.sucursal_id);
       }
 
       // El medio 1 cubre lo que no paga el medio 2 (si lo hay).
