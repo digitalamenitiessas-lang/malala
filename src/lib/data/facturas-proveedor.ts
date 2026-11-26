@@ -20,8 +20,8 @@ export type FacturaProveedorResult =
  *   una compra suelta.
  * - Uno más por la diferencia con el total (IVA, percepciones y otros), así
  *   la deuda con el proveedor es exactamente la factura.
- * - Todos con el mismo número de factura. Si esa factura ya está cargada para
- *   el proveedor, avisa antes de cargarla otra vez.
+ * - Todos con el mismo número de factura. Si esa factura del proveedor ya
+ *   está cargada en esta sucursal, avisa antes de cargarla otra vez.
  * - Si se pide, actualiza el costo de los productos con el precio de la
  *   factura, IVA incluido.
  *

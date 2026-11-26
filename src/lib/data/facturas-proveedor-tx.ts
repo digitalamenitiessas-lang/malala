@@ -62,7 +62,9 @@ export async function cargarFacturaTx(
     .for("update");
   if (!proveedor) throw new Error("El proveedor no existe");
 
-  // La misma factura dos veces es pagarla dos veces.
+  // La misma factura dos veces es pagarla dos veces. Se mira sólo esta
+  // sucursal: una factura compartida (Loreal, 26/11/2026) la carga cada
+  // sucursal con sus productos y su parte, con el mismo número.
   if (!cargarIgual) {
     const yaCargadas = await tx
       .select({ comprobante: egresosTable.comprobante, fecha: egresosTable.fecha })
@@ -70,6 +72,7 @@ export async function cargarFacturaTx(
       .where(
         and(
           eq(egresosTable.proveedorId, proveedorId),
+          eq(egresosTable.sucursalId, sucursalId),
           eq(egresosTable.anulado, false),
           isNotNull(egresosTable.comprobante),
         ),
@@ -77,7 +80,7 @@ export async function cargarFacturaTx(
     const misma = yaCargadas.find((e) => numeroFactura(e.comprobante) === numero);
     if (misma) {
       throw new FacturaRepetida(
-        `La factura ${misma.comprobante} de este proveedor ya está cargada (${misma.fecha.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}). Si es otra factura, tildá "Es otra factura, cargarla igual".`,
+        `La factura ${misma.comprobante} de este proveedor ya está cargada en esta sucursal (${misma.fecha.toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}). Si es otra factura, tildá "Es otra factura, cargarla igual".`,
       );
     }
   }

@@ -117,7 +117,7 @@ export function FacturaProveedorForm({
           value={total}
           onChange={setTotal}
           error={errors.total}
-          hint="El total final que figura en la factura."
+          hint="El total final de la factura. Si es compartida con la otra sucursal, sólo su parte con impuestos."
           required
         />
       </div>
