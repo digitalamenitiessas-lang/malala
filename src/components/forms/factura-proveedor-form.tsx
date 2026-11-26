@@ -7,6 +7,7 @@ import { CurrencyField, Field, FormButtons, GlobalError, SelectField } from "./f
 import { CurrencyInput } from "./currency-input";
 import { formatARS } from "@/lib/utils";
 import { planFactura } from "@/lib/factura-proveedor";
+import { etiquetaInsumo } from "@/lib/insumo-etiqueta";
 import type { Insumo, Proveedor } from "@/lib/types";
 import type { FacturaProveedorResult } from "@/lib/data/facturas-proveedor";
 
@@ -153,7 +154,7 @@ export function FacturaProveedorForm({
                       <optgroup label="De este proveedor">
                         {delProveedor.map((x) => (
                           <option key={x.id} value={x.id}>
-                            {x.nombre}
+                            {etiquetaInsumo(x)}
                           </option>
                         ))}
                       </optgroup>
@@ -161,7 +162,7 @@ export function FacturaProveedorForm({
                     <optgroup label={delProveedor.length > 0 ? "Otros productos" : "Productos"}>
                       {otros.map((x) => (
                         <option key={x.id} value={x.id}>
-                          {x.nombre}
+                          {etiquetaInsumo(x)}
                         </option>
                       ))}
                     </optgroup>

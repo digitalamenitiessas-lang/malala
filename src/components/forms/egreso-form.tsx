@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useActionStateFeedback } from "@/components/feedback/action-feedback";
 import { CurrencyField, Field, FormButtons, GlobalError, SelectField } from "./field";
 import { formatARS } from "@/lib/utils";
+import { etiquetaInsumo } from "@/lib/insumo-etiqueta";
 import type {
   CuentaBancaria,
   Insumo,
@@ -316,7 +317,7 @@ export function EgresoForm({
                 { value: NUEVO_INSUMO, label: "➕ Crear insumo nuevo" },
                 ...insumosVisibles.map((i) => ({
                   value: i.id,
-                  label: i.nombre,
+                  label: etiquetaInsumo(i),
                 })),
               ]}
               placeholder="Seleccioná insumo"
